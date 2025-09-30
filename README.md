@@ -65,9 +65,7 @@ npm run type-check
 
 ## Inspiration
 
-This project was inspired by research on web content organization and AI-assisted browsing:
-
-**Zhu, F. W., Agrawala, M., & Mysore, G. J.** (2024). Nabokov: Organize Web Content with LLM-Powered Visual Canvas. *Companion Proceedings of the 37th Annual ACM Symposium on User Interface Software and Technology (UIST '24 Companion)*, Article 42, 1-3. https://doi.org/10.1145/3698061.3726916
+This project name is inspired by [Nabokov's Cards](https://dl.acm.org/doi/abs/10.1145/3698061.3726916), a research project on organizing web content with LLM-powered visual canvas.
 
 ## License
 
