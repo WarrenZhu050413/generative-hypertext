@@ -54,3 +54,13 @@ npm run type-check
 - Vitest (unit testing)
 - Playwright (e2e testing)
 - @crxjs/vite-plugin (Chrome extension support)
+
+## Inspiration
+
+This project was inspired by research on web content organization and AI-assisted browsing:
+
+**Zhu, F. W., Agrawala, M., & Mysore, G. J.** (2024). Nabokov: Organize Web Content with LLM-Powered Visual Canvas. *Companion Proceedings of the 37th Annual ACM Symposium on User Interface Software and Technology (UIST '24 Companion)*, Article 42, 1-3. https://doi.org/10.1145/3698061.3726916
+
+## License
+
+MIT
