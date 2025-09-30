@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playwright Chrome Extension Testing - Deep Dive</title>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --ink-black: #1a1a1a;
+            --paper-beige: #F5F5DC;
+            --light-cream: #FFFEF0;
+            --level-1: #8B0000;
+            --level-2: #CD5C5C;
+            --level-3: #555;
+            --success: #2E7D32;
+            --warning: #F57C00;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            line-height: 1.4;
+            font-size: 14px;
+            padding: 10px;
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 900;
+            margin: 10px 0 16px 0;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 16px 0 8px 0;
+            padding: 8px 12px;
+            border-left: 5px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.04);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 17px;
+            font-weight: 600;
+            margin: 12px 0 6px 0;
+            padding: 6px 0 6px 16px;
+            color: var(--level-2);
+            border-left: 3px solid var(--chinese-gold);
+        }
+
+        h4 {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 8px 0 5px 20px;
+            color: var(--level-3);
+        }
+
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 0, 0, 0.15);
+            border-radius: 5px;
+            padding: 12px;
+            margin: 8px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .card.critical {
+            border: 2px solid var(--chinese-red);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+        }
+
+        .card.success {
+            border: 2px solid var(--success);
+            background: linear-gradient(135deg, rgba(46, 125, 50, 0.05), white);
+        }
+
+        .card.warning {
+            border: 2px solid var(--warning);
+            background: linear-gradient(135deg, rgba(245, 124, 0, 0.05), white);
+        }
+
+        pre, code {
+            background: linear-gradient(135deg, rgba(245, 245, 220, 0.4), rgba(255, 255, 255, 0.6));
+            border: 1px solid rgba(139, 0, 0, 0.1);
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        code {
+            padding: 3px 7px;
+            border-radius: 3px;
+        }
+
+        pre {
+            padding: 12px;
+            margin: 10px 0;
+            overflow-x: auto;
+            border-radius: 5px;
+        }
+
+        pre code {
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 12px 0;
+        }
+
+        ul, ol {
+            margin: 8px 0 8px 24px;
+            padding: 0;
+        }
+
+        li {
+            margin: 5px 0;
+            padding-left: 6px;
+        }
+
+        .dense-list {
+            list-style: none;
+            margin-left: 16px;
+        }
+
+        .dense-list li {
+            padding: 5px 0 5px 18px;
+            position: relative;
+        }
+
+        .dense-list li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--chinese-red);
+            font-size: 12px;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
+            border: 2px solid var(--chinese-gold);
+            padding: 14px;
+            margin: 12px 0;
+            border-radius: 6px;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, var(--chinese-red), transparent);
+            margin: 16px 0;
+        }
+
+        .step-box {
+            background: white;
+            border-left: 4px solid var(--chinese-gold);
+            padding: 12px;
+            margin: 10px 0 10px 20px;
+        }
+
+        .step-number {
+            display: inline-block;
+            background: var(--chinese-red);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: 700;
+            margin-right: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 13px;
+            background: white;
+        }
+
+        th, td {
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        th {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.08), rgba(255, 215, 0, 0.05));
+            font-weight: 600;
+            color: var(--level-1);
+        }
+
+        .collapsible {
+            margin: 8px 0;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.04), rgba(255, 215, 0, 0.02));
+            border-left: 3px solid var(--chinese-gold);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.08), rgba(255, 215, 0, 0.04));
+        }
+
+        .collapsible-header .arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-size: 13px;
+            margin-right: 8px;
+        }
+
+        .collapsible.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 14px;
+            margin-left: 16px;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 15000px;
+            padding: 14px;
+        }
+
+        .comparison-table {
+            display: grid;
+            grid-template-columns: 200px 1fr 1fr;
+            gap: 1px;
+            background: rgba(139, 0, 0, 0.2);
+            margin: 12px 0;
+        }
+
+        .comparison-table > div {
+            background: white;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .comparison-table > div:nth-child(3n+1) {
+            font-weight: 700;
+            background: rgba(139, 0, 0, 0.05);
+        }
+
+        .pros-cons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin: 12px 0;
+        }
+
+        .pros {
+            border-left: 4px solid var(--success);
+            padding-left: 14px;
+        }
+
+        .cons {
+            border-left: 4px solid var(--warning);
+            padding-left: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Playwright Chrome Extension Testing Explained</h1>
+
+        <div class="highlight-box">
+            <strong style="color: var(--chinese-red); font-size: 16px;">The Key Problem:</strong> Chrome extensions run in a special isolated context. You can't just do <code>page.goto('chrome-extension://...')</code>. Playwright needs to launch Chrome with the extension pre-loaded.
+        </div>
+
+        <h2>🤔 Why It's Different from Normal Testing</h2>
+
+        <div class="comparison-table">
+            <div><strong>Aspect</strong></div>
+            <div><strong>Normal Web App</strong></div>
+            <div><strong>Chrome Extension</strong></div>
+
+            <div>URL</div>
+            <div><code>https://example.com</code></div>
+            <div><code>chrome-extension://abc123/popup.html</code></div>
+
+            <div>Access Method</div>
+            <div>Navigate directly</div>
+            <div>Must load extension into browser first</div>
+
+            <div>Context</div>
+            <div>Single page context</div>
+            <div>Multiple: background, popup, content scripts</div>
+
+            <div>Permissions</div>
+            <div>Normal web permissions</td>
+            <div>Special extension APIs (tabs, storage, etc.)</div>
+
+            <div>Testing Setup</div>
+            <div><code>await page.goto(url)</code></div>
+            <div>Launch browser with <code>--load-extension</code> flag</div>
+        </div>
+
+        <h2>🔧 How Playwright Loads Extensions</h2>
+
+        <div class="card critical">
+            <h3>The Secret: <code>launchPersistentContext()</code></h3>
+            <p style="margin: 8px 0;">Playwright uses a special API that launches Chrome with command-line arguments to load your unpacked extension.</p>
+
+            <pre><code>import { chromium } from '@playwright/test';
+
+const context = await chromium.launchPersistentContext('', {
+  headless: false,  // ⚠️ MUST be false - extensions don't work in headless mode
+  args: [
+    '--disable-extensions-except=/path/to/your/extension',  // Allow ONLY this extension
+    '--load-extension=/path/to/your/extension',             // Load it
+  ],
+});</code></pre>
+
+            <div class="card warning" style="margin-top: 12px;">
+                <strong>⚠️ Critical Limitation:</strong> Extension testing <strong>CANNOT run in headless mode</strong>. Chrome's headless mode doesn't support extensions at all. You'll see a real browser window open during tests.
+            </div>
+        </div>
+
+        <h2>📦 Complete Setup for Nabokov Clipper</h2>
+
+        <div class="step-box">
+            <h3><span class="step-number">1</span>Build the Extension First</h3>
+            <p style="margin: 8px 0;">Before testing, you need a built extension directory:</p>
+            <pre><code>npm run build:extension
+# Creates: dist/extension/ with manifest.json, content.js, etc.</code></pre>
+        </div>
+
+        <div class="step-box">
+            <h3><span class="step-number">2</span>Configure Playwright to Load Extension</h3>
+            <pre><code>// playwright.config.ts
+import { defineConfig, devices } from '@playwright/test';
+import path from 'path';
+
+export default defineConfig({
+  testDir: './tests/e2e',
+
+  use: {
+    // Can't use baseURL for extensions - each test opens its own pages
+    trace: 'on-first-retry',
+  },
+
+  projects: [
+    {
+      name: 'extension-tests',
+      testMatch: /.*extension.*\.spec\.ts/,
+      use: {
+        ...devices['Desktop Chrome'],
+        // These are passed to test fixtures
+        launchOptions: {
+          headless: false,  // REQUIRED for extensions
+          args: [
+            `--disable-extensions-except=${path.join(__dirname, './dist/extension')}`,
+            `--load-extension=${path.join(__dirname, './dist/extension')}`,
+          ],
+        },
+      },
+    },
+  ],
+});</code></pre>
+        </div>
+
+        <div class="step-box">
+            <h3><span class="step-number">3</span>Create Extension Test Fixture</h3>
+            <p style="margin: 8px 0;">Make a reusable fixture that handles extension setup:</p>
+            <pre><code>// tests/fixtures/extension.ts
+import { test as base, chromium, BrowserContext } from '@playwright/test';
+import path from 'path';
+
+export const test = base.extend<{
+  context: BrowserContext;
+  extensionId: string;
+}>({
+  // Override context to use persistent context with extension
+  context: async ({}, use) => {
+    const pathToExtension = path.join(__dirname, '../../dist/extension');
+
+    const context = await chromium.launchPersistentContext('', {
+      headless: false,
+      args: [
+        `--disable-extensions-except=${pathToExtension}`,
+        `--load-extension=${pathToExtension}`,
+      ],
+    });
+
+    await use(context);
+    await context.close();
+  },
+
+  // Provide extension ID to tests
+  extensionId: async ({ context }, use) => {
+    // Extension ID is in the service worker URL
+    let [background] = context.serviceWorkers();
+
+    // If not immediately available, wait for it
+    if (!background) {
+      background = await context.waitForEvent('serviceworker');
+    }
+
+    const extensionId = background.url().split('/')[2];
+    await use(extensionId);
+  },
+});
+
+export { expect } from '@playwright/test';</code></pre>
+        </div>
+
+        <div class="step-box">
+            <h3><span class="step-number">4</span>Write Extension Tests Using Fixture</h3>
+            <pre><code>// tests/e2e/extension.spec.ts
+import { test, expect } from '../fixtures/extension';
+
+test('should load extension and activate element selector', async ({
+  context,
+  extensionId
+}) => {
+  // Open a new page in the context (extension is already loaded)
+  const page = await context.newPage();
+  await page.goto('https://example.com');
+
+  // Press keyboard shortcut to activate selector
+  await page.keyboard.press('Meta+Shift+C');
+
+  // Verify element selector overlay appears
+  const overlay = page.locator('.nabokov-overlay');
+  await expect(overlay).toBeVisible();
+
+  // Hover over h1 element
+  const h1 = page.locator('h1').first();
+  await h1.hover();
+
+  // Verify overlay moves to h1 position
+  await expect(overlay).toHaveCSS('display', 'block');
+
+  // Click to capture
+  await h1.click();
+
+  // Verify floating chat appears
+  const chat = page.locator('[data-testid="floating-chat"]');
+  await expect(chat).toBeVisible();
+});</code></pre>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>🎯 Testing Different Extension Parts</h2>
+
+        <div class="two-column-layout">
+            <div class="card">
+                <h4>Testing Content Scripts</h4>
+                <ul class="dense-list">
+                    <li>Content scripts inject into regular web pages</li>
+                    <li>Test by navigating to a page</li>
+                    <li>Interact with injected UI elements</li>
+                </ul>
+                <pre><code>const page = await context.newPage();
+await page.goto('https://example.com');
+
+// Content script injected automatically
+const injectedElement = page.locator('.my-extension-ui');
+await expect(injectedElement).toBeVisible();</code></pre>
+            </div>
+
+            <div class="card">
+                <h4>Testing Extension Popup</h4>
+                <ul class="dense-list">
+                    <li>Popup has special <code>chrome-extension://</code> URL</li>
+                    <li>Must navigate to it explicitly</li>
+                    <li>Can interact like normal page</li>
+                </ul>
+                <pre><code>const popupPage = await context.newPage();
+await popupPage.goto(
+  `chrome-extension://${extensionId}/popup.html`
+);
+
+const statsText = popupPage.locator('.stats');
+await expect(statsText).toContainText('5 cards saved');</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span>Testing Background Service Worker</span>
+            </div>
+            <div class="collapsible-content">
+                <p style="margin-bottom: 10px;">Background scripts are trickier - they don't have a visible UI. You test them by:</p>
+
+                <ol>
+                    <li>Triggering actions that cause background script to run</li>
+                    <li>Checking side effects (storage changes, tab modifications, etc.)</li>
+                </ol>
+
+                <pre><code>// tests/e2e/background.spec.ts
+test('background script saves data to chrome.storage', async ({ context, page }) => {
+  await page.goto('https://example.com');
+
+  // Trigger something that uses background script
+  await page.keyboard.press('Meta+Shift+C');
+  await page.locator('h1').click();
+  await page.locator('button:has-text("Export")').click();
+
+  // Check chrome.storage was updated
+  const storageData = await page.evaluate(() => {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(null, resolve);
+    });
+  });
+
+  expect(storageData).toHaveProperty('cards');
+});</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span>Testing IndexedDB from Extension</span>
+            </div>
+            <div class="collapsible-content">
+                <p style="margin-bottom: 10px;">Extensions can use IndexedDB like normal pages. Access it via <code>page.evaluate()</code>:</p>
+
+                <pre><code>test('should save card to IndexedDB', async ({ page }) => {
+  await page.goto('https://example.com');
+
+  // ... trigger card save ...
+
+  // Check IndexedDB
+  const cards = await page.evaluate(async () => {
+    return new Promise((resolve) => {
+      const request = indexedDB.open('nabokov-cards', 1);
+
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction('cards', 'readonly');
+        const store = tx.objectStore('cards');
+        const getAll = store.getAll();
+
+        getAll.onsuccess = () => resolve(getAll.result);
+      };
+    });
+  });
+
+  expect(cards).toHaveLength(1);
+  expect(cards[0]).toHaveProperty('element.html');
+});</code></pre>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>⚠️ Gotchas & Limitations</h2>
+
+        <table>
+            <tr>
+                <th style="width: 30%;">Issue</th>
+                <th style="width: 70%;">Solution / Workaround</th>
+            </tr>
+            <tr>
+                <td><strong>Must run headed</strong></td>
+                <td>Extensions don't work in headless mode. CI needs a virtual display (Xvfb) or use <code>xvfb-run</code></td>
+            </tr>
+            <tr>
+                <td><strong>Slow startup</strong></td>
+                <td>Launching with extension takes ~2-3 seconds. Use <code>context</code> fixture to reuse across tests</td>
+            </tr>
+            <tr>
+                <td><strong>Extension ID changes</strong></td>
+                <td>Unpacked extensions get random IDs. Extract from service worker URL dynamically</td>
+            </tr>
+            <tr>
+                <td><strong>Can't test install flow</strong></td>
+                <td>Extension is pre-loaded, can't test first-time install experience</td>
+            </tr>
+            <tr>
+                <td><strong>Chrome Web Store not accessible</strong></td>
+                <td>Can only test unpacked/developer extensions, not published ones</td>
+            </tr>
+            <tr>
+                <td><strong>Permissions popup</strong></td>
+                <td>First run may show permissions dialog - handle with <code>context.grantPermissions()</code></td>
+            </tr>
+        </table>
+
+        <div class="divider"></div>
+
+        <h2>🚀 CI/CD Setup (GitHub Actions)</h2>
+
+        <div class="card warning">
+            <h4>GitHub Actions needs special config for headed browser:</h4>
+            <pre><code># .github/workflows/test-extension.yml
+name: Extension E2E Tests
+
+on: [push, pull_request]
+
+jobs:
+  test-extension:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run build:extension
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run extension tests with virtual display
+        run: xvfb-run npm run test:e2e:extension
+        # xvfb-run creates a virtual display so headed Chrome can run
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/</code></pre>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>📋 Practical Testing Strategy for Nabokov</h2>
+
+        <div class="card success">
+            <h3>Recommended Approach</h3>
+
+            <div class="pros-cons">
+                <div class="pros">
+                    <h4 style="color: var(--success); margin: 0 0 8px 0;">✅ DO Test with Playwright:</h4>
+                    <ul class="dense-list">
+                        <li>Content script injection</li>
+                        <li>Element selector UI appearing</li>
+                        <li>FloatingChat positioning</li>
+                        <li>Keyboard shortcuts triggering actions</li>
+                        <li>IndexedDB save operations</li>
+                        <li>Extension popup UI</li>
+                    </ul>
+                </div>
+
+                <div class="cons">
+                    <h4 style="color: var(--warning); margin: 0 0 8px 0;">⚠️ Consider Manual Testing:</h4>
+                    <ul class="dense-list">
+                        <li>Cross-site behavior (many domains)</li>
+                        <li>Visual regression testing</li>
+                        <li>Browser-specific quirks</li>
+                        <li>Extension update flows</li>
+                        <li>Real-world website complexity</li>
+                        <li>Performance under load</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Hybrid Strategy</h3>
+            <p style="margin-bottom: 10px;"><strong>For Nabokov Clipper, I recommend:</strong></p>
+
+            <div class="step-box">
+                <strong>1. Playwright (15 tests) - Critical Paths Only</strong>
+                <ul class="dense-list" style="margin-top: 8px;">
+                    <li>Basic activation flow (keyboard → selector → chat → save)</li>
+                    <li>IndexedDB persistence</li>
+                    <li>Extension popup functionality</li>
+                    <li>Key edge cases (errors, network issues)</li>
+                </ul>
+            </div>
+
+            <div class="step-box">
+                <strong>2. Manual Testing (20 scenarios) - Complex Interactions</strong>
+                <ul class="dense-list" style="margin-top: 8px;">
+                    <li>Test on real websites (GitHub, Twitter, Medium, etc.)</li>
+                    <li>Visual validation (CSS, positioning, responsive)</li>
+                    <li>Browser compatibility (Chrome, Edge, Brave)</li>
+                    <li>Performance testing (many cards, large elements)</li>
+                </ul>
+            </div>
+
+            <div class="step-box">
+                <strong>3. Separate Canvas App Tests (Fast & Headless)</strong>
+                <ul class="dense-list" style="margin-top: 8px;">
+                    <li>Canvas app can be tested normally (no extension)</li>
+                    <li>Run in headless mode ✓</li>
+                    <li>Fast CI/CD ✓</li>
+                    <li>Test React Flow, IndexedDB, UI independently</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>🎬 Getting Started - Quick Commands</h2>
+
+        <div class="card critical">
+            <pre><code># 1. Install Playwright
+npm install -D @playwright/test
+
+# 2. Build your extension
+npm run build:extension
+
+# 3. Run extension tests (will open browser window)
+npx playwright test tests/e2e/extension.spec.ts --headed
+
+# 4. Debug mode (pauses at each step)
+npx playwright test tests/e2e/extension.spec.ts --debug
+
+# 5. Run all tests except extension (fast, headless)
+npx playwright test --grep-invert extension</code></pre>
+        </div>
+
+        <div class="highlight-box" style="text-align: center; margin-top: 20px;">
+            <h3 style="margin-bottom: 10px;">💡 Key Takeaway</h3>
+            <p style="font-size: 14px; margin: 0;">
+                Extension testing with Playwright <strong>works but requires special setup</strong>. You need:
+                <br><br>
+                ✓ Built extension directory<br>
+                ✓ <code>launchPersistentContext()</code> with extension flags<br>
+                ✓ Headed mode (no headless)<br>
+                ✓ Virtual display on CI (xvfb)<br>
+                <br>
+                <strong>Best practice:</strong> Keep extension E2E tests minimal (15 critical paths), do heavy testing on the standalone canvas app (fast & headless).
+            </p>
+        </div>
+
+    </div>
+
+    <script>
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+                header.parentElement.classList.toggle('open');
+            });
+        });
+    </script>
+</body>
+</html>

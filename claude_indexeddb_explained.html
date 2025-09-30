@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexedDB Complete Guide</title>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --ink-black: #1a1a1a;
+            --paper-beige: #F5F5DC;
+            --light-cream: #FFFEF0;
+            --level-1: #8B0000;
+            --level-2: #CD5C5C;
+            --level-3: #555;
+            --level-4: #777;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            line-height: 1.3;
+            font-size: 14px;
+            padding: 8px;
+        }
+
+        .container { max-width: 100%; margin: 0; padding: 0; }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 900;
+            margin: 6px 0 12px 0;
+            padding: 8px;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 12px 0 6px 0;
+            padding: 6px 8px;
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.03);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 8px 0 4px 0;
+            padding: 4px 0 4px 12px;
+            color: var(--level-2);
+            border-left: 3px solid var(--chinese-gold);
+        }
+
+        h4 {
+            font-size: 13px;
+            font-weight: 600;
+            margin: 6px 0 3px 16px;
+            color: var(--level-3);
+        }
+
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 8px 0;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 0, 0, 0.15);
+            border-radius: 3px;
+            padding: 8px;
+            margin: 6px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .card.critical {
+            border: 2px solid var(--chinese-red);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+        }
+
+        pre, code {
+            background: linear-gradient(135deg, rgba(245, 245, 220, 0.4), rgba(255, 255, 255, 0.6));
+            border: 1px solid rgba(139, 0, 0, 0.1);
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.3;
+        }
+
+        code { padding: 2px 5px; border-radius: 2px; }
+        pre { padding: 8px; margin: 6px 0; overflow-x: auto; border-radius: 3px; }
+        pre code { background: none; border: none; padding: 0; }
+
+        .dense-list {
+            list-style: none;
+            margin-left: 12px;
+        }
+
+        .dense-list li {
+            padding: 3px 0 3px 14px;
+            position: relative;
+        }
+
+        .dense-list li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--chinese-red);
+            font-size: 10px;
+        }
+
+        .dense-list li strong {
+            color: var(--level-2);
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 13px;
+            background: white;
+        }
+
+        th, td {
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        th {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.08), rgba(255, 215, 0, 0.05));
+            font-weight: 600;
+            color: var(--level-1);
+        }
+
+        .collapsible { margin: 6px 0; width: 100%; }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 6px 10px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.04), rgba(255, 215, 0, 0.02));
+            border-left: 3px solid var(--chinese-gold);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.08), rgba(255, 215, 0, 0.04));
+        }
+
+        .collapsible-header .arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-size: 11px;
+            margin-right: 6px;
+        }
+
+        .collapsible.open .arrow { transform: rotate(90deg); }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 10px;
+            margin-left: 12px;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 8000px;
+            padding: 10px;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
+            border: 2px solid var(--chinese-gold);
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 4px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, var(--chinese-red), transparent);
+            margin: 12px 0;
+        }
+
+        .flow-diagram {
+            background: white;
+            border: 2px solid var(--chinese-gold);
+            padding: 12px;
+            margin: 10px 0;
+            font-family: 'SF Mono', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 2px 4px 2px 0;
+        }
+
+        .badge.good { background: linear-gradient(135deg, #2d7d2d, #4a9d4a); }
+        .badge.bad { background: linear-gradient(135deg, #8B0000, #CD5C5C); }
+        .badge.neutral { background: linear-gradient(135deg, #666, #888); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📦 IndexedDB: Complete Guide</h1>
+
+        <div class="highlight-box">
+            <strong style="color: var(--chinese-red); font-size: 15px;">What is IndexedDB?</strong><br>
+            A low-level API for client-side storage of significant amounts of structured data (including files/blobs). Think of it as a <strong>NoSQL database built into your browser</strong> that persists data locally and works offline.
+        </div>
+
+        <h2>🎯 Core Concepts (Most Important First)</h2>
+
+        <div class="card critical">
+            <h3>The 3 Essential Components</h3>
+            <div class="two-column-layout" style="margin-top: 8px;">
+                <div>
+                    <h4>1. Database</h4>
+                    <ul class="dense-list">
+                        <li><strong>Container for everything</strong></li>
+                        <li>Per-origin (domain-specific)</li>
+                        <li>Has a name and version number</li>
+                        <li>Example: <code>"nabokov-cards"</code></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>2. Object Store</h4>
+                    <ul class="dense-list">
+                        <li><strong>Like a SQL table</strong></li>
+                        <li>Stores JavaScript objects</li>
+                        <li>Each has a key path or auto-increment</li>
+                        <li>Example: <code>"cards"</code> store</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="margin-top: 8px;">
+                <h4>3. Index</h4>
+                <ul class="dense-list">
+                    <li><strong>Fast lookup by specific field</strong></li>
+                    <li>Like SQL indexes - speeds up queries</li>
+                    <li>Example: Index on <code>metadata.created</code> for date sorting</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>📊 IndexedDB vs Other Storage</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Storage Type</th>
+                    <th>Size Limit</th>
+                    <th>Data Type</th>
+                    <th>Async?</th>
+                    <th>Best For</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>IndexedDB</strong></td>
+                    <td>~50MB-unlimited (varies)</td>
+                    <td>Objects, Files, Blobs</td>
+                    <td>✅ Yes</td>
+                    <td>Large structured data, offline apps</td>
+                </tr>
+                <tr>
+                    <td>localStorage</td>
+                    <td>5-10MB</td>
+                    <td>Strings only</td>
+                    <td>❌ No</td>
+                    <td>Small settings, tokens</td>
+                </tr>
+                <tr>
+                    <td>sessionStorage</td>
+                    <td>5-10MB</td>
+                    <td>Strings only</td>
+                    <td>❌ No</td>
+                    <td>Temporary session data</td>
+                </tr>
+                <tr>
+                    <td>cookies</td>
+                    <td>4KB per cookie</td>
+                    <td>Strings</td>
+                    <td>❌ No</td>
+                    <td>Authentication, tracking</td>
+                </tr>
+                <tr>
+                    <td>Cache API</td>
+                    <td>Large</td>
+                    <td>HTTP requests/responses</td>
+                    <td>✅ Yes</td>
+                    <td>Service worker caching</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>🔍 How IndexedDB Actually Works</h2>
+
+        <div class="flow-diagram">
+┌─────────────────────────────────────────────────────────────┐
+│                    IndexedDB Architecture                   │
+└─────────────────────────────────────────────────────────────┘
+
+Browser
+  │
+  ├── IndexedDB Engine (per origin)
+  │     │
+  │     ├── Database: "nabokov-cards" (version 1)
+  │     │     │
+  │     │     ├── Object Store: "cards"
+  │     │     │     │
+  │     │     │     ├── Key: "uuid-123"
+  │     │     │     │   Value: { id, element, conversation, ... }
+  │     │     │     │
+  │     │     │     ├── Key: "uuid-456"
+  │     │     │     │   Value: { id, element, conversation, ... }
+  │     │     │     │
+  │     │     │     └── Indexes:
+  │     │     │           ├── "by-created" → sorts by metadata.created
+  │     │     │           └── "by-url" → lookup by source.url
+  │     │     │
+  │     │     └── Object Store: "settings" (optional)
+  │     │           └── Key-value pairs for app config
+  │     │
+  │     └── Database: "other-app-db" (isolated)
+  │
+  └── Disk Storage (persistent)
+        </div>
+
+        <h2>💻 Basic Usage: Step-by-Step</h2>
+
+        <div class="collapsible open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span>Step 1: Open/Create Database</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>// Request to open database (creates if doesn't exist)
+const request = indexedDB.open('nabokov-cards', 1);
+//                               ↑ name         ↑ version
+
+// This is ASYNC - need event handlers
+request.onerror = (event) => {
+  console.error('Database error:', event.target.error);
+};
+
+request.onsuccess = (event) => {
+  const db = event.target.result;
+  console.log('Database opened:', db);
+};
+
+// Called ONLY when database is created or version changes
+request.onupgradeneeded = (event) => {
+  const db = event.target.result;
+
+  // Create object store if it doesn't exist
+  if (!db.objectStoreNames.contains('cards')) {
+    const objectStore = db.createObjectStore('cards', { keyPath: 'id' });
+    //                                                    ↑ primary key field
+
+    // Create indexes for fast lookups
+    objectStore.createIndex('by-created', 'metadata.created', { unique: false });
+    objectStore.createIndex('by-url', 'source.url', { unique: false });
+  }
+};</code></pre>
+
+                <div class="card" style="margin-top: 8px;">
+                    <strong>Key Points:</strong>
+                    <ul class="dense-list">
+                        <li><strong>Version number:</strong> Increment to trigger schema changes</li>
+                        <li><strong>onupgradeneeded:</strong> Only place you can modify schema (add stores/indexes)</li>
+                        <li><strong>keyPath:</strong> Field that acts as primary key (must be unique)</li>
+                        <li><strong>Indexes:</strong> Optional but make queries much faster</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span>Step 2: Transactions & CRUD Operations</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Why Transactions?</h4>
+                <p style="margin: 6px 0;">All database operations happen in <strong>transactions</strong> for data integrity. Think: "atomic operations that either fully succeed or fully fail."</p>
+
+                <div class="two-column-layout" style="margin-top: 8px;">
+                    <div>
+                        <h4>CREATE (Add)</h4>
+                        <pre><code>// Start a read-write transaction
+const tx = db.transaction(['cards'], 'readwrite');
+const store = tx.objectStore('cards');
+
+const card = {
+  id: 'uuid-123',
+  element: { html: '...' },
+  conversation: [],
+  // ... rest of card data
+};
+
+// Add to store
+const request = store.add(card);
+
+request.onsuccess = () => {
+  console.log('Card added!');
+};
+
+request.onerror = () => {
+  console.error('Failed to add');
+};</code></pre>
+                    </div>
+
+                    <div>
+                        <h4>READ (Get)</h4>
+                        <pre><code>// Read-only transaction (faster)
+const tx = db.transaction(['cards'], 'readonly');
+const store = tx.objectStore('cards');
+
+// Get single item by key
+const request = store.get('uuid-123');
+
+request.onsuccess = (event) => {
+  const card = event.target.result;
+  console.log('Found card:', card);
+};
+
+// Get ALL items
+const getAllRequest = store.getAll();
+getAllRequest.onsuccess = (event) => {
+  const allCards = event.target.result;
+  console.log('All cards:', allCards);
+};</code></pre>
+                    </div>
+                </div>
+
+                <div class="two-column-layout" style="margin-top: 8px;">
+                    <div>
+                        <h4>UPDATE (Put)</h4>
+                        <pre><code>const tx = db.transaction(['cards'], 'readwrite');
+const store = tx.objectStore('cards');
+
+// Get existing card
+const getRequest = store.get('uuid-123');
+getRequest.onsuccess = (event) => {
+  const card = event.target.result;
+
+  // Modify it
+  card.conversation.push({
+    role: 'user',
+    content: 'New message'
+  });
+
+  // Put back (overwrites)
+  const putRequest = store.put(card);
+  putRequest.onsuccess = () => {
+    console.log('Card updated!');
+  };
+};</code></pre>
+                    </div>
+
+                    <div>
+                        <h4>DELETE</h4>
+                        <pre><code>const tx = db.transaction(['cards'], 'readwrite');
+const store = tx.objectStore('cards');
+
+const request = store.delete('uuid-123');
+
+request.onsuccess = () => {
+  console.log('Card deleted!');
+};
+
+// Delete ALL items in store
+const clearRequest = store.clear();
+clearRequest.onsuccess = () => {
+  console.log('All cards deleted!');
+};</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span>Step 3: Querying with Indexes & Cursors</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Using Indexes for Fast Queries</h4>
+                <pre><code>const tx = db.transaction(['cards'], 'readonly');
+const store = tx.objectStore('cards');
+
+// Get index
+const index = store.index('by-created');
+
+// Query by index (get all cards sorted by creation date)
+const request = index.getAll();
+request.onsuccess = (event) => {
+  const sortedCards = event.target.result;
+  console.log('Cards by date:', sortedCards);
+};
+
+// Get cards from specific URL
+const urlIndex = store.index('by-url');
+const urlRequest = urlIndex.getAll('https://example.com');
+urlRequest.onsuccess = (event) => {
+  const cardsFromUrl = event.target.result;
+};</code></pre>
+
+                <h4 style="margin-top: 12px;">Using Cursors (Advanced Iteration)</h4>
+                <pre><code>// Cursor lets you iterate through results one-by-one
+const tx = db.transaction(['cards'], 'readonly');
+const store = tx.objectStore('cards');
+
+const request = store.openCursor();
+
+request.onsuccess = (event) => {
+  const cursor = event.target.result;
+
+  if (cursor) {
+    console.log('Card:', cursor.key, cursor.value);
+
+    // Move to next item
+    cursor.continue();
+  } else {
+    console.log('Done iterating');
+  }
+};</code></pre>
+            </div>
+        </div>
+
+        <h2>🎁 Modern Wrapper: idb Library</h2>
+
+        <div class="highlight-box">
+            <strong>Why use idb?</strong> Native IndexedDB is callback-based and verbose. The <code>idb</code> library wraps it with Promises/async-await for cleaner code.
+        </div>
+
+        <div class="two-column-layout">
+            <div>
+                <h4>❌ Native IndexedDB (Ugly)</h4>
+                <pre><code>const request = indexedDB.open('db', 1);
+
+request.onupgradeneeded = (event) => {
+  const db = event.target.result;
+  db.createObjectStore('cards', { keyPath: 'id' });
+};
+
+request.onsuccess = (event) => {
+  const db = event.target.result;
+  const tx = db.transaction(['cards'], 'readwrite');
+  const store = tx.objectStore('cards');
+  const addRequest = store.add(card);
+
+  addRequest.onsuccess = () => {
+    console.log('Added!');
+  };
+};</code></pre>
+            </div>
+
+            <div>
+                <h4>✅ With idb Library (Clean)</h4>
+                <pre><code>import { openDB } from 'idb';
+
+const db = await openDB('db', 1, {
+  upgrade(db) {
+    db.createObjectStore('cards', { keyPath: 'id' });
+  },
+});
+
+// Add card
+await db.add('cards', card);
+console.log('Added!');
+
+// Get card
+const card = await db.get('cards', 'uuid-123');
+
+// Get all
+const allCards = await db.getAll('cards');</code></pre>
+            </div>
+        </div>
+
+        <h2>🏗️ Complete Example: Nabokov Card Database</h2>
+
+        <div class="collapsible open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span>Full Implementation with idb</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>// db.ts
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
+
+// Define TypeScript schema
+interface NabokovDB extends DBSchema {
+  cards: {
+    key: string;
+    value: ClippedCard;
+    indexes: {
+      'by-created': number;
+      'by-url': string;
+    };
+  };
+}
+
+class CardDatabase {
+  private db: IDBPDatabase<NabokovDB> | null = null;
+
+  async init() {
+    this.db = await openDB<NabokovDB>('nabokov-cards', 1, {
+      upgrade(db) {
+        const store = db.createObjectStore('cards', { keyPath: 'id' });
+        store.createIndex('by-created', 'metadata.created');
+        store.createIndex('by-url', 'source.url');
+      },
+    });
+  }
+
+  async addCard(card: ClippedCard): Promise<string> {
+    return this.db!.add('cards', card);
+  }
+
+  async getCard(id: string): Promise<ClippedCard | undefined> {
+    return this.db!.get('cards', id);
+  }
+
+  async getAllCards(): Promise<ClippedCard[]> {
+    return this.db!.getAll('cards');
+  }
+
+  async getCardsByUrl(url: string): Promise<ClippedCard[]> {
+    return this.db!.getAllFromIndex('cards', 'by-url', url);
+  }
+
+  async getCardsSortedByDate(): Promise<ClippedCard[]> {
+    return this.db!.getAllFromIndex('cards', 'by-created');
+  }
+
+  async updateCard(id: string, updates: Partial<ClippedCard>): Promise<string> {
+    const card = await this.getCard(id);
+    if (!card) throw new Error('Card not found');
+
+    const updated = { ...card, ...updates };
+    return this.db!.put('cards', updated);
+  }
+
+  async deleteCard(id: string): Promise<void> {
+    return this.db!.delete('cards', id);
+  }
+
+  async searchCards(query: string): Promise<ClippedCard[]> {
+    const allCards = await this.getAllCards();
+    return allCards.filter(card =>
+      card.element.html.toLowerCase().includes(query.toLowerCase()) ||
+      card.source.title.toLowerCase().includes(query.toLowerCase())
+    );
+  }
+}
+
+// Singleton instance
+export const cardDB = new CardDatabase();
+
+// Usage in app
+await cardDB.init();
+
+// Add a card
+await cardDB.addCard({
+  id: crypto.randomUUID(),
+  element: { html: '<div>Content</div>', /* ... */ },
+  conversation: [],
+  // ...
+});
+
+// Get all cards
+const cards = await cardDB.getAllCards();
+
+// Update card
+await cardDB.updateCard('uuid-123', {
+  conversation: [...existingConversation, newMessage]
+});</code></pre>
+            </div>
+        </div>
+
+        <h2>⚡ Performance Considerations</h2>
+
+        <div class="comparison-grid">
+            <div class="card">
+                <h4><span class="badge good">DO</span> Batch Operations</h4>
+                <pre><code>// Good: Single transaction
+const tx = db.transaction(['cards'], 'readwrite');
+const store = tx.objectStore('cards');
+
+await store.add(card1);
+await store.add(card2);
+await store.add(card3);
+
+await tx.done;</code></pre>
+            </div>
+
+            <div class="card">
+                <h4><span class="badge bad">DON'T</span> Multiple Transactions</h4>
+                <pre><code>// Bad: 3 separate transactions
+await db.add('cards', card1);
+await db.add('cards', card2);
+await db.add('cards', card3);
+
+// Much slower!</code></pre>
+            </div>
+
+            <div class="card">
+                <h4><span class="badge good">DO</span> Use Indexes</h4>
+                <pre><code>// Fast: Index lookup
+const cards = await db
+  .getAllFromIndex(
+    'cards',
+    'by-url',
+    url
+  );</code></pre>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 8px;">
+            <h4>Storage Limits & Quotas</h4>
+            <ul class="dense-list">
+                <li><strong>Chrome:</strong> Up to 80% of disk space (temporary) or unlimited (persistent)</li>
+                <li><strong>Firefox:</strong> Up to 50% of free disk space (temporary) or 2GB (persistent)</li>
+                <li><strong>Safari:</strong> ~1GB limit</li>
+                <li><strong>Check quota:</strong> <code>navigator.storage.estimate()</code></li>
+                <li><strong>Request persistent:</strong> <code>navigator.storage.persist()</code></li>
+            </ul>
+        </div>
+
+        <h2>🔧 Common Patterns</h2>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span>Pattern: Pagination</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>async function getCardsPaginated(page: number, pageSize: number) {
+  const tx = db.transaction(['cards'], 'readonly');
+  const store = tx.objectStore('cards');
+  const index = store.index('by-created');
+
+  let count = 0;
+  let results: ClippedCard[] = [];
+  const start = page * pageSize;
+  const end = start + pageSize;
+
+  const cursor = await index.openCursor(null, 'prev'); // Newest first
+
+  for await (const cursor of cursorIterate(cursor)) {
+    if (count >= start && count < end) {
+      results.push(cursor.value);
+    }
+    count++;
+    if (count >= end) break;
+  }
+
+  return results;
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span>Pattern: Syncing with Backend</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>// Offline-first pattern
+async function saveCard(card: ClippedCard) {
+  // 1. Save to IndexedDB immediately
+  await cardDB.addCard(card);
+
+  // 2. Try to sync to server
+  try {
+    await fetch('/api/cards', {
+      method: 'POST',
+      body: JSON.stringify(card),
+    });
+
+    // Mark as synced
+    await cardDB.updateCard(card.id, { synced: true });
+  } catch (error) {
+    // Network error - will sync later
+    console.log('Offline, will sync later');
+  }
+}
+
+// Background sync when online
+window.addEventListener('online', async () => {
+  const unsyncedCards = await cardDB.getUnsyncedCards();
+  for (const card of unsyncedCards) {
+    await syncCard(card);
+  }
+});</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span>Pattern: Migration (Version Upgrades)</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>const db = await openDB('nabokov-cards', 2, {
+  upgrade(db, oldVersion, newVersion, transaction) {
+    // Version 0 → 1: Initial schema
+    if (oldVersion < 1) {
+      const store = db.createObjectStore('cards', { keyPath: 'id' });
+      store.createIndex('by-created', 'metadata.created');
+    }
+
+    // Version 1 → 2: Add tags field
+    if (oldVersion < 2) {
+      const store = transaction.objectStore('cards');
+      store.createIndex('by-tag', 'metadata.tags', { multiEntry: true });
+
+      // Migrate existing data
+      const cursor = await store.openCursor();
+      for await (const cursor of cursorIterate(cursor)) {
+        const card = cursor.value;
+        card.metadata.tags = card.metadata.tags || [];
+        cursor.update(card);
+      }
+    }
+  },
+});</code></pre>
+            </div>
+        </div>
+
+        <h2>❌ Common Mistakes</h2>
+
+        <div class="card" style="background: rgba(139, 0, 0, 0.05);">
+            <ul class="dense-list">
+                <li><strong>Forgetting transactions close:</strong> Always use <code>await tx.done</code> or wait for request completion</li>
+                <li><strong>Schema changes outside onupgradeneeded:</strong> Can only modify schema during upgrade</li>
+                <li><strong>Not handling errors:</strong> Always add error handlers or try-catch</li>
+                <li><strong>Blocking the main thread:</strong> IndexedDB is async, but iterating huge datasets can still block</li>
+                <li><strong>Storing non-cloneable objects:</strong> Can't store functions, DOM elements, or circular references</li>
+            </ul>
+        </div>
+
+        <h2>🎓 Summary</h2>
+
+        <div class="highlight-box">
+            <h3>When to use IndexedDB:</h3>
+            <ul class="dense-list">
+                <li><strong>✅ Large amounts of data</strong> (images, conversations, documents)</li>
+                <li><strong>✅ Structured data</strong> (objects with relationships)</li>
+                <li><strong>✅ Offline-first apps</strong> (PWAs, web apps that work without internet)</li>
+                <li><strong>✅ Complex queries</strong> (need indexes, sorting, filtering)</li>
+            </ul>
+
+            <h3 style="margin-top: 12px;">When NOT to use IndexedDB:</h3>
+            <ul class="dense-list">
+                <li><strong>❌ Small settings/config</strong> (use localStorage)</li>
+                <li><strong>❌ Simple key-value pairs</strong> (localStorage is simpler)</li>
+                <li><strong>❌ Server-authoritative data</strong> (fetch from API instead)</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <script>
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+                header.parentElement.classList.toggle('open');
+            });
+        });
+    </script>
+</body>
+</html>

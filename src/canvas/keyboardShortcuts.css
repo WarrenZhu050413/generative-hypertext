@@ -1,0 +1,148 @@
+/**
+ * CSS Animations for Keyboard Shortcuts System
+ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUpFade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Toggle slider animation */
+input[type="checkbox"]:checked + .toggle-slider {
+  background: #D4AF37;
+}
+
+input[type="checkbox"]:checked + .toggle-slider::before {
+  transform: translateX(24px);
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+/* Hover effects */
+button:hover,
+.button:hover {
+  opacity: 0.8;
+  transform: translateY(-1px);
+}
+
+button:active,
+.button:active {
+  transform: translateY(0);
+}
+
+/* Keyboard shortcut item hover */
+.shortcut-item:hover {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(212, 175, 55, 0.4) !important;
+}
+
+/* Theme option hover */
+input[type="radio"]:checked + .theme-card {
+  border-color: #D4AF37 !important;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+}
+
+.theme-card:hover {
+  border-color: rgba(212, 175, 55, 0.5) !important;
+}
+
+/* Filter option hover */
+.filter-option:hover {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(184, 156, 130, 0.4) !important;
+}
+
+/* Close button hover */
+.close-button:hover {
+  background: rgba(184, 156, 130, 0.2) !important;
+  color: #5C4D42 !important;
+}
+
+/* Search input focus */
+input[type="text"]:focus {
+  border-color: rgba(212, 175, 55, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+/* Screen reader only text */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Focus visible styles for accessibility */
+*:focus-visible {
+  outline: 2px solid #D4AF37;
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling for filter panel */
+.filter-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.filter-panel::-webkit-scrollbar-track {
+  background: rgba(184, 156, 130, 0.1);
+  border-radius: 4px;
+}
+
+.filter-panel::-webkit-scrollbar-thumb {
+  background: rgba(184, 156, 130, 0.3);
+  border-radius: 4px;
+}
+
+.filter-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(184, 156, 130, 0.5);
+}

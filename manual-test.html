@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Storage Inspector</title>
+</head>
+<body>
+  <h1>Nabokov Storage Test</h1>
+  <button onclick="checkStorage()">Check Storage</button>
+  <pre id="output"></pre>
+  
+  <script>
+    async function checkStorage() {
+      const output = document.getElementById('output');
+      
+      try {
+        // Read from chrome.storage.local
+        const result = await chrome.storage.local.get(['cards']);
+        output.textContent = JSON.stringify(result, null, 2);
+        
+        console.log('[Manual Test] Storage contents:', result);
+        console.log('[Manual Test] Cards count:', result.cards?.length || 0);
+        
+        if (result.cards && result.cards.length > 0) {
+          console.log('[Manual Test] Sample card:', result.cards[0]);
+        }
+      } catch (error) {
+        output.textContent = 'Error: ' + error.message;
+        console.error('[Manual Test] Error:', error);
+      }
+    }
+    
+    // Auto-check on load
+    window.addEventListener('load', checkStorage);
+  </script>
+</body>
+</html>
