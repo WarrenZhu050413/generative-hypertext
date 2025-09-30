@@ -6,7 +6,7 @@ A Chrome extension for clipping web content and organizing it in a visual canvas
 
 ```
 NabokovsWeb/
-├── src/
+├── src/                # Source code
 │   ├── components/     # React components
 │   ├── utils/          # Utility functions
 │   ├── types/          # TypeScript type definitions
@@ -14,12 +14,20 @@ NabokovsWeb/
 │   ├── content/        # Content scripts
 │   ├── canvas/         # Canvas application
 │   └── manifest.json   # Chrome extension manifest
-├── public/             # Static assets
-├── tests/
+├── public/             # Static assets (icons, etc.)
+├── tests/              # Unit and E2E tests
 │   ├── unit/          # Unit tests
 │   ├── e2e/           # End-to-end tests
-│   └── fixtures/      # Test fixtures
-└── dist/              # Build output
+│   ├── fixtures/      # Test fixtures
+│   └── utils/         # Test utilities
+├── scripts/            # Build and utility scripts
+├── docs/               # Documentation
+│   ├── screenshots/   # Screenshots for documentation
+│   └── *.md          # Various documentation files
+├── test-scripts/       # Manual testing scripts and HTML test pages
+├── archive/            # Deprecated/old code
+├── dist/              # Build output (gitignored)
+└── coverage/          # Test coverage reports (gitignored)
 ```
 
 ## Development

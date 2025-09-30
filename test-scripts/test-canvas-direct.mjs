@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 async function test() {
   console.log('🧪 Testing Canvas Page Directly\n');
 
-  const ext = path.join(__dirname, 'dist');
+  const ext = path.join(__dirname, '..', 'dist');
   const ctx = await chromium.launchPersistentContext('', {
     headless: false,
     args: [
