@@ -129,12 +129,12 @@ export const DEFAULT_SHORTCUTS: Record<string, Omit<KeyboardShortcut, 'handler'>
     category: 'filters',
     enabled: true,
   },
-  openNewTab: {
-    id: 'openNewTab',
+  createNote: {
+    id: 'createNote',
     key: 'n',
     modifier: 'meta',
-    description: 'Open canvas in new tab',
-    category: 'navigation',
+    description: 'Create new note',
+    category: 'canvas',
     enabled: true,
   },
   escape: {

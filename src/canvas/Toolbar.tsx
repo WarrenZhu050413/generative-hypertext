@@ -12,6 +12,7 @@ interface ToolbarProps {
   resultCount: number;
   totalCount: number;
   onSettingsClick?: () => void;
+  onCreateNote?: () => void;
 }
 
 export interface ToolbarRef {
@@ -28,6 +29,7 @@ export const Toolbar = forwardRef<ToolbarRef, ToolbarProps>(({
   resultCount,
   totalCount,
   onSettingsClick,
+  onCreateNote,
 }, ref) => {
   const [searchInput, setSearchInput] = useState(filters.searchQuery);
   const [showFilters, setShowFilters] = useState(false);
@@ -188,6 +190,34 @@ export const Toolbar = forwardRef<ToolbarRef, ToolbarProps>(({
               />
             </svg>
             {hasActiveFilters && <div style={styles.filterBadge} />}
+          </button>
+
+          <button
+            onClick={onCreateNote}
+            style={styles.newNoteButton}
+            title="Create new note (Cmd+N)"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path
+                d="M2 2H10L16 8V16H2V2Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M10 2V8H16"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M5 11H13M5 14H11"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span style={styles.newNoteText}>New Note</span>
           </button>
 
           {/* Result count */}
@@ -697,5 +727,22 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#A89684',
     padding: '6px 12px',
     fontStyle: 'italic',
+  },
+  newNoteButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 14px',
+    border: '1px solid rgba(139, 0, 0, 0.3)',
+    borderRadius: '8px',
+    background: 'rgba(139, 0, 0, 0.05)',
+    color: '#8B0000',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    fontWeight: 600,
+    fontSize: '14px',
+  },
+  newNoteText: {
+    color: '#8B0000',
   },
 };

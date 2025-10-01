@@ -57,16 +57,16 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
       <div style={styles.header}>
         <div style={styles.headerLeft}>
           {card.metadata.favicon && (
-            <img
-              src={card.metadata.favicon}
-              alt=""
-              style={styles.favicon}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
+            <span style={styles.favicon}>
+              {card.metadata.favicon}
+            </span>
           )}
-          <div style={styles.domain}>{card.metadata.domain}</div>
+          <div style={{
+            ...styles.domain,
+            ...(card.cardType === 'note' ? styles.noteDomain : {}),
+          }}>
+            {card.metadata.domain}
+          </div>
         </div>
         <div style={styles.headerRight}>
           <button
@@ -247,5 +247,9 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     fontSize: '12px',
     transition: 'all 0.2s ease',
+  },
+  noteDomain: {
+    fontWeight: 600,
+    color: '#8B0000',
   },
 };

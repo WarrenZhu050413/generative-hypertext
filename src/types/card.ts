@@ -78,6 +78,14 @@ export interface Card {
   screenshotId?: string; // Reference to screenshot in IndexedDB
   styles?: import('../types').RelevantStyles; // Computed styles for rendering
   context?: string; // Parent element context (HTML snippet)
+  // Card type and relationships
+  cardType?: 'clipped' | 'generated' | 'note'; // Type of card
+  parentCardId?: string; // Reference to parent card (for generated cards)
+  generationContext?: {
+    sourceMessageId: string;
+    userPrompt: string;
+    timestamp: number;
+  };
 }
 
 /**

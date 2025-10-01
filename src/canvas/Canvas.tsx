@@ -24,6 +24,8 @@ import {
   mergeShortcutsConfig,
 } from '@/utils/keyboardShortcuts';
 import type { WindowState } from '@/types/window';
+import type { Card } from '@/types/card';
+import { saveCard, generateId } from '@/utils/storage';
 
 // Register custom node types
 const nodeTypes = {
@@ -112,10 +114,6 @@ function CanvasInner() {
         toolbarRef.current?.toggleFilters();
         showFeedback('Filters toggled');
       },
-      openNewTab: () => {
-        chrome.tabs.create({ url: chrome.runtime.getURL('canvas.html') });
-        showFeedback('Opened in new tab');
-      },
       escape: () => {
         if (showKeyboardHelp) {
           setShowKeyboardHelp(false);
@@ -155,6 +153,11 @@ function CanvasInner() {
       tag7: () => handleTagFilter(6),
       tag8: () => handleTagFilter(7),
       tag9: () => handleTagFilter(8),
+      // Create note
+      createNote: () => {
+        handleCreateNote();
+        showFeedback('Creating note...');
+      },
     };
 
     return handlers[id] || (() => console.log(`Unhandled shortcut: ${id}`));
@@ -183,6 +186,46 @@ function CanvasInner() {
 
   const handleOpenSettings = () => {
     setShowSettings(true);
+  };
+
+  const handleCreateNote = async () => {
+    try {
+      // Get current viewport center position
+      const { x, y, zoom } = { x: window.innerWidth / 2, y: window.innerHeight / 2, zoom: 1 };
+
+      const newNote: Card = {
+        id: generateId(),
+        content: '<p>Start typing...</p>',
+        cardType: 'note',
+        metadata: {
+          url: '',
+          title: 'Untitled Note',
+          domain: 'notes',
+          favicon: '📝',
+          timestamp: Date.now(),
+        },
+        position: {
+          x: x / zoom - 160, // Center the 320px wide card
+          y: y / zoom - 120, // Center the 240px tall card
+        },
+        size: { width: 320, height: 240 },
+        starred: false,
+        tags: ['note'],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        conversation: [],
+      };
+
+      await saveCard(newNote);
+
+      // Reload canvas to show new note
+      window.location.reload();
+
+      showFeedback('Note created');
+    } catch (error) {
+      console.error('[Canvas] Error creating note:', error);
+      showFeedback('Failed to create note');
+    }
   };
 
   if (isLoading) {
@@ -264,6 +307,7 @@ function CanvasInner() {
         resultCount={filteredCards.length}
         totalCount={cards.length}
         onSettingsClick={handleOpenSettings}
+        onCreateNote={handleCreateNote}
       />
 
       {/* Keyboard shortcuts feedback */}
