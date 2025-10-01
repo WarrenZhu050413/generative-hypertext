@@ -1,5 +1,5 @@
 /**
- * Window types for floating window system
+ * Window types for floating windows system
  */
 
 import type { Message } from './card';
@@ -22,53 +22,31 @@ export interface WindowSize {
 
 /**
  * Complete state for a floating window
- * Persists across minimize/maximize and page reloads
+ * Persisted to storage to survive minimize/maximize and page reloads
  */
 export interface WindowState {
-  id: string;
   cardId: string;
   position: WindowPosition;
   size: WindowSize;
-  isMinimized: boolean;
+  minimized: boolean;
   zIndex: number;
 
-  // Chat state
-  chatInput: string;
-  conversationMessages: Message[];
-  scrollPosition: number;
-  isStreaming: boolean;
-
-  // Form data for any inputs within window content
-  formData?: Record<string, string>;
-
-  // Metadata
-  createdAt: number;
-  lastInteractedAt: number;
+  // Chat-specific state
+  chatInput: string;            // Current input value (preserved on minimize)
+  conversationMessages: Message[]; // Full conversation history
+  scrollPosition: number;       // Content scroll position
+  isStreaming: boolean;         // Whether Claude is currently responding
 }
 
 /**
- * Props for the FloatingWindow component
+ * Minimal state saved to chrome.storage.local
+ * Full conversation is saved in Card, not duplicated here
  */
-export interface FloatingWindowProps {
-  windowState: WindowState;
-  onMinimize: (windowId: string) => void;
-  onMaximize: (windowId: string) => void;
-  onClose: (windowId: string) => void;
-  onBringToFront: (windowId: string) => void;
-  onUpdateState: (windowId: string, updates: Partial<WindowState>) => void;
-}
-
-/**
- * Props for the FloatingWindowChat component
- */
-export interface FloatingWindowChatProps {
+export interface SerializedWindowState {
   cardId: string;
-  cardContent: string;
-  messages: Message[];
-  currentInput: string;
-  isStreaming: boolean;
-  onSendMessage: (message: string) => void;
-  onInputChange: (value: string) => void;
-  onStopStreaming: () => void;
-  onClearChat: () => void;
+  position: WindowPosition;
+  size: WindowSize;
+  minimized: boolean;
+  chatInput: string;
+  scrollPosition: number;
 }

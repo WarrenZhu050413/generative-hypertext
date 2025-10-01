@@ -15,12 +15,15 @@ import { Toolbar } from './Toolbar';
 import { useCanvasState } from './useCanvasState';
 import { KeyboardHelp } from '@/components/KeyboardHelp';
 import { SettingsPanel } from './SettingsPanel';
+import { FloatingWindow } from '@/components/FloatingWindow';
+import { windowManager } from '@/services/windowManager';
 import {
   globalShortcutManager,
   KeyboardShortcut,
   loadShortcutsConfig,
   mergeShortcutsConfig,
 } from '@/utils/keyboardShortcuts';
+import type { WindowState } from '@/types/window';
 
 // Register custom node types
 const nodeTypes = {
@@ -50,6 +53,7 @@ function CanvasInner() {
   const [shortcuts, setShortcuts] = useState<KeyboardShortcut[]>([]);
   const toolbarRef = useRef<{ focusSearch: () => void; toggleFilters: () => void }>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [windows, setWindows] = useState(windowManager.getWindows());
 
   // Initialize keyboard shortcuts
   useEffect(() => {
@@ -58,6 +62,19 @@ function CanvasInner() {
 
     return () => {
       globalShortcutManager.stop();
+    };
+  }, []);
+
+  // Initialize window manager and subscribe to changes
+  useEffect(() => {
+    windowManager.initialize();
+
+    const unsubscribe = windowManager.subscribe(() => {
+      setWindows(windowManager.getWindows());
+    });
+
+    return () => {
+      unsubscribe();
     };
   }, []);
 
@@ -365,6 +382,22 @@ function CanvasInner() {
           </div>
         )}
       </ReactFlow>
+
+      {/* Floating windows container */}
+      <div id="floating-windows-container" style={styles.floatingWindowsContainer}>
+        {windows.map((windowState: WindowState) => {
+          const card = cards.find(c => c.id === windowState.cardId);
+          if (!card) return null;
+
+          return (
+            <FloatingWindow
+              key={windowState.cardId}
+              card={card}
+              windowState={windowState}
+            />
+          );
+        })}
+      </div>
     </>
   );
 }
@@ -384,6 +417,16 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100vw',
     height: '100vh',
     background: '#FAF7F2',
+    position: 'relative',
+  },
+  floatingWindowsContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+    zIndex: 10,
   },
   loadingContainer: {
     width: '100%',

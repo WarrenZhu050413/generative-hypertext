@@ -1,219 +1,258 @@
 /**
- * WindowManager - Manages all floating windows
- * Handles window lifecycle, z-index management, and state persistence
+ * WindowManager service for managing floating windows
  */
 
-import type { WindowState } from '@/types/window';
 import type { Card } from '@/types/card';
+import type { WindowState, SerializedWindowState } from '@/types/window';
+import { saveWindowStates, loadWindowStates } from '@/utils/windowStorage';
+import { chatService } from './chatService';
 
-type WindowChangeListener = () => void;
-
-class WindowManager {
+/**
+ * WindowManager service
+ * Manages all floating windows, their state, and z-index ordering
+ */
+export class WindowManager {
   private windows = new Map<string, WindowState>();
-  private maxZIndex = 1000; // Start at 1000 (above React Flow)
-  private listeners = new Set<WindowChangeListener>();
+  private maxZIndex = 1000;
+  private saveDebounceTimer: number | null = null;
+  private listeners = new Set<() => void>();
 
   /**
-   * Open a new window for the given card
-   * Auto-positions with cascade offset from existing windows
+   * Initialize the window manager
+   * Load saved window states from storage
    */
-  openWindow(cardId: string, card: Card): WindowState {
-    const windowId = `window-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  async initialize(): Promise<void> {
+    const saved = await loadWindowStates();
 
-    // Calculate cascade position
-    const existingWindows = Array.from(this.windows.values());
-    const offset = existingWindows.length * 30;
+    // Restore windows (but don't auto-open them)
+    // Windows are opened on demand when user clicks "Open as Window"
+    console.log('[WindowManager] Loaded', saved.length, 'saved window states');
+  }
 
+  /**
+   * Open a window for a card
+   * If window already exists, bring it to front
+   */
+  async openWindow(card: Card): Promise<void> {
+    const existingWindow = this.windows.get(card.id);
+
+    if (existingWindow) {
+      // Window already open, just bring to front
+      this.bringToFront(card.id);
+      return;
+    }
+
+    // Load conversation for this card
+    await chatService.loadConversation(card.id);
+
+    // Create new window state
     const windowState: WindowState = {
-      id: windowId,
-      cardId,
-      position: { x: 100 + offset, y: 100 + offset },
-      size: { width: 500, height: 600 },
-      isMinimized: false,
+      cardId: card.id,
+      position: this.calculateCascadePosition(),
+      size: { width: 600, height: 500 },
+      minimized: false,
       zIndex: ++this.maxZIndex,
       chatInput: '',
-      scrollPosition: 0,
       conversationMessages: card.conversation || [],
-      isStreaming: false,
-      formData: {},
-      createdAt: Date.now(),
-      lastInteractedAt: Date.now(),
+      scrollPosition: 0,
+      isStreaming: false
     };
 
-    this.windows.set(windowId, windowState);
-    this.notifyListeners();
-    this.debouncedSave();
-
-    return windowState;
-  }
-
-  /**
-   * Close window and remove from state
-   */
-  closeWindow(windowId: string): void {
-    this.windows.delete(windowId);
+    this.windows.set(card.id, windowState);
     this.notifyListeners();
     this.debouncedSave();
   }
 
   /**
-   * Minimize window (collapse to title bar)
+   * Close a window
    */
-  minimizeWindow(windowId: string): void {
-    const window = this.windows.get(windowId);
-    if (!window) return;
-
-    window.isMinimized = true;
-    window.lastInteractedAt = Date.now();
+  closeWindow(cardId: string): void {
+    this.windows.delete(cardId);
     this.notifyListeners();
     this.debouncedSave();
   }
 
   /**
-   * Maximize window (expand from title bar)
+   * Minimize a window (sets minimized flag, doesn't unmount)
    */
-  maximizeWindow(windowId: string): void {
-    const window = this.windows.get(windowId);
-    if (!window) return;
-
-    window.isMinimized = false;
-    window.lastInteractedAt = Date.now();
-    this.notifyListeners();
-    // No save needed - state change is instant
+  minimizeWindow(cardId: string): void {
+    const window = this.windows.get(cardId);
+    if (window) {
+      window.minimized = true;
+      this.notifyListeners();
+      this.debouncedSave();
+    }
   }
 
   /**
-   * Update window state (position, input, scroll, etc.)
+   * Maximize a window (unsets minimized flag)
    */
-  updateWindowState(windowId: string, updates: Partial<WindowState>): void {
-    const window = this.windows.get(windowId);
-    if (!window) return;
-
-    Object.assign(window, updates);
-    window.lastInteractedAt = Date.now();
-    this.notifyListeners();
-    this.debouncedSave();
+  maximizeWindow(cardId: string): void {
+    const window = this.windows.get(cardId);
+    if (window) {
+      window.minimized = false;
+      this.bringToFront(cardId);
+      this.notifyListeners();
+      this.debouncedSave();
+    }
   }
 
   /**
-   * Bring window to front (highest z-index)
+   * Bring window to front
    */
-  bringToFront(windowId: string): void {
-    const window = this.windows.get(windowId);
-    if (!window) return;
-
-    // Only update if not already on top
-    if (window.zIndex < this.maxZIndex) {
+  bringToFront(cardId: string): void {
+    const window = this.windows.get(cardId);
+    if (window) {
       window.zIndex = ++this.maxZIndex;
       this.notifyListeners();
     }
   }
 
   /**
-   * Get a specific window by ID
+   * Update window position
    */
-  getWindow(windowId: string): WindowState | undefined {
-    return this.windows.get(windowId);
+  updatePosition(cardId: string, x: number, y: number): void {
+    const window = this.windows.get(cardId);
+    if (window) {
+      window.position = { x, y };
+      this.notifyListeners();
+      this.debouncedSave();
+    }
   }
 
   /**
-   * Get all windows sorted by z-index (lowest to highest)
+   * Update window size
    */
-  getAllWindows(): WindowState[] {
-    return Array.from(this.windows.values()).sort((a, b) => a.zIndex - b.zIndex);
+  updateSize(cardId: string, width: number, height: number): void {
+    const window = this.windows.get(cardId);
+    if (window) {
+      window.size = { width, height };
+      this.notifyListeners();
+      this.debouncedSave();
+    }
   }
 
   /**
-   * Get window count
+   * Update chat input
    */
-  getWindowCount(): number {
-    return this.windows.size;
+  updateChatInput(cardId: string, input: string): void {
+    const window = this.windows.get(cardId);
+    if (window) {
+      window.chatInput = input;
+      this.notifyListeners();
+      this.debouncedSave();
+    }
   }
 
   /**
-   * Check if a card has an open window
+   * Update conversation messages
    */
-  hasWindowForCard(cardId: string): boolean {
-    return Array.from(this.windows.values()).some((w) => w.cardId === cardId);
+  updateConversationMessages(cardId: string, messages: any[]): void {
+    const window = this.windows.get(cardId);
+    if (window) {
+      window.conversationMessages = messages;
+      this.notifyListeners();
+    }
   }
 
   /**
-   * Subscribe to window changes
-   * Returns unsubscribe function
+   * Update streaming state
    */
-  subscribe(callback: WindowChangeListener): () => void {
-    this.listeners.add(callback);
-    return () => this.listeners.delete(callback);
+  updateStreamingState(cardId: string, isStreaming: boolean): void {
+    const window = this.windows.get(cardId);
+    if (window) {
+      window.isStreaming = isStreaming;
+      this.notifyListeners();
+    }
+  }
+
+  /**
+   * Update scroll position
+   */
+  updateScrollPosition(cardId: string, position: number): void {
+    const window = this.windows.get(cardId);
+    if (window) {
+      window.scrollPosition = position;
+      this.debouncedSave();
+    }
+  }
+
+  /**
+   * Get all windows
+   */
+  getWindows(): WindowState[] {
+    return Array.from(this.windows.values());
+  }
+
+  /**
+   * Get window by card ID
+   */
+  getWindow(cardId: string): WindowState | undefined {
+    return this.windows.get(cardId);
+  }
+
+  /**
+   * Check if window is open
+   */
+  isWindowOpen(cardId: string): boolean {
+    return this.windows.has(cardId);
+  }
+
+  /**
+   * Subscribe to window state changes
+   */
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  /**
+   * Calculate cascade position for new window
+   */
+  private calculateCascadePosition(): { x: number; y: number } {
+    const openWindows = this.getWindows().filter(w => !w.minimized);
+    const offset = openWindows.length * 30;
+
+    return {
+      x: 100 + offset,
+      y: 100 + offset
+    };
   }
 
   /**
    * Notify all listeners of state change
    */
   private notifyListeners(): void {
-    this.listeners.forEach((listener) => listener());
+    this.listeners.forEach(listener => listener());
   }
 
   /**
-   * Debounced save to storage (500ms)
+   * Debounced save to storage
    */
-  private saveTimeout: ReturnType<typeof setTimeout> | null = null;
   private debouncedSave(): void {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
+    if (this.saveDebounceTimer) {
+      clearTimeout(this.saveDebounceTimer);
     }
-    this.saveTimeout = setTimeout(() => {
-      this.saveToStorage();
+
+    this.saveDebounceTimer = window.setTimeout(() => {
+      this.save();
     }, 500);
   }
 
   /**
-   * Save window states to chrome.storage.local
+   * Save window states to storage
    */
-  async saveToStorage(): Promise<void> {
-    try {
-      const windowsArray = Array.from(this.windows.values());
-      await chrome.storage.local.set({
-        nabokov_windows: windowsArray,
-      });
-      console.log('[WindowManager] Saved', windowsArray.length, 'windows to storage');
-    } catch (error) {
-      console.error('[WindowManager] Failed to save windows:', error);
-    }
-  }
+  private async save(): Promise<void> {
+    const serialized: SerializedWindowState[] = Array.from(this.windows.values()).map(w => ({
+      cardId: w.cardId,
+      position: w.position,
+      size: w.size,
+      minimized: w.minimized,
+      chatInput: w.chatInput,
+      scrollPosition: w.scrollPosition
+    }));
 
-  /**
-   * Load window states from chrome.storage.local
-   */
-  async loadFromStorage(): Promise<void> {
-    try {
-      const result = await chrome.storage.local.get(['nabokov_windows']);
-      const windowsArray: WindowState[] = result.nabokov_windows || [];
-
-      this.windows.clear();
-      windowsArray.forEach((w: WindowState) => {
-        this.windows.set(w.id, w);
-        this.maxZIndex = Math.max(this.maxZIndex, w.zIndex);
-      });
-
-      console.log('[WindowManager] Loaded', windowsArray.length, 'windows from storage');
-      this.notifyListeners();
-    } catch (error) {
-      console.error('[WindowManager] Failed to load windows:', error);
-    }
-  }
-
-  /**
-   * Close all minimized windows (cleanup)
-   */
-  closeAllMinimized(): void {
-    const minimized = Array.from(this.windows.values()).filter((w) => w.isMinimized);
-    minimized.forEach((w) => this.windows.delete(w.id));
-
-    if (minimized.length > 0) {
-      console.log('[WindowManager] Closed', minimized.length, 'minimized windows');
-      this.notifyListeners();
-      this.debouncedSave();
-    }
+    await saveWindowStates(serialized);
   }
 }
 

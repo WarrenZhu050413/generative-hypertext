@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { Card } from '@/types/card';
 import DOMPurify from 'isomorphic-dompurify';
+import { windowManager } from '@/services/windowManager';
 
 interface CardNodeProps {
   data: {
@@ -45,6 +46,11 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
     return truncateText(text, 200);
   };
 
+  const handleOpenWindow = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent node drag
+    windowManager.openWindow(card);
+  };
+
   return (
     <div style={styles.card}>
       {/* Header */}
@@ -63,6 +69,14 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
           <div style={styles.domain}>{card.metadata.domain}</div>
         </div>
         <div style={styles.headerRight}>
+          <button
+            onClick={handleOpenWindow}
+            style={styles.openWindowButton}
+            title="Open as floating window"
+            data-testid="open-window-btn"
+          >
+            🗖
+          </button>
           {card.starred && (
             <svg width="16" height="16" viewBox="0 0 16 16" fill="#D4AF37">
               <path d="M8 1L10.163 5.382L15 6.089L11.5 9.494L12.326 14.305L8 12.032L3.674 14.305L4.5 9.494L1 6.089L5.837 5.382L8 1Z" />
@@ -219,5 +233,19 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#8B7355',
     fontWeight: 500,
     border: '1px solid rgba(212, 175, 55, 0.3)',
+  },
+  openWindowButton: {
+    width: '20px',
+    height: '20px',
+    padding: '0',
+    border: 'none',
+    background: 'rgba(139, 0, 0, 0.1)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '12px',
+    transition: 'all 0.2s ease',
   },
 };

@@ -1,312 +1,308 @@
 /** @jsxImportSource @emotion/react */
 import { css } from '@emotion/react';
-import { useRef, useEffect } from 'react';
-import type { FloatingWindowChatProps } from '@/types/window';
+import React, { useEffect, useRef } from 'react';
+import type { Message } from '@/types/card';
 
-export function FloatingWindowChat({
+/**
+ * Props for FloatingWindowChat component
+ */
+export interface FloatingWindowChatProps {
+  cardId: string;
+  cardContent: string;
+  messages: Message[];
+  currentInput: string;
+  isStreaming: boolean;
+  onSendMessage: (message: string) => void;
+  onInputChange: (value: string) => void;
+  onStopStreaming: () => void;
+  onClearChat: () => void;
+}
+
+/**
+ * Chat interface component for floating windows
+ * Displays conversation and input form
+ */
+export const FloatingWindowChat: React.FC<FloatingWindowChatProps> = ({
   messages,
   currentInput,
   isStreaming,
   onSendMessage,
   onInputChange,
   onStopStreaming,
-  onClearChat,
-}: FloatingWindowChatProps) {
+  onClearChat
+}) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (currentInput.trim() && !isStreaming) {
-      onSendMessage(currentInput);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
+    if (!currentInput.trim() || isStreaming) return;
+    onSendMessage(currentInput);
   };
 
   return (
-    <div css={styles.container}>
-      {/* Messages List */}
-      <div css={styles.messagesContainer}>
+    <div css={containerStyles}>
+      <div css={messagesContainerStyles}>
         {messages.length === 0 ? (
-          <div css={styles.emptyState}>
-            Start a conversation about this content...
+          <div css={emptyStateStyles}>
+            Ask a question about this card...
           </div>
         ) : (
-          messages.map((message) => (
+          messages.map((msg: Message) => (
             <div
-              key={message.id}
-              css={[
-                styles.message,
-                message.role === 'user' ? styles.userMessage : styles.assistantMessage,
-              ]}
+              key={msg.id}
+              css={messageStyles(msg.role)}
             >
-              <div css={styles.messageRole}>
-                {message.role === 'user' ? '👤' : '🤖'}
+              <div css={messageContentStyles}>
+                <div
+                  dangerouslySetInnerHTML={{ __html: msg.content }}
+                />
               </div>
-              <div css={styles.messageContent}>
-                {message.content}
-                {message.streaming && <span css={styles.cursor}>▊</span>}
-              </div>
+              {msg.streaming && (
+                <span css={streamingIndicatorStyles}>▸</span>
+              )}
             </div>
           ))
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Form */}
-      <form css={styles.inputForm} onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} css={inputFormStyles}>
         <input
-          ref={inputRef}
           type="text"
           value={currentInput}
-          onChange={(e) => onInputChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask a question..."
-          css={styles.input}
+          onChange={e => onInputChange(e.target.value)}
+          placeholder="Ask about this card..."
           disabled={isStreaming}
-          data-testid="chat-input"
-          className="chat-input"
+          css={inputStyles(isStreaming)}
         />
-        <div css={styles.controls}>
+        <div css={buttonGroupStyles}>
           {isStreaming ? (
             <button
               type="button"
               onClick={onStopStreaming}
-              css={[styles.button, styles.stopButton]}
-              data-testid="stop-streaming-btn"
+              css={stopButtonStyles}
+              title="Stop generating"
             >
-              ⏹ Stop
+              ⏹
             </button>
           ) : (
-            <>
-              {messages.length > 0 && (
-                <button
-                  type="button"
-                  onClick={onClearChat}
-                  css={[styles.button, styles.clearButton]}
-                  data-testid="clear-chat-btn"
-                  title="Clear conversation"
-                >
-                  🗑
-                </button>
-              )}
-              <button
-                type="submit"
-                css={[styles.button, styles.sendButton]}
-                disabled={!currentInput.trim() || isStreaming}
-                data-testid="send-btn"
-              >
-                ↑
-              </button>
-            </>
+            <button
+              type="submit"
+              css={sendButtonStyles}
+              disabled={!currentInput.trim()}
+              title="Send message"
+            >
+              ↑
+            </button>
           )}
+          <button
+            type="button"
+            onClick={onClearChat}
+            css={clearButtonStyles}
+            title="Clear conversation"
+          >
+            🗑️
+          </button>
         </div>
       </form>
     </div>
   );
-}
-
-const styles = {
-  container: css`
-    display: flex;
-    flex-direction: column;
-    height: 200px;
-    border-top: 1px solid rgba(184, 156, 130, 0.3);
-    background: rgba(250, 247, 242, 0.5);
-  `,
-
-  messagesContainer: css`
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    /* Scrollbar styling */
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: rgba(184, 156, 130, 0.1);
-      border-radius: 3px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: rgba(139, 0, 0, 0.3);
-      border-radius: 3px;
-    }
-
-    &::-webkit-scrollbar-thumb:hover {
-      background: rgba(139, 0, 0, 0.5);
-    }
-  `,
-
-  emptyState: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: #a89684;
-    font-size: 13px;
-    font-style: italic;
-  `,
-
-  message: css`
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    font-size: 13px;
-    line-height: 1.5;
-  `,
-
-  userMessage: css`
-    flex-direction: row-reverse;
-  `,
-
-  assistantMessage: css`
-    flex-direction: row;
-  `,
-
-  messageRole: css`
-    flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-  `,
-
-  messageContent: css`
-    flex: 1;
-    padding: 6px 10px;
-    border-radius: 8px;
-    background: white;
-    border: 1px solid rgba(184, 156, 130, 0.2);
-    color: #3e3226;
-    max-width: 80%;
-
-    .user-message & {
-      background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(212, 175, 55, 0.05));
-      border-color: rgba(212, 175, 55, 0.3);
-    }
-  `,
-
-  cursor: css`
-    animation: blink 1s infinite;
-    margin-left: 2px;
-
-    @keyframes blink {
-      0%,
-      50% {
-        opacity: 1;
-      }
-      51%,
-      100% {
-        opacity: 0;
-      }
-    }
-  `,
-
-  inputForm: css`
-    display: flex;
-    gap: 6px;
-    padding: 8px;
-    background: white;
-    border-top: 1px solid rgba(184, 156, 130, 0.2);
-  `,
-
-  input: css`
-    flex: 1;
-    padding: 8px 12px;
-    border: 1px solid rgba(184, 156, 130, 0.3);
-    border-radius: 6px;
-    font-size: 13px;
-    font-family: inherit;
-    outline: none;
-    transition: all 0.2s ease;
-
-    &:focus {
-      border-color: #8b0000;
-      box-shadow: 0 0 0 2px rgba(139, 0, 0, 0.1);
-    }
-
-    &:disabled {
-      background: rgba(0, 0, 0, 0.05);
-      cursor: not-allowed;
-    }
-
-    &::placeholder {
-      color: #a89684;
-    }
-  `,
-
-  controls: css`
-    display: flex;
-    gap: 4px;
-  `,
-
-  button: css`
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: all 0.2s ease;
-    padding: 0;
-
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-  `,
-
-  sendButton: css`
-    background: linear-gradient(135deg, #8b0000, #cd5c5c);
-    color: white;
-
-    &:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 6px rgba(139, 0, 0, 0.3);
-    }
-
-    &:active:not(:disabled) {
-      transform: translateY(0);
-    }
-  `,
-
-  stopButton: css`
-    background: #cd5c5c;
-    color: white;
-
-    &:hover {
-      background: #8b0000;
-    }
-  `,
-
-  clearButton: css`
-    background: rgba(0, 0, 0, 0.05);
-    color: #666;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.1);
-    }
-  `,
 };
+
+// Styles
+const containerStyles = css`
+  border-top: 1px solid #FFD700;
+  background: rgba(255, 215, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  height: 200px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+`;
+
+const messagesContainerStyles = css`
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(139, 0, 0, 0.3);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 0, 0, 0.5);
+  }
+`;
+
+const emptyStateStyles = css`
+  color: #999;
+  font-size: 13px;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+`;
+
+const messageStyles = (role: 'user' | 'assistant') => css`
+  padding: 8px 10px;
+  border-radius: 6px;
+  max-width: 85%;
+  font-size: 13px;
+  line-height: 1.4;
+  align-self: ${role === 'user' ? 'flex-end' : 'flex-start'};
+  background: ${role === 'user'
+    ? 'rgba(139, 0, 0, 0.1)'
+    : 'rgba(255, 215, 0, 0.1)'};
+  border-left: 3px solid ${role === 'user'
+    ? '#8B0000'
+    : '#FFD700'};
+`;
+
+const messageContentStyles = css`
+  h3 {
+    margin: 0 0 6px 0;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 4px 0;
+  }
+
+  ul, ol {
+    margin: 4px 0 4px 20px;
+  }
+
+  li {
+    margin: 2px 0;
+  }
+
+  strong {
+    font-weight: 600;
+    color: #333;
+  }
+
+  code {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 2px 4px;
+    border-radius: 2px;
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 12px;
+  }
+`;
+
+const streamingIndicatorStyles = css`
+  display: inline-block;
+  margin-left: 4px;
+  color: #8B0000;
+  animation: pulse 1s infinite;
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+`;
+
+const inputFormStyles = css`
+  display: flex;
+  padding: 8px;
+  gap: 4px;
+  border-top: 1px solid #ddd;
+  background: white;
+`;
+
+const inputStyles = (disabled: boolean) => css`
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid ${disabled ? '#ddd' : '#FFD700'};
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  opacity: ${disabled ? 0.6 : 1};
+  cursor: ${disabled ? 'not-allowed' : 'text'};
+
+  &:focus {
+    border-color: #8B0000;
+    box-shadow: 0 0 0 2px rgba(139, 0, 0, 0.1);
+  }
+
+  &::placeholder {
+    color: #999;
+  }
+`;
+
+const buttonGroupStyles = css`
+  display: flex;
+  gap: 4px;
+`;
+
+const buttonBaseStyles = css`
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+`;
+
+const sendButtonStyles = css`
+  ${buttonBaseStyles}
+  background: linear-gradient(135deg, #8B0000, #CD5C5C);
+  color: white;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+`;
+
+const stopButtonStyles = css`
+  ${buttonBaseStyles}
+  background: linear-gradient(135deg, #CD5C5C, #8B0000);
+  color: white;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+  }
+`;
+
+const clearButtonStyles = css`
+  ${buttonBaseStyles}
+  background: rgba(0, 0, 0, 0.05);
+  color: #666;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.1);
+    transform: scale(1.05);
+  }
+`;

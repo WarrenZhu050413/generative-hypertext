@@ -102,6 +102,17 @@ export async function getCards(): Promise<Card[]> {
 }
 
 /**
+ * Gets a single card by ID from chrome.storage.local
+ *
+ * @param cardId - The ID of the card to get
+ * @returns Promise that resolves with the card or undefined if not found
+ */
+export async function getCardById(cardId: string): Promise<Card | undefined> {
+  const cards = await getCards();
+  return cards.find(c => c.id === cardId);
+}
+
+/**
  * Deletes a card from chrome.storage.local
  *
  * @param cardId - The ID of the card to delete
