@@ -37,8 +37,14 @@ export class WindowManager {
     const existingWindow = this.windows.get(card.id);
 
     if (existingWindow) {
-      // Window already open, just bring to front
-      this.bringToFront(card.id);
+      // Window already exists
+      if (existingWindow.minimized) {
+        // Restore minimized window
+        this.maximizeWindow(card.id);
+      } else {
+        // Just bring to front
+        this.bringToFront(card.id);
+      }
       return;
     }
 
