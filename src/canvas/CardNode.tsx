@@ -1,8 +1,9 @@
-import React, { memo } from 'react';
+import React, { memo, useState, useRef, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { Card } from '@/types/card';
 import DOMPurify from 'isomorphic-dompurify';
 import { windowManager } from '@/services/windowManager';
+import { saveCard } from '@/utils/storage';
 
 interface CardNodeProps {
   data: {
@@ -12,6 +13,11 @@ interface CardNodeProps {
 
 export const CardNode = memo(({ data }: CardNodeProps) => {
   const card = data?.card;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const contentEditRef = useRef<HTMLTextAreaElement>(null);
+  const titleEditRef = useRef<HTMLInputElement>(null);
 
   if (!card) {
     return null;
@@ -51,8 +57,145 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
     windowManager.openWindow(card);
   };
 
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Extract plain text from HTML content
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = sanitizedContent;
+    const plainText = tempDiv.textContent || tempDiv.innerText || '';
+
+    setEditContent(plainText);
+    setEditTitle(card.metadata.title);
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      // Convert plain text to HTML with paragraphs
+      const htmlContent = editContent
+        .split('\n\n')
+        .map(para => `<p>${para.replace(/\n/g, '<br>')}</p>`)
+        .join('');
+
+      const updatedCard: Card = {
+        ...card,
+        content: htmlContent,
+        metadata: {
+          ...card.metadata,
+          title: editTitle,
+        },
+        updatedAt: Date.now(),
+      };
+
+      await saveCard(updatedCard);
+      setIsEditing(false);
+
+      // Reload to show updated content
+      window.location.reload();
+    } catch (error) {
+      console.error('[CardNode] Error saving edits:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditContent('');
+    setEditTitle('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleCancelEdit();
+    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      handleSaveEdit();
+    }
+  };
+
+  // Focus content editor when entering edit mode
+  useEffect(() => {
+    if (isEditing && contentEditRef.current) {
+      contentEditRef.current.focus();
+      contentEditRef.current.select();
+    }
+  }, [isEditing]);
+
+  if (isEditing) {
+    return (
+      <div style={styles.card} onKeyDown={handleKeyDown}>
+        {/* Edit Mode Header */}
+        <div style={styles.header}>
+          <div style={styles.headerLeft}>
+            {card.metadata.favicon && (
+              <span style={styles.favicon}>
+                {card.metadata.favicon}
+              </span>
+            )}
+            <div style={{
+              ...styles.domain,
+              ...(card.cardType === 'note' ? styles.noteDomain : {}),
+            }}>
+              {card.metadata.domain}
+            </div>
+          </div>
+          <div style={styles.editButtons}>
+            <button
+              onClick={handleSaveEdit}
+              style={styles.saveButton}
+              title="Save (Cmd+Enter)"
+            >
+              ✓
+            </button>
+            <button
+              onClick={handleCancelEdit}
+              style={styles.cancelButton}
+              title="Cancel (Esc)"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Editable Title */}
+        <input
+          ref={titleEditRef}
+          type="text"
+          value={editTitle}
+          onChange={(e) => setEditTitle(e.target.value)}
+          style={styles.titleEdit}
+          placeholder="Card title..."
+        />
+
+        {/* Editable Content */}
+        <textarea
+          ref={contentEditRef}
+          value={editContent}
+          onChange={(e) => setEditContent(e.target.value)}
+          style={styles.contentEdit}
+          placeholder="Card content..."
+        />
+
+        {/* Footer with hints */}
+        <div style={styles.editFooter}>
+          <div style={styles.editHint}>Cmd+Enter to save, Esc to cancel</div>
+        </div>
+
+        {/* Handles for connections */}
+        <Handle
+          type="source"
+          position={Position.Right}
+          style={{ opacity: 0, pointerEvents: 'none' }}
+        />
+        <Handle
+          type="target"
+          position={Position.Left}
+          style={{ opacity: 0, pointerEvents: 'none' }}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div style={styles.card}>
+    <div style={styles.card} onDoubleClick={handleDoubleClick}>
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerLeft}>
@@ -251,5 +394,74 @@ const styles: Record<string, React.CSSProperties> = {
   noteDomain: {
     fontWeight: 600,
     color: '#8B0000',
+  },
+  editButtons: {
+    display: 'flex',
+    gap: '4px',
+  },
+  saveButton: {
+    width: '24px',
+    height: '24px',
+    padding: '0',
+    border: 'none',
+    background: 'rgba(0, 128, 0, 0.1)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '14px',
+    color: '#008000',
+    transition: 'all 0.2s ease',
+  },
+  cancelButton: {
+    width: '24px',
+    height: '24px',
+    padding: '0',
+    border: 'none',
+    background: 'rgba(139, 0, 0, 0.1)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '14px',
+    color: '#8B0000',
+    transition: 'all 0.2s ease',
+  },
+  titleEdit: {
+    fontSize: '15px',
+    fontWeight: 600,
+    color: '#3E3226',
+    background: 'rgba(255, 255, 255, 0.7)',
+    border: '1px solid rgba(184, 156, 130, 0.3)',
+    borderRadius: '4px',
+    padding: '8px',
+    outline: 'none',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+  },
+  contentEdit: {
+    flex: 1,
+    fontSize: '13px',
+    color: '#5C4D42',
+    lineHeight: '1.5',
+    background: 'rgba(255, 255, 255, 0.7)',
+    border: '1px solid rgba(184, 156, 130, 0.3)',
+    borderRadius: '4px',
+    padding: '8px',
+    outline: 'none',
+    resize: 'none',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+  },
+  editFooter: {
+    paddingTop: '8px',
+    borderTop: '1px solid rgba(184, 156, 130, 0.15)',
+    marginTop: 'auto',
+  },
+  editHint: {
+    fontSize: '10px',
+    color: '#A89684',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
 };
