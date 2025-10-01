@@ -7,6 +7,8 @@ import type { WindowState } from '@/types/window';
 import { FloatingWindowChat } from './FloatingWindowChat';
 import { windowManager } from '@/services/windowManager';
 import { chatService } from '@/services/chatService';
+import { saveCard, generateId } from '@/utils/storage';
+import { addConnection as saveConnection } from '@/utils/connectionStorage';
 
 /**
  * Props for FloatingWindow component
@@ -83,6 +85,84 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
     }
   };
 
+  // Handle save conversation as card
+  const handleSaveConversation = async () => {
+    const messages = windowState.conversationMessages;
+    if (!messages || messages.length === 0) {
+      alert('No conversation to save');
+      return;
+    }
+
+    try {
+      // Format conversation as HTML
+      const conversationHTML = messages.map(msg => {
+        const role = msg.role === 'user' ? 'You' : 'Assistant';
+        const timestamp = new Date(msg.timestamp).toLocaleString();
+        return `
+          <div style="margin-bottom: 16px; padding: 12px; background: ${msg.role === 'user' ? 'rgba(212, 175, 55, 0.1)' : 'rgba(139, 0, 0, 0.05)'}; border-radius: 8px;">
+            <div style="font-weight: 600; color: #8B7355; margin-bottom: 4px; font-size: 12px;">
+              ${role} - ${timestamp}
+            </div>
+            <div style="color: #3E3226; line-height: 1.5;">
+              ${msg.content.replace(/\n/g, '<br>')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Create new card
+      const newCard: Card = {
+        id: generateId(),
+        content: conversationHTML,
+        cardType: 'generated',
+        parentCardId: card.id,
+        metadata: {
+          url: '',
+          title: `Chat: ${card.metadata.title}`,
+          domain: 'ai-generated',
+          favicon: '💬',
+          timestamp: Date.now(),
+        },
+        position: undefined, // Will be auto-positioned on canvas
+        size: { width: 400, height: 300 },
+        starred: false,
+        tags: ['chat', 'ai-generated'],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        conversation: messages,
+        generationContext: {
+          sourceMessageId: messages[messages.length - 1].id,
+          userPrompt: messages.find(m => m.role === 'user')?.content || '',
+          timestamp: Date.now(),
+        },
+      };
+
+      // Save card
+      await saveCard(newCard);
+
+      // Create connection
+      await saveConnection({
+        id: generateId(),
+        source: card.id,
+        target: newCard.id,
+        type: 'generated-from',
+        label: 'Chat conversation',
+        metadata: {
+          createdAt: Date.now(),
+          createdBy: 'user',
+        },
+      });
+
+      alert('Conversation saved as card!');
+
+      // Optionally reload canvas to show new card
+      // window.location.reload();
+    } catch (error) {
+      console.error('[FloatingWindow] Error saving conversation:', error);
+      alert('Failed to save conversation');
+    }
+  };
+
   // Handle close
   const handleClose = () => {
     windowManager.closeWindow(card.id);
@@ -126,6 +206,14 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
             <span css={titleTextStyles}>{card.metadata.title}</span>
           </div>
           <div css={controlsStyles}>
+            <button
+              onClick={handleSaveConversation}
+              css={saveConversationButtonStyles}
+              title="Save conversation as card"
+              disabled={!windowState.conversationMessages || windowState.conversationMessages.length === 0}
+            >
+              💾
+            </button>
             <button
               onClick={handleMinimize}
               css={controlButtonStyles}
@@ -271,6 +359,34 @@ const controlButtonStyles = css`
 
   &:active {
     transform: scale(0.95);
+  }
+`;
+
+const saveConversationButtonStyles = css`
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 215, 0, 0.3);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 215, 0, 0.5);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 `;
 
