@@ -17,6 +17,10 @@
 
 import { test as base, chromium, type BrowserContext } from '@playwright/test';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 type ExtensionFixtures = {
   context: BrowserContext;
@@ -28,7 +32,7 @@ type ExtensionFixtures = {
  */
 function getExtensionPath(): string {
   // Adjust this path based on where your extension builds to
-  return path.join(__dirname, '../../nabokov-clipper/dist');
+  return path.join(__dirname, '../../dist');
 }
 
 /**
@@ -106,7 +110,7 @@ export async function openCanvasPage(
   context: BrowserContext,
   extensionId: string
 ): Promise<void> {
-  const canvasUrl = `chrome-extension://${extensionId}/canvas.html`;
+  const canvasUrl = `chrome-extension://${extensionId}/src/canvas/index.html`;
   const page = await context.newPage();
   await page.goto(canvasUrl);
 }
