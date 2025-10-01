@@ -47,6 +47,9 @@ function CanvasInner() {
     availableDomains,
     availableTags,
     refreshStats,
+    connections,
+    addConnection,
+    removeConnection,
   } = useCanvasState();
 
   const { fitView, zoomIn, zoomOut } = useReactFlow();
@@ -56,6 +59,8 @@ function CanvasInner() {
   const toolbarRef = useRef<{ focusSearch: () => void; toggleFilters: () => void }>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [windows, setWindows] = useState(windowManager.getWindows());
+  const [connectionMode, setConnectionMode] = useState(false);
+  const [selectedSource, setSelectedSource] = useState<string | null>(null);
 
   // Initialize keyboard shortcuts
   useEffect(() => {
@@ -158,6 +163,10 @@ function CanvasInner() {
         handleCreateNote();
         showFeedback('Creating note...');
       },
+      // Connection mode
+      toggleConnectionMode: () => {
+        handleToggleConnectionMode();
+      },
     };
 
     return handlers[id] || (() => console.log(`Unhandled shortcut: ${id}`));
@@ -225,6 +234,37 @@ function CanvasInner() {
     } catch (error) {
       console.error('[Canvas] Error creating note:', error);
       showFeedback('Failed to create note');
+    }
+  };
+
+  const handleToggleConnectionMode = () => {
+    setConnectionMode(!connectionMode);
+    setSelectedSource(null);
+    showFeedback(connectionMode ? 'Connection mode off' : 'Connection mode on - click source card');
+  };
+
+  const handleNodeClick = async (_event: React.MouseEvent, node: any) => {
+    if (!connectionMode) return;
+
+    if (!selectedSource) {
+      // First click - select source
+      setSelectedSource(node.id);
+      showFeedback('Source selected - click target card');
+    } else if (selectedSource === node.id) {
+      // Clicking same node - deselect
+      setSelectedSource(null);
+      showFeedback('Selection cleared - click source card');
+    } else {
+      // Second click - create connection
+      try {
+        await addConnection(selectedSource, node.id, 'related', '');
+        showFeedback('Connection created');
+        setSelectedSource(null);
+        setConnectionMode(false);
+      } catch (error) {
+        console.error('[Canvas] Error creating connection:', error);
+        showFeedback('Failed to create connection');
+      }
     }
   };
 
@@ -308,6 +348,8 @@ function CanvasInner() {
         totalCount={cards.length}
         onSettingsClick={handleOpenSettings}
         onCreateNote={handleCreateNote}
+        onToggleConnectionMode={handleToggleConnectionMode}
+        connectionMode={connectionMode}
       />
 
       {/* Keyboard shortcuts feedback */}
@@ -335,6 +377,7 @@ function CanvasInner() {
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
+        onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{

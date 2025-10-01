@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CardMutationAPI Design: AI-Powered Artifact Manipulation</title>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --jade-green: #00A86B;
+            --ink-black: #2B2B2B;
+            --paper-beige: #F5F5DC;
+            --light-cream: #FAFAF0;
+            --level-1: #000;
+            --level-2: #333;
+            --level-3: #666;
+            --level-4: #999;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            margin: 0;
+            padding: 8px;
+            line-height: 1.3;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin: 8px 0;
+            padding: 12px 8px;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 12px 0 6px 0;
+            padding: 6px;
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.03);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 8px 0 4px 8px;
+            color: var(--level-2);
+        }
+
+        h4 {
+            font-size: 13px;
+            font-weight: 500;
+            margin: 6px 0 3px 16px;
+            color: var(--level-3);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            padding: 4px 12px;
+            margin: 2px;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+        }
+
+        .collapsible {
+            margin: 6px 0;
+            width: 100%;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+            border-left: 3px solid var(--chinese-gold);
+            display: flex;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+        }
+
+        .collapsible-header .arrow {
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-size: 12px;
+        }
+
+        .collapsible.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 12px;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 8000px;
+            padding: 12px;
+        }
+
+        .collapsible.critical .collapsible-header {
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.08);
+            font-weight: 700;
+        }
+
+        .important-always-visible {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+            border: 2px solid var(--chinese-gold);
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 8px 0;
+        }
+
+        @media (max-width: 900px) {
+            .two-column-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .dense-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 8px 12px;
+        }
+
+        .dense-list li {
+            padding: 4px 0 4px 16px;
+            position: relative;
+            line-height: 1.5;
+        }
+
+        .dense-list li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--chinese-red);
+            font-size: 12px;
+        }
+
+        .dense-list li strong {
+            color: var(--level-2);
+            font-weight: 600;
+        }
+
+        .metric {
+            display: inline-block;
+            background: white;
+            border: 1px solid var(--chinese-gold);
+            padding: 3px 8px;
+            margin: 2px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .metric.important {
+            background: var(--chinese-gold);
+            color: white;
+            font-weight: 700;
+        }
+
+        .critical { color: var(--chinese-red); font-weight: 700; }
+        .success { color: var(--jade-green); font-weight: 600; }
+        .warning { color: var(--chinese-gold); font-weight: 600; }
+        .muted { color: var(--level-4); font-size: 12px; }
+
+        pre, code {
+            background: linear-gradient(135deg, rgba(245, 245, 220, 0.3), rgba(255, 255, 255, 0.5));
+            border: 1px solid rgba(139, 0, 0, 0.1);
+            padding: 3px 6px;
+            margin: 2px 0;
+            font-size: 12px;
+            line-height: 1.4;
+            font-family: 'Monaco', 'Menlo', monospace;
+            border-radius: 2px;
+        }
+
+        pre {
+            padding: 8px;
+            margin: 6px 0;
+            overflow-x: auto;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            border-radius: 3px;
+            padding: 10px;
+            margin: 6px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.priority {
+            border: 2px solid var(--chinese-gold);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+
+        th {
+            background: var(--chinese-red);
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+        }
+
+        tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+
+        .indent-1 { margin-left: 16px; }
+        .indent-2 { margin-left: 32px; }
+
+        .diagram {
+            background: white;
+            border: 2px solid var(--chinese-gold);
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .highlight-box {
+            background: rgba(255, 215, 0, 0.15);
+            border-left: 3px solid var(--chinese-gold);
+            padding: 8px;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div style="margin: 8px 0; text-align: right;">
+        <button id="expand-all">Expand All</button>
+        <button id="collapse-all">Collapse All</button>
+    </div>
+
+    <div class="important-always-visible">
+        <h1>🎨 CardMutationAPI Design: AI-Powered DOM Manipulation</h1>
+        <p style="margin: 8px 0; line-height: 1.5;">
+            <strong>Core Concept:</strong> Claude acts as the "backend developer" for artifacts, responding to user interactions by surgically manipulating the DOM—inspired by <strong>Claude Imagine</strong>. Instead of traditional JavaScript event handlers, AI handles all interactivity through precise DOM operations.
+        </p>
+        <div class="two-column-layout">
+            <div>
+                <h3>Key Principles</h3>
+                <ul class="dense-list">
+                    <li><strong>No Traditional JS:</strong> AI handles interactivity, not event handlers</li>
+                    <li><strong>Surgical Updates:</strong> Precise selector-based edits, not full re-renders</li>
+                    <li><strong>~3s Response Time:</strong> Perfect for turn-based interactions</li>
+                    <li><strong>Mockup Backend:</strong> Simulate AI responses during development</li>
+                </ul>
+            </div>
+            <div>
+                <h3>Focus: Learn-More Pattern</h3>
+                <ul class="dense-list">
+                    <li><strong>Floating Windows:</strong> Spawn on-demand exploration surfaces</li>
+                    <li><strong>Recursive:</strong> Windows can spawn more windows</li>
+                    <li><strong>Chat-Enabled:</strong> Direct conversation with enhanced UI</li>
+                    <li><strong>Context-Aware:</strong> Carries parent artifact context</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="two-column-layout">
+        <!-- LEFT: Core Architecture -->
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>⚡ CardMutationAPI Operations</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <p class="muted">Inspired by Claude Imagine's DOM operation model</p>
+
+                <h4>1. DOM Manipulation Operations</h4>
+                <pre>// Core operations available to AI
+interface CardMutationAPI {
+  // Replace HTML content
+  replaceContent(selector: string, html: string): void;
+
+  // Append new HTML
+  appendContent(selector: string, html: string): void;
+
+  // Remove elements
+  remove(selector: string): void;
+
+  // Set attributes
+  setAttribute(selector: string, attr: string, value: string): void;
+
+  // Replace CSS classes
+  replaceClasses(selector: string, oldClass: string, newClass: string): void;
+}</pre>
+
+                <h4>2. Knowledge Construction Operations</h4>
+                <pre>interface KnowledgeOps {
+  // Highlight text with optional note
+  highlight(text: string, note?: string, color?: string): void;
+
+  // Add annotation overlay
+  annotate(selector: string, annotation: string): void;
+
+  // Progressive disclosure
+  collapse(selector: string): void;
+  expand(selector: string): void;
+
+  // Add context reference
+  addReference(sourceId: string, excerpt: string): void;
+}</pre>
+
+                <h4>3. Window Management Operations</h4>
+                <pre>interface WindowOps {
+  // Create floating window
+  createWindow(id: string, html: string, position?: {x, y}): void;
+
+  // Close window
+  closeWindow(id: string): void;
+
+  // Update window content
+  updateWindow(id: string, selector: string, html: string): void;
+
+  // Move window
+  moveWindow(id: string, position: {x, y}): void;
+}</pre>
+            </div>
+        </div>
+
+        <!-- RIGHT: How It Works -->
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>🔄 Interaction Flow</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <div class="diagram">
+┌─────────────────────────────────────┐
+│ 1. User clicks &lt;learn-more&gt; button  │
+│    topic="distributed cognition"   │
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────┐
+│ 2. Custom Element captures event    │
+│    Extracts: topic, parent context  │
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────┐
+│ 3. Send to Mockup Backend           │
+│    POST /api/learn-more             │
+│    { topic, parentId, context }     │
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────┐
+│ 4. Backend returns operations       │
+│    [                                │
+│      {op: "createWindow", ...},     │
+│      {op: "appendContent", ...}     │
+│    ]                                │
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────┐
+│ 5. MutationExecutor applies ops     │
+│    Surgically updates DOM           │
+│    Shows loading → content          │
+└─────────────────────────────────────┘
+                </div>
+
+                <p style="margin-top: 8px;"><strong>Response Time:</strong> <span class="warning">~3 seconds</span> (simulated in mockup)</p>
+                <p class="muted">This is perfect for turn-based knowledge exploration, not real-time interactions.</p>
+            </div>
+        </div>
+
+        <!-- Learn-More Button Implementation -->
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>🔍 Learn-More Button Design</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Custom Element Definition</h4>
+                <pre>// src/components/interactive-elements/LearnMore.ts
+class LearnMoreElement extends HTMLElement {
+  connectedCallback() {
+    const topic = this.getAttribute('topic');
+    const prompt = this.getAttribute('prompt') ||
+      `Tell me more about ${topic}`;
+
+    this.innerHTML = `
+      &lt;button class="learn-more-btn"
+              data-topic="${topic}"
+              data-prompt="${prompt}"&gt;
+        🔍 Learn more about ${topic}
+      &lt;/button&gt;
+    `;
+
+    this.querySelector('button').addEventListener('click',
+      () => this.handleClick()
+    );
+  }
+
+  async handleClick() {
+    const topic = this.getAttribute('topic');
+    const prompt = this.getAttribute('prompt');
+    const parentId = this.closest('[data-card-id]')
+                         ?.dataset.cardId;
+
+    // Show loading state
+    this.querySelector('button').disabled = true;
+    this.querySelector('button').textContent = '⏳ Loading...';
+
+    // Send to backend
+    const ops = await fetchMutationOps({
+      action: 'learn-more',
+      topic,
+      prompt,
+      parentId,
+      parentContext: this.getParentContext()
+    });
+
+    // Execute operations
+    executeMutations(ops);
+  }
+
+  getParentContext() {
+    const card = this.closest('[data-card-id]');
+    return {
+      cardId: card?.dataset.cardId,
+      content: card?.querySelector('.card-content')?.innerText,
+      metadata: card?.dataset.metadata
+    };
+  }
+}
+
+customElements.define('learn-more', LearnMoreElement);</pre>
+
+                <h4>Usage in Artifacts</h4>
+                <pre>&lt;!-- Simple usage --&gt;
+&lt;learn-more topic="distributed cognition"&gt;&lt;/learn-more&gt;
+
+&lt;!-- With custom prompt --&gt;
+&lt;learn-more
+  topic="Clark's copresence principle"
+  prompt="How does copresence relate to AI interfaces?"&gt;
+&lt;/learn-more&gt;
+
+&lt;!-- Embedded in content --&gt;
+&lt;p&gt;
+  The theory of distributed cognition suggests that
+  cognitive processes extend beyond the brain.
+  &lt;learn-more topic="extended mind thesis"&gt;&lt;/learn-more&gt;
+&lt;/p&gt;</pre>
+            </div>
+        </div>
+
+        <!-- Floating Window Design -->
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>💬 Floating Window + Chat</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Window Structure</h4>
+                <pre>&lt;!-- Generated by CardMutationAPI --&gt;
+&lt;div class="floating-window"
+     data-window-id="window-123"
+     data-parent-card="card-456"
+     style="position: fixed; top: 100px; left: 300px;"&gt;
+
+  &lt;!-- Header with drag handle --&gt;
+  &lt;div class="window-header"&gt;
+    &lt;span class="drag-handle"&gt;⋮⋮&lt;/span&gt;
+    &lt;h3&gt;💡 Distributed Cognition&lt;/h3&gt;
+    &lt;button class="close-btn"&gt;✕&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;!-- AI-generated content --&gt;
+  &lt;div class="window-content"&gt;
+    &lt;p&gt;Distributed cognition is a framework that views
+    cognitive processes as distributed across...&lt;/p&gt;
+
+    &lt;!-- Recursive learn-more buttons --&gt;
+    &lt;learn-more topic="Hutchins navigation study"&gt;&lt;/learn-more&gt;
+
+    &lt;div class="key-concepts"&gt;
+      &lt;h4&gt;Key Concepts:&lt;/h4&gt;
+      &lt;ul&gt;
+        &lt;li&gt;Cognitive artifacts&lt;/li&gt;
+        &lt;li&gt;External representations&lt;/li&gt;
+      &lt;/ul&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;!-- Chat interface at bottom --&gt;
+  &lt;div class="window-chat"&gt;
+    &lt;div class="chat-messages"&gt;
+      &lt;!-- Previous messages --&gt;
+    &lt;/div&gt;
+    &lt;div class="chat-input-container"&gt;
+      &lt;input type="text"
+             placeholder="Ask follow-up questions..."
+             class="chat-input" /&gt;
+      &lt;button class="send-btn"&gt;→&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+
+                <h4>Chat Interaction Flow</h4>
+                <pre>// When user sends message in floating window
+async function handleWindowChat(windowId, message) {
+  const window = document.querySelector(
+    `[data-window-id="${windowId}"]`
+  );
+
+  // Add user message to chat
+  appendMessage(windowId, {
+    role: 'user',
+    content: message
+  });
+
+  // Send to backend with full window context
+  const ops = await fetchMutationOps({
+    action: 'window-chat',
+    windowId,
+    message,
+    windowContext: extractWindowContext(window),
+    parentContext: extractParentCardContext(window)
+  });
+
+  // Execute operations (likely appendContent to chat)
+  executeMutations(ops);
+}</pre>
+            </div>
+        </div>
+
+        <!-- Mockup Backend -->
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>🎭 Mockup Backend Implementation</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Simple Mock Service</h4>
+                <pre>// src/services/mockMutationBackend.ts
+export async function fetchMutationOps(request: {
+  action: 'learn-more' | 'window-chat' | 'highlight',
+  topic?: string,
+  message?: string,
+  parentId?: string,
+  [key: string]: any
+}): Promise&lt;MutationOperation[]&gt; {
+
+  // Simulate network delay (~3s)
+  await new Promise(resolve =>
+    setTimeout(resolve, 3000)
+  );
+
+  // Route to appropriate mock handler
+  switch (request.action) {
+    case 'learn-more':
+      return mockLearnMore(request);
+    case 'window-chat':
+      return mockWindowChat(request);
+    default:
+      return [];
+  }
+}</pre>
+
+                <h4>Learn-More Mock Response</h4>
+                <pre>function mockLearnMore({ topic, prompt, parentId }) {
+  const windowId = `window-${Date.now()}`;
+
+  // Generate mock content based on topic
+  const content = generateMockContent(topic);
+
+  return [
+    {
+      operation: 'createWindow',
+      windowId,
+      parentId,
+      html: `
+        &lt;div class="floating-window"
+             data-window-id="${windowId}"&gt;
+          &lt;div class="window-header"&gt;
+            &lt;span class="drag-handle"&gt;⋮⋮&lt;/span&gt;
+            &lt;h3&gt;💡 ${topic}&lt;/h3&gt;
+            &lt;button class="close-btn"&gt;✕&lt;/button&gt;
+          &lt;/div&gt;
+          &lt;div class="window-content"&gt;
+            ${content}
+          &lt;/div&gt;
+          &lt;div class="window-chat"&gt;
+            &lt;div class="chat-messages"&gt;&lt;/div&gt;
+            &lt;input type="text"
+                   placeholder="Ask follow-up..."
+                   class="chat-input" /&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      `,
+      position: { x: 300, y: 100 }
+    }
+  ];
+}</pre>
+
+                <h4>Mock Content Generator</h4>
+                <pre>function generateMockContent(topic: string): string {
+  // Template library for common topics
+  const templates = {
+    'distributed cognition': `
+      &lt;p&gt;Distributed cognition suggests cognitive
+      processes extend beyond individual minds to
+      include tools, artifacts, and environments.&lt;/p&gt;
+
+      &lt;h4&gt;Key Ideas:&lt;/h4&gt;
+      &lt;ul&gt;
+        &lt;li&gt;Cognitive artifacts extend thinking&lt;/li&gt;
+        &lt;li&gt;Environment as cognitive partner&lt;/li&gt;
+        &lt;li&gt;Information flows through systems&lt;/li&gt;
+      &lt;/ul&gt;
+
+      &lt;learn-more topic="Hutchins ship navigation"&gt;
+      &lt;/learn-more&gt;
+    `,
+
+    'extended mind thesis': `
+      &lt;p&gt;Clark & Chalmers (1998): When external
+      resources are reliably available and trusted,
+      they become part of the cognitive system.&lt;/p&gt;
+
+      &lt;blockquote&gt;"Where does the mind stop and
+      the rest of the world begin?"&lt;/blockquote&gt;
+
+      &lt;learn-more topic="Otto's notebook example"&gt;
+      &lt;/learn-more&gt;
+    `
+  };
+
+  return templates[topic.toLowerCase()] ||
+         `&lt;p&gt;Mock content for: ${topic}&lt;/p&gt;`;
+}</pre>
+            </div>
+        </div>
+
+        <!-- MutationExecutor -->
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>⚙️ MutationExecutor: Applying Operations</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Safe Execution Engine</h4>
+                <pre>// src/utils/mutationExecutor.ts
+export function executeMutations(
+  operations: MutationOperation[]
+) {
+  for (const op of operations) {
+    try {
+      executeOperation(op);
+    } catch (error) {
+      console.error('[MutationExecutor] Failed:', op, error);
+    }
+  }
+}
+
+function executeOperation(op: MutationOperation) {
+  switch (op.operation) {
+    case 'createWindow':
+      createFloatingWindow(op);
+      break;
+
+    case 'replaceContent':
+      replaceContentSafely(op.selector, op.html);
+      break;
+
+    case 'appendContent':
+      appendContentSafely(op.selector, op.html);
+      break;
+
+    case 'remove':
+      removeElementSafely(op.selector);
+      break;
+
+    case 'setAttribute':
+      setAttributeSafely(op.selector, op.attr, op.value);
+      break;
+
+    default:
+      console.warn('[MutationExecutor] Unknown op:', op.operation);
+  }
+}</pre>
+
+                <h4>Sanitization & Security</h4>
+                <pre>import DOMPurify from 'isomorphic-dompurify';
+
+function replaceContentSafely(selector: string, html: string) {
+  const target = document.querySelector(selector);
+  if (!target) {
+    console.warn('[MutationExecutor] Selector not found:', selector);
+    return;
+  }
+
+  // Sanitize HTML to prevent XSS
+  const sanitized = DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [
+      'p', 'div', 'span', 'h1', 'h2', 'h3', 'h4',
+      'ul', 'ol', 'li', 'a', 'strong', 'em',
+      'blockquote', 'code', 'pre',
+      'learn-more', 'artifact-ref' // Custom elements
+    ],
+    ALLOWED_ATTR: [
+      'class', 'id', 'data-*',
+      'href', 'target', 'rel',
+      'topic', 'prompt' // Learn-more attributes
+    ]
+  });
+
+  target.innerHTML = sanitized;
+
+  // Re-register custom elements after DOM update
+  registerCustomElements(target);
+}</pre>
+
+                <h4>Window Creation</h4>
+                <pre>function createFloatingWindow(op: {
+  windowId: string,
+  html: string,
+  position?: {x: number, y: number}
+}) {
+  const sanitized = DOMPurify.sanitize(op.html);
+
+  // Create window element
+  const windowEl = document.createElement('div');
+  windowEl.innerHTML = sanitized;
+  const window = windowEl.firstElementChild;
+
+  // Set position
+  if (op.position) {
+    window.style.position = 'fixed';
+    window.style.top = `${op.position.y}px`;
+    window.style.left = `${op.position.x}px`;
+  }
+
+  // Add to canvas
+  document.getElementById('canvas-root').appendChild(window);
+
+  // Setup event handlers
+  setupWindowEventHandlers(window);
+
+  // Register custom elements within window
+  registerCustomElements(window);
+}</pre>
+            </div>
+        </div>
+
+        <!-- Complete Example -->
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>🎬 Complete Example: End-to-End Flow</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>1. User Creates Artifact with Learn-More</h4>
+                <pre>&lt;!-- Card created from web clipping --&gt;
+&lt;div class="card" data-card-id="card-789"&gt;
+  &lt;div class="card-content"&gt;
+    &lt;h2&gt;Distributed Cognition in HCI&lt;/h2&gt;
+    &lt;p&gt;Hutchins' theory proposes that cognition is
+    distributed across people, artifacts, and time.&lt;/p&gt;
+
+    &lt;!-- Learn-more button embedded --&gt;
+    &lt;learn-more
+      topic="distributed cognition"
+      prompt="Explain with examples"&gt;
+    &lt;/learn-more&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+
+                <h4>2. User Clicks Button</h4>
+                <pre>// Button click triggers LearnMoreElement.handleClick()
+// Sends request to mockup backend:
+{
+  action: 'learn-more',
+  topic: 'distributed cognition',
+  prompt: 'Explain with examples',
+  parentId: 'card-789',
+  parentContext: {
+    cardId: 'card-789',
+    content: 'Hutchins\' theory proposes...',
+    metadata: {...}
+  }
+}</pre>
+
+                <h4>3. Backend Returns Operations</h4>
+                <pre>// mockLearnMore() returns:
+[
+  {
+    operation: 'createWindow',
+    windowId: 'window-1234',
+    parentId: 'card-789',
+    html: `
+      &lt;div class="floating-window"
+           data-window-id="window-1234"
+           data-parent-card="card-789"&gt;
+        &lt;div class="window-header"&gt;
+          &lt;h3&gt;💡 Distributed Cognition&lt;/h3&gt;
+          &lt;button class="close-btn"&gt;✕&lt;/button&gt;
+        &lt;/div&gt;
+        &lt;div class="window-content"&gt;
+          &lt;h4&gt;Ship Navigation Example (Hutchins 1995):&lt;/h4&gt;
+          &lt;p&gt;In naval navigation, no single person holds
+          all knowledge. The cognitive process is
+          distributed across:&lt;/p&gt;
+          &lt;ul&gt;
+            &lt;li&gt;Navigator using charts&lt;/li&gt;
+            &lt;li&gt;Helmsman steering&lt;/li&gt;
+            &lt;li&gt;Charts as external memory&lt;/li&gt;
+            &lt;li&gt;Communication protocols&lt;/li&gt;
+          &lt;/ul&gt;
+
+          &lt;!-- Recursive learn-more --&gt;
+          &lt;learn-more topic="Hutchins ship study details"&gt;
+          &lt;/learn-more&gt;
+        &lt;/div&gt;
+
+        &lt;!-- Chat interface --&gt;
+        &lt;div class="window-chat"&gt;
+          &lt;div class="chat-messages"&gt;&lt;/div&gt;
+          &lt;input class="chat-input"
+                 placeholder="Ask follow-up questions..." /&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    `,
+    position: { x: 350, y: 150 }
+  }
+]</pre>
+
+                <h4>4. MutationExecutor Creates Window</h4>
+                <pre>// executeMutations() processes operations
+// Result: Floating window appears on canvas
+// - Positioned at (350, 150)
+// - Contains AI-generated explanation
+// - Has learn-more buttons (recursive!)
+// - Has chat input at bottom
+// - Draggable via window header
+// - Closable via ✕ button</pre>
+
+                <h4>5. User Chats in Window</h4>
+                <pre>// User types: "How does this apply to AI interfaces?"
+// Sends to backend:
+{
+  action: 'window-chat',
+  windowId: 'window-1234',
+  message: 'How does this apply to AI interfaces?',
+  windowContext: { /* window content */ },
+  parentContext: { /* original card */ }
+}
+
+// Backend returns:
+[
+  {
+    operation: 'appendContent',
+    selector: '[data-window-id="window-1234"] .chat-messages',
+    html: `
+      &lt;div class="message assistant"&gt;
+        &lt;p&gt;In AI interfaces, distributed cognition
+        manifests when the interface becomes a
+        cognitive partner...&lt;/p&gt;
+
+        &lt;learn-more topic="AI as cognitive partner"&gt;
+        &lt;/learn-more&gt;
+      &lt;/div&gt;
+    `
+  }
+]</pre>
+
+                <h4>6. Recursive Exploration</h4>
+                <div class="highlight-box">
+                    <strong>Key Feature:</strong> User can click the new learn-more button in the chat response, which spawns <em>another</em> floating window, creating a cascade of exploration windows.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Testing Strategy -->
+    <div class="collapsible" data-collapsible="open" style="grid-column: 1 / -1;">
+        <div class="collapsible-header">
+            <span>🧪 Testing the CardMutationAPI (Playwright)</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <div class="two-column-layout">
+                <pre>// Test 1: Learn-more creates window
+test('learn-more button spawns window', async ({
+  context, extensionId
+}) => {
+  const page = await context.newPage();
+  await page.goto(canvasUrl);
+
+  // Create card with learn-more
+  await createCard(page, `
+    &lt;learn-more topic="test"&gt;&lt;/learn-more&gt;
+  `);
+
+  // Click button
+  await page.click('learn-more button');
+
+  // Wait for mock backend delay
+  await page.waitForTimeout(3500);
+
+  // Verify window created
+  const window = await page.$('.floating-window');
+  expect(window).not.toBeNull();
+
+  const windowId = await window.getAttribute(
+    'data-window-id'
+  );
+  expect(windowId).toMatch(/^window-/);
+});</pre>
+
+                <pre>// Test 2: Window has chat interface
+test('floating window has chat', async ({ page }) => {
+  await page.click('learn-more button');
+  await page.waitForSelector('.floating-window');
+
+  // Check for chat elements
+  const chatInput = await page.$(
+    '.floating-window .chat-input'
+  );
+  expect(chatInput).not.toBeNull();
+
+  // Type message
+  await chatInput.fill('Test question');
+  await page.click('.send-btn');
+
+  // Wait for response
+  await page.waitForTimeout(3500);
+
+  // Verify message appended
+  const messages = await page.$$(
+    '.chat-messages .message'
+  );
+  expect(messages.length).toBeGreaterThan(0);
+});</pre>
+
+                <pre>// Test 3: Recursive learn-more
+test('windows can spawn more windows', async ({
+  page
+}) => {
+  // Create first window
+  await page.click('learn-more[topic="test1"]');
+  await page.waitForSelector('.floating-window');
+
+  // Click learn-more inside window
+  await page.click(
+    '.floating-window learn-more[topic="test2"]'
+  );
+  await page.waitForTimeout(3500);
+
+  // Verify two windows exist
+  const windows = await page.$$('.floating-window');
+  expect(windows.length).toBe(2);
+
+  // Verify parent relationship
+  const window2 = windows[1];
+  const parentId = await window2.getAttribute(
+    'data-parent-card'
+  );
+  const window1Id = await windows[0].getAttribute(
+    'data-window-id'
+  );
+  expect(parentId).toBe(window1Id);
+});</pre>
+
+                <pre>// Test 4: Operation sanitization
+test('malicious HTML is sanitized', async ({
+  page
+}) => {
+  // Mock backend returns malicious HTML
+  const ops = [
+    {
+      operation: 'createWindow',
+      html: `
+        &lt;div&gt;
+          &lt;script&gt;alert('XSS')&lt;/script&gt;
+          &lt;p&gt;Normal content&lt;/p&gt;
+        &lt;/div&gt;
+      `
+    }
+  ];
+
+  await page.evaluate((operations) => {
+    executeMutations(operations);
+  }, ops);
+
+  // Verify script tag removed
+  const window = await page.$('.floating-window');
+  const html = await window.innerHTML();
+  expect(html).not.toContain('&lt;script&gt;');
+  expect(html).toContain('Normal content');
+});</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revised Implementation Timeline -->
+    <div class="collapsible" data-collapsible="closed" style="grid-column: 1 / -1;">
+        <div class="collapsible-header">
+            <span>📅 Revised Implementation Phases</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <table>
+                <tr>
+                    <th>Phase</th>
+                    <th>Duration</th>
+                    <th>Deliverables</th>
+                </tr>
+                <tr>
+                    <td><strong>1.5: CardMutationAPI + Learn-More</strong></td>
+                    <td>1.5 weeks</td>
+                    <td>
+                        • MutationOperation interface<br>
+                        • LearnMore custom element<br>
+                        • Mockup backend with template library<br>
+                        • MutationExecutor with sanitization<br>
+                        • Floating window component<br>
+                        • Window chat interface
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>2: Universal Artifacts</strong></td>
+                    <td>1 week</td>
+                    <td>
+                        • URL import<br>
+                        • Note creation<br>
+                        • File/screenshot upload<br>
+                        • Extended Card type
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>3: Generative UI Polish</strong></td>
+                    <td>1 week</td>
+                    <td>
+                        • UI template library expansion<br>
+                        • Auto-positioning logic<br>
+                        • Connection lines (parent-child)<br>
+                        • Window management (minimize, snap)
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>4: Direct Manipulation</strong></td>
+                    <td>1 week</td>
+                    <td>
+                        • ContentEditable regions<br>
+                        • Annotation layer<br>
+                        • AI-powered text operations<br>
+                        • Version tracking
+                    </td>
+                </tr>
+            </table>
+
+            <div class="card priority" style="margin-top: 12px;">
+                <h3 class="success">✅ Phase 5: Inter-Artifact Communication → Future Work</h3>
+                <p style="margin: 8px 0;">Moved to post-MVP. Will implement artifact-to-artifact messaging, distributed queries, and knowledge networks after core features are stable.</p>
+            </div>
+
+            <p style="margin: 16px 0; font-weight: 600;">
+                Total Estimated Time: <span class="metric important">4.5 weeks</span> (down from 6 weeks)
+            </p>
+        </div>
+    </div>
+
+    <!-- Key Insights -->
+    <div class="collapsible" data-collapsible="closed" style="grid-column: 1 / -1;">
+        <div class="collapsible-header">
+            <span>💡 Key Design Insights</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <div class="two-column-layout">
+                <div class="card">
+                    <h4 class="success">Why This Works</h4>
+                    <ul class="dense-list">
+                        <li><strong>Familiar Pattern:</strong> Floating windows + chat = known UX</li>
+                        <li><strong>Progressive:</strong> Start simple, add complexity via learn-more</li>
+                        <li><strong>Recursive:</strong> Every window can spawn windows (fractal exploration)</li>
+                        <li><strong>Context-Aware:</strong> Each window carries parent context</li>
+                        <li><strong>Chat-Native:</strong> Direct conversation feels natural</li>
+                        <li><strong>Mockup-First:</strong> Can develop without AI integration</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4 class="warning">Design Tradeoffs</h4>
+                    <ul class="dense-list">
+                        <li><strong>~3s Latency:</strong> Not suitable for real-time games</li>
+                        <li><strong>Window Clutter:</strong> Need minimize/close management</li>
+                        <li><strong>Context Limits:</strong> Can't send all content to AI</li>
+                        <li><strong>No Traditional JS:</strong> Learning curve for contributors</li>
+                        <li><strong>Template Quality:</strong> Mockup needs realistic responses</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="highlight-box" style="margin-top: 12px;">
+                <strong>Critical Success Factor:</strong> The quality of the mockup backend determines development velocity. Invest time in realistic mock responses and a comprehensive template library to simulate actual AI behavior.
+            </div>
+        </div>
+    </div>
+
+    <div style="height: 1px; background: var(--chinese-gold); margin: 20px 0;"></div>
+    <p style="text-align: center; color: var(--level-4); font-size: 12px;">
+        CardMutationAPI Design Document • Inspired by Claude Imagine • Ready to implement
+    </p>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-collapsible]').forEach(function(section) {
+            const isOpen = section.getAttribute('data-collapsible') === 'open';
+            section.classList.add('collapsible');
+            if (isOpen) section.classList.add('open');
+        });
+
+        document.querySelectorAll('.collapsible-header').forEach(function(header) {
+            header.addEventListener('click', function() {
+                const collapsible = this.closest('.collapsible');
+                collapsible.classList.toggle('open');
+            });
+        });
+
+        const expandAllBtn = document.getElementById('expand-all');
+        const collapseAllBtn = document.getElementById('collapse-all');
+
+        if (expandAllBtn) {
+            expandAllBtn.addEventListener('click', function() {
+                document.querySelectorAll('.collapsible').forEach(function(c) {
+                    c.classList.add('open');
+                });
+            });
+        }
+
+        if (collapseAllBtn) {
+            collapseAllBtn.addEventListener('click', function() {
+                document.querySelectorAll('.collapsible').forEach(function(c) {
+                    c.classList.remove('open');
+                });
+            });
+        }
+    });
+    </script>
+</body>
+</html>

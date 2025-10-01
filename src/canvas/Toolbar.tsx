@@ -13,6 +13,8 @@ interface ToolbarProps {
   totalCount: number;
   onSettingsClick?: () => void;
   onCreateNote?: () => void;
+  onToggleConnectionMode?: () => void;
+  connectionMode?: boolean;
 }
 
 export interface ToolbarRef {
@@ -30,6 +32,8 @@ export const Toolbar = forwardRef<ToolbarRef, ToolbarProps>(({
   totalCount,
   onSettingsClick,
   onCreateNote,
+  onToggleConnectionMode,
+  connectionMode,
 }, ref) => {
   const [searchInput, setSearchInput] = useState(filters.searchQuery);
   const [showFilters, setShowFilters] = useState(false);
@@ -218,6 +222,40 @@ export const Toolbar = forwardRef<ToolbarRef, ToolbarProps>(({
               />
             </svg>
             <span style={styles.newNoteText}>New Note</span>
+          </button>
+
+          <button
+            onClick={onToggleConnectionMode}
+            style={{
+              ...styles.connectionButton,
+              ...(connectionMode ? styles.connectionButtonActive : {}),
+            }}
+            title="Connect cards (Press C)"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="4" cy="4" r="2.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
+              <circle cx="14" cy="14" r="2.5" stroke="currentColor" strokeWidth="1.5" fill="none" />
+              <path
+                d="M6 5L12 13"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                markerEnd="url(#arrowhead)"
+              />
+              <defs>
+                <marker
+                  id="arrowhead"
+                  markerWidth="10"
+                  markerHeight="10"
+                  refX="8"
+                  refY="3"
+                  orient="auto"
+                >
+                  <polygon points="0 0, 6 3, 0 6" fill="currentColor" />
+                </marker>
+              </defs>
+            </svg>
+            <span style={styles.connectionButtonText}>Connect</span>
           </button>
 
           {/* Result count */}
@@ -744,5 +782,27 @@ const styles: Record<string, React.CSSProperties> = {
   },
   newNoteText: {
     color: '#8B0000',
+  },
+  connectionButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 14px',
+    border: '1px solid rgba(212, 175, 55, 0.4)',
+    borderRadius: '8px',
+    background: 'rgba(212, 175, 55, 0.1)',
+    color: '#8B7355',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    fontWeight: 600,
+    fontSize: '14px',
+  },
+  connectionButtonActive: {
+    background: '#D4AF37',
+    color: 'white',
+    borderColor: '#D4AF37',
+  },
+  connectionButtonText: {
+    color: 'inherit',
   },
 };

@@ -2,7 +2,7 @@
  * WindowManager service for managing floating windows
  */
 
-import type { Card } from '@/types/card';
+import type { Card, Message } from '@/types/card';
 import type { WindowState, SerializedWindowState } from '@/types/window';
 import { saveWindowStates, loadWindowStates } from '@/utils/windowStorage';
 import { chatService } from './chatService';
@@ -153,7 +153,7 @@ export class WindowManager {
   /**
    * Update conversation messages
    */
-  updateConversationMessages(cardId: string, messages: any[]): void {
+  updateConversationMessages(cardId: string, messages: Message[]): void {
     const window = this.windows.get(cardId);
     if (window) {
       window.conversationMessages = messages;

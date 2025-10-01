@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Structure - Technical Definition</title>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --ink-black: #2C2C2C;
+            --paper-beige: #F5F5DC;
+            --light-cream: #FFFEF0;
+            --level-1: #8B0000;
+            --level-2: #CD5C5C;
+            --level-3: #666;
+            --level-4: #999;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            line-height: 1.3;
+            font-size: 13px;
+            padding: 12px;
+            max-width: 100%;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin: 8px 0 12px 0;
+            padding: 8px 0;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            border-bottom: 3px solid var(--chinese-gold);
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 10px 0 6px 0;
+            padding: 6px 8px;
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.05);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 6px 0 4px 0;
+            color: var(--level-2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h4 {
+            font-size: 13px;
+            font-weight: 600;
+            margin: 4px 0 2px 0;
+            color: var(--level-2);
+        }
+
+        .critical {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), white);
+            border: 2px solid var(--chinese-gold);
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 3px;
+        }
+
+        .definition-box {
+            background: white;
+            border: 2px solid var(--chinese-red);
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 3px;
+            box-shadow: 0 2px 6px rgba(139, 0, 0, 0.15);
+        }
+
+        .formal-def {
+            font-family: 'Courier New', monospace;
+            background: rgba(245, 245, 220, 0.5);
+            padding: 8px;
+            border-left: 3px solid var(--chinese-gold);
+            margin: 8px 0;
+            font-size: 12px;
+        }
+
+        .collapsible {
+            margin: 6px 0;
+            width: 100%;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 8px 10px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.06), rgba(255, 215, 0, 0.03));
+            border-left: 3px solid var(--chinese-gold);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.12), rgba(255, 215, 0, 0.06));
+        }
+
+        .collapsible-header .arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-size: 12px;
+            margin-right: 8px;
+        }
+
+        .collapsible.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 10000px;
+            padding: 10px 12px;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 8px 0;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            border-radius: 3px;
+            padding: 8px;
+            margin: 6px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.priority {
+            border: 2px solid var(--chinese-gold);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+        }
+
+        code {
+            background: rgba(245, 245, 220, 0.5);
+            padding: 2px 5px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--level-2);
+        }
+
+        pre {
+            background: linear-gradient(135deg, rgba(245, 245, 220, 0.3), rgba(255, 255, 255, 0.5));
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            padding: 8px;
+            margin: 6px 0;
+            overflow-x: auto;
+            border-radius: 3px;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+
+        th, td {
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(139, 0, 0, 0.1);
+            font-weight: 600;
+            color: var(--level-1);
+        }
+
+        ul, ol {
+            margin: 6px 0 6px 20px;
+            line-height: 1.6;
+        }
+
+        li {
+            margin: 3px 0;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, var(--chinese-red), transparent);
+            margin: 12px 0;
+        }
+
+        .controls {
+            position: sticky;
+            top: 0;
+            background: var(--paper-beige);
+            padding: 8px;
+            border-bottom: 2px solid var(--chinese-gold);
+            z-index: 100;
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+        }
+
+        .property-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .property-list li {
+            padding: 4px 0 4px 16px;
+            position: relative;
+        }
+
+        .property-list li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--chinese-red);
+            font-weight: bold;
+        }
+
+        .complexity-box {
+            background: rgba(139, 0, 0, 0.03);
+            border-left: 3px solid var(--chinese-red);
+            padding: 6px 10px;
+            margin: 6px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button onclick="expandAll()">Expand All</button>
+        <button onclick="collapseAll()">Collapse All</button>
+    </div>
+
+    <h1>Data Structure - Technical Definition</h1>
+
+    <div class="critical">
+        <h2>Core Definition</h2>
+        <div class="definition-box">
+            <p style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">A <strong>data structure</strong> is a specialized format for organizing, processing, retrieving, and storing data in a computer's memory, enabling efficient access and modification.</p>
+
+            <p style="margin-top: 8px;">More formally: A data structure is a collection of data values, the relationships among them, and the operations that can be applied to the data.</p>
+        </div>
+
+        <div class="formal-def">
+            <strong>Formal Mathematical Definition:</strong><br>
+            DS = (D, R, O)<br>
+            where:<br>
+            • D = set of data values (domain)<br>
+            • R = set of relationships/constraints on D<br>
+            • O = set of operations/functions on D
+        </div>
+    </div>
+
+    <div class="two-column">
+        <div class="card priority">
+            <h4>🎯 Essential Components</h4>
+            <ul class="property-list">
+                <li><strong>Data values:</strong> The actual information stored</li>
+                <li><strong>Organization:</strong> How data is arranged in memory</li>
+                <li><strong>Relationships:</strong> Connections between data elements</li>
+                <li><strong>Operations:</strong> Allowed manipulations (insert, delete, search, etc.)</li>
+                <li><strong>Constraints:</strong> Rules governing structure and access</li>
+            </ul>
+        </div>
+
+        <div class="card priority">
+            <h4>⚡ Key Properties</h4>
+            <ul class="property-list">
+                <li><strong>Time Complexity:</strong> Speed of operations</li>
+                <li><strong>Space Complexity:</strong> Memory requirements</li>
+                <li><strong>Persistence:</strong> Data lifetime</li>
+                <li><strong>Mutability:</strong> Modifiable vs. immutable</li>
+                <li><strong>Access Pattern:</strong> Sequential, random, hierarchical</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="collapsible open">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>Abstract vs Concrete Data Structures</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="two-column">
+                <div class="card">
+                    <h4>Abstract Data Type (ADT)</h4>
+                    <p style="margin-bottom: 6px;"><strong>Definition:</strong> Mathematical model defining data type by its behavior (operations) from user's perspective, independent of implementation.</p>
+                    <p style="margin-top: 6px; font-weight: 600; color: var(--level-2);">Examples:</p>
+                    <ul style="margin-left: 16px; margin-top: 4px;">
+                        <li>List (ordered collection)</li>
+                        <li>Stack (LIFO)</li>
+                        <li>Queue (FIFO)</li>
+                        <li>Set (unique elements)</li>
+                        <li>Map/Dictionary (key-value pairs)</li>
+                        <li>Tree (hierarchical structure)</li>
+                        <li>Graph (nodes and edges)</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h4>Concrete Data Structure</h4>
+                    <p style="margin-bottom: 6px;"><strong>Definition:</strong> Actual implementation of an ADT in memory, specifying how data is stored and operations are performed.</p>
+                    <p style="margin-top: 6px; font-weight: 600; color: var(--level-2);">Examples:</p>
+                    <ul style="margin-left: 16px; margin-top: 4px;">
+                        <li>Array (contiguous memory)</li>
+                        <li>Linked List (node pointers)</li>
+                        <li>Hash Table (array + hash function)</li>
+                        <li>Binary Search Tree (pointer-based)</li>
+                        <li>Heap (array-based tree)</li>
+                        <li>B-Tree (disk-optimized tree)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card priority" style="margin-top: 8px;">
+                <h4>Key Distinction</h4>
+                <p><strong>ADT = WHAT</strong> (interface, behavior, operations) — "A stack supports push and pop"</p>
+                <p style="margin-top: 4px;"><strong>Concrete DS = HOW</strong> (implementation, memory layout) — "A stack implemented using an array"</p>
+                <p style="margin-top: 6px; font-style: italic; color: var(--level-3);">Example: The Stack ADT can be implemented using Array, Linked List, or Dynamic Array concrete structures.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>Classification by Organization</div>
+        </div>
+        <div class="collapsible-content">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Organization</th>
+                        <th>Examples</th>
+                        <th>Use Cases</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Linear</strong></td>
+                        <td>Sequential, one-to-one relationships</td>
+                        <td>Array, Linked List, Stack, Queue</td>
+                        <td>Simple traversal, LIFO/FIFO processing</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Non-Linear</strong></td>
+                        <td>Hierarchical or networked relationships</td>
+                        <td>Tree, Graph, Heap</td>
+                        <td>Hierarchy modeling, network representation</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Homogeneous</strong></td>
+                        <td>All elements same type</td>
+                        <td>Array of integers, List of strings</td>
+                        <td>Type-safe collections</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Heterogeneous</strong></td>
+                        <td>Different types allowed</td>
+                        <td>Struct, Record, Object</td>
+                        <td>Complex data modeling</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Static</strong></td>
+                        <td>Fixed size at compile time</td>
+                        <td>Static array, Fixed record</td>
+                        <td>Known size, embedded systems</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Dynamic</strong></td>
+                        <td>Size changes at runtime</td>
+                        <td>Linked List, Dynamic Array, Tree</td>
+                        <td>Unknown size, flexible storage</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>Common Operations & Complexity</div>
+        </div>
+        <div class="collapsible-content">
+            <h3>Standard Operations</h3>
+            <div class="two-column">
+                <div>
+                    <h4>Access Operations</h4>
+                    <ul>
+                        <li><code>Access(i)</code> - Retrieve element at position i</li>
+                        <li><code>Search(x)</code> - Find element x</li>
+                        <li><code>Traverse()</code> - Visit all elements</li>
+                    </ul>
+
+                    <h4 style="margin-top: 10px;">Modification Operations</h4>
+                    <ul>
+                        <li><code>Insert(x, i)</code> - Add x at position i</li>
+                        <li><code>Delete(i)</code> - Remove element at position i</li>
+                        <li><code>Update(i, x)</code> - Modify element at i</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4>Query Operations</h4>
+                    <ul>
+                        <li><code>Size()</code> - Number of elements</li>
+                        <li><code>IsEmpty()</code> - Check if empty</li>
+                        <li><code>Contains(x)</code> - Check membership</li>
+                    </ul>
+
+                    <h4 style="margin-top: 10px;">Iterator Operations</h4>
+                    <ul>
+                        <li><code>First()</code> - Get first element</li>
+                        <li><code>Next()</code> - Move to next</li>
+                        <li><code>HasNext()</code> - Check if more elements</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <h3>Time Complexity Comparison</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Data Structure</th>
+                        <th>Access</th>
+                        <th>Search</th>
+                        <th>Insert</th>
+                        <th>Delete</th>
+                        <th>Space</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Array</strong></td>
+                        <td>O(1)</td>
+                        <td>O(n)</td>
+                        <td>O(n)</td>
+                        <td>O(n)</td>
+                        <td>O(n)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Linked List</strong></td>
+                        <td>O(n)</td>
+                        <td>O(n)</td>
+                        <td>O(1)*</td>
+                        <td>O(1)*</td>
+                        <td>O(n)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Hash Table</strong></td>
+                        <td>O(1)**</td>
+                        <td>O(1)**</td>
+                        <td>O(1)**</td>
+                        <td>O(1)**</td>
+                        <td>O(n)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Binary Search Tree</strong></td>
+                        <td>O(log n)***</td>
+                        <td>O(log n)***</td>
+                        <td>O(log n)***</td>
+                        <td>O(log n)***</td>
+                        <td>O(n)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>AVL Tree</strong></td>
+                        <td>O(log n)</td>
+                        <td>O(log n)</td>
+                        <td>O(log n)</td>
+                        <td>O(log n)</td>
+                        <td>O(n)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>B-Tree</strong></td>
+                        <td>O(log n)</td>
+                        <td>O(log n)</td>
+                        <td>O(log n)</td>
+                        <td>O(log n)</td>
+                        <td>O(n)</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p style="font-size: 11px; margin-top: 6px; color: var(--level-3);">
+                * At known position; ** Average case (worst O(n)); *** Balanced tree (worst O(n) if unbalanced)
+            </p>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>Fundamental Data Structures (Detailed)</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="card">
+                <h4>1. Array</h4>
+                <p><strong>Definition:</strong> Contiguous block of memory storing elements of same type, indexed by integers starting from 0.</p>
+                <div class="complexity-box">
+                    Memory: E[0] | E[1] | E[2] | ... | E[n-1]<br>
+                    Address: base + (i × sizeof(element))
+                </div>
+                <p><strong>Properties:</strong> Random access O(1), Fixed size (static), Cache-friendly</p>
+            </div>
+
+            <div class="card">
+                <h4>2. Linked List</h4>
+                <p><strong>Definition:</strong> Collection of nodes where each node contains data and pointer(s) to next/previous node(s).</p>
+                <div class="complexity-box">
+                    Node: [Data | Next*] → [Data | Next*] → [Data | NULL]
+                </div>
+                <p><strong>Variants:</strong></p>
+                <ul style="margin-left: 16px; margin-top: 4px;">
+                    <li><strong>Singly Linked:</strong> One pointer (next)</li>
+                    <li><strong>Doubly Linked:</strong> Two pointers (next, prev)</li>
+                    <li><strong>Circular:</strong> Last node points to first</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h4>3. Stack</h4>
+                <p><strong>Definition:</strong> LIFO (Last-In-First-Out) abstract data type with two primary operations.</p>
+                <div class="complexity-box">
+                    push(x): Add element to top — O(1)<br>
+                    pop(): Remove and return top element — O(1)<br>
+                    peek(): View top without removal — O(1)
+                </div>
+                <p><strong>Applications:</strong> Function call stack, undo mechanisms, expression evaluation, backtracking</p>
+            </div>
+
+            <div class="card">
+                <h4>4. Queue</h4>
+                <p><strong>Definition:</strong> FIFO (First-In-First-Out) abstract data type.</p>
+                <div class="complexity-box">
+                    enqueue(x): Add to rear — O(1)<br>
+                    dequeue(): Remove from front — O(1)<br>
+                    front(): View front element — O(1)
+                </div>
+                <p><strong>Variants:</strong> Circular Queue, Priority Queue, Deque (Double-ended queue)</p>
+            </div>
+
+            <div class="card">
+                <h4>5. Hash Table</h4>
+                <p><strong>Definition:</strong> Data structure mapping keys to values using hash function for O(1) average access.</p>
+                <div class="complexity-box">
+                    h(key) → index in array<br>
+                    Collision handling: Chaining, Open Addressing<br>
+                    Load factor α = n/m (n items, m buckets)
+                </div>
+                <p><strong>Applications:</strong> Dictionaries, caches, symbol tables, database indexing</p>
+            </div>
+
+            <div class="card">
+                <h4>6. Tree</h4>
+                <p><strong>Definition:</strong> Hierarchical data structure with root node and child subtrees, forming acyclic graph.</p>
+                <p><strong>Key Variants:</strong></p>
+                <ul style="margin-left: 16px; margin-top: 4px;">
+                    <li><strong>Binary Tree:</strong> Each node ≤ 2 children</li>
+                    <li><strong>Binary Search Tree:</strong> Left < Parent < Right ordering</li>
+                    <li><strong>AVL Tree:</strong> Self-balancing BST (height difference ≤ 1)</li>
+                    <li><strong>Red-Black Tree:</strong> Self-balancing with color properties</li>
+                    <li><strong>B-Tree:</strong> Multi-way tree for disk storage</li>
+                    <li><strong>Heap:</strong> Complete binary tree with heap property</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h4>7. Graph</h4>
+                <p><strong>Definition:</strong> G = (V, E) where V = set of vertices, E = set of edges connecting vertices.</p>
+                <p><strong>Types:</strong></p>
+                <ul style="margin-left: 16px; margin-top: 4px;">
+                    <li><strong>Directed/Undirected:</strong> Edge direction</li>
+                    <li><strong>Weighted/Unweighted:</strong> Edge costs</li>
+                    <li><strong>Cyclic/Acyclic:</strong> Presence of cycles</li>
+                </ul>
+                <p style="margin-top: 6px;"><strong>Representations:</strong></p>
+                <div class="complexity-box">
+                    Adjacency Matrix: O(V²) space, O(1) edge check<br>
+                    Adjacency List: O(V+E) space, O(degree) edge check
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>Advanced Concepts</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="card priority">
+                <h4>Persistent Data Structures</h4>
+                <p><strong>Definition:</strong> Data structures that preserve previous versions when modified, enabling access to historical states.</p>
+                <p style="margin-top: 6px;"><strong>Types:</strong></p>
+                <ul style="margin-left: 16px; margin-top: 4px;">
+                    <li><strong>Partially Persistent:</strong> All versions readable, only newest writable</li>
+                    <li><strong>Fully Persistent:</strong> All versions readable and writable</li>
+                    <li><strong>Confluent Persistent:</strong> Versions can be merged</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h4>Immutable Data Structures</h4>
+                <p><strong>Definition:</strong> Structures that cannot be modified after creation; operations return new structures.</p>
+                <p style="margin-top: 6px;"><strong>Benefits:</strong> Thread-safety, easier reasoning, cacheable, undo/redo support</p>
+                <p style="margin-top: 4px;"><strong>Implementation:</strong> Structural sharing to minimize copying</p>
+            </div>
+
+            <div class="card">
+                <h4>Concurrent Data Structures</h4>
+                <p><strong>Definition:</strong> Structures designed for safe concurrent access by multiple threads.</p>
+                <p style="margin-top: 6px;"><strong>Techniques:</strong> Lock-free algorithms, Compare-and-Swap (CAS), Memory barriers</p>
+                <p style="margin-top: 4px;"><strong>Examples:</strong> Concurrent HashMap, Lock-free Queue, Skip List</p>
+            </div>
+
+            <div class="card">
+                <h4>Cache-Oblivious Data Structures</h4>
+                <p><strong>Definition:</strong> Structures optimized for cache performance without knowing cache parameters.</p>
+                <p style="margin-top: 6px;"><strong>Principle:</strong> Recursive decomposition achieves optimal cache usage at all memory hierarchy levels</p>
+                <p style="margin-top: 4px;"><strong>Examples:</strong> Cache-oblivious B-tree, van Emde Boas layout</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>Selection Criteria & Trade-offs</div>
+        </div>
+        <div class="collapsible-content">
+            <h3>Factors in Choosing Data Structures</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Factor</th>
+                        <th>Considerations</th>
+                        <th>Example Trade-off</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Access Pattern</strong></td>
+                        <td>Sequential, random, hierarchical</td>
+                        <td>Array (random) vs Linked List (sequential)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Operation Frequency</strong></td>
+                        <td>Read-heavy vs write-heavy</td>
+                        <td>Array (read) vs Linked List (insert/delete)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Memory Constraints</strong></td>
+                        <td>Available RAM, fragmentation</td>
+                        <td>Array (contiguous) vs Tree (scattered)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Size Predictability</strong></td>
+                        <td>Known vs dynamic size</td>
+                        <td>Static Array vs Dynamic Array</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Search Requirements</strong></td>
+                        <td>Key-based, range, nearest neighbor</td>
+                        <td>Hash Table vs BST vs KD-Tree</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ordering Needs</strong></td>
+                        <td>Sorted vs unsorted</td>
+                        <td>BST vs Hash Table</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Concurrency</strong></td>
+                        <td>Single vs multi-threaded</td>
+                        <td>Standard vs Concurrent structures</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Persistence</strong></td>
+                        <td>Disk vs memory storage</td>
+                        <td>B-Tree vs Red-Black Tree</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="card priority" style="margin-top: 12px;">
+                <h4>The Space-Time Trade-off</h4>
+                <p><strong>Fundamental Principle:</strong> Often, you can trade space (memory) for time (speed) or vice versa.</p>
+                <p style="margin-top: 8px;"><strong>Examples:</strong></p>
+                <ul style="margin-left: 16px; margin-top: 4px;">
+                    <li><strong>Memoization:</strong> Store computed results → More space, less time</li>
+                    <li><strong>Compression:</strong> Compact storage → Less space, more time (to decompress)</li>
+                    <li><strong>Indexing:</strong> Additional index structures → More space, faster search</li>
+                    <li><strong>Hash Tables:</strong> Larger table (lower load factor) → More space, fewer collisions</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>Real-World Applications</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="two-column">
+                <div class="card">
+                    <h4>Operating Systems</h4>
+                    <ul style="margin-left: 16px;">
+                        <li>Process scheduling: <strong>Queue, Priority Queue</strong></li>
+                        <li>Memory management: <strong>Linked List, Tree</strong></li>
+                        <li>File systems: <strong>Tree, B-Tree</strong></li>
+                        <li>Virtual memory: <strong>Hash Table, Page Table</strong></li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h4>Databases</h4>
+                    <ul style="margin-left: 16px;">
+                        <li>Indexing: <strong>B+ Tree, Hash Index</strong></li>
+                        <li>Query optimization: <strong>Graph</strong></li>
+                        <li>Transactions: <strong>Stack (undo), Log</strong></li>
+                        <li>Caching: <strong>LRU Cache (Hash + DLL)</strong></li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h4>Networking</h4>
+                    <ul style="margin-left: 16px;">
+                        <li>Routing: <strong>Graph, Trie</strong></li>
+                        <li>Packet buffering: <strong>Queue</strong></li>
+                        <li>DNS: <strong>Hash Table, Trie</strong></li>
+                        <li>Load balancing: <strong>Heap</strong></li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h4>Compilers</h4>
+                    <ul style="margin-left: 16px;">
+                        <li>Symbol table: <strong>Hash Table</strong></li>
+                        <li>Syntax tree: <strong>Tree</strong></li>
+                        <li>Expression evaluation: <strong>Stack</strong></li>
+                        <li>Optimization: <strong>Graph (CFG, DFG)</strong></li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h4>Machine Learning</h4>
+                    <ul style="margin-left: 16px;">
+                        <li>Decision trees: <strong>Tree</strong></li>
+                        <li>Neural networks: <strong>Graph</strong></li>
+                        <li>Nearest neighbor: <strong>KD-Tree, Ball Tree</strong></li>
+                        <li>Feature hashing: <strong>Hash Table</strong></li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h4>Web Applications</h4>
+                    <ul style="margin-left: 16px;">
+                        <li>DOM: <strong>Tree</strong></li>
+                        <li>Browser history: <strong>Stack, Queue</strong></li>
+                        <li>Session storage: <strong>Hash Table</strong></li>
+                        <li>Social graphs: <strong>Graph</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="critical">
+        <h2>Summary: Data Structure Essence</h2>
+        <p style="margin-bottom: 8px;">A data structure is fundamentally about <strong>organizing information to solve problems efficiently</strong>. The "right" structure depends on:</p>
+        <div class="two-column" style="margin-top: 8px;">
+            <ul style="margin-left: 16px;">
+                <li>What operations you need (access, search, insert, delete)</li>
+                <li>How often you perform each operation</li>
+                <li>Whether you know the data size in advance</li>
+                <li>Memory constraints and locality</li>
+            </ul>
+            <ul style="margin-left: 16px;">
+                <li>Whether data needs ordering</li>
+                <li>Concurrency requirements</li>
+                <li>Cache/disk considerations</li>
+                <li>Acceptable trade-offs (time vs space)</li>
+            </ul>
+        </div>
+        <p style="margin-top: 10px; font-weight: 600; font-size: 14px;">The art of programming is choosing the right data structure for the problem at hand.</p>
+    </div>
+
+    <script>
+        function toggleCollapsible(header) {
+            const collapsible = header.parentElement;
+            collapsible.classList.toggle('open');
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.classList.add('open');
+            });
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.classList.remove('open');
+            });
+        }
+    </script>
+</body>
+</html>

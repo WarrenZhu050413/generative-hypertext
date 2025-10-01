@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TODO Integration Complete - Nabokov's Web Design</title>
+<style>
+:root {
+    --chinese-red: #8B0000;
+    --chinese-gold: #FFD700;
+    --paper-beige: #FAF7F2;
+    --light-cream: #FFF8DC;
+    --ink-black: #2C2C2C;
+    --level-1: #8B0000;
+    --level-2: #CD5C5C;
+    --level-3: #B8956D;
+    --level-4: #999;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+    color: var(--ink-black);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    line-height: 1.3;
+    font-size: 13px;
+    padding: 12px;
+}
+
+h1 {
+    font-size: 26px;
+    font-weight: 900;
+    margin: 8px 0;
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+    border-bottom: 3px solid var(--chinese-gold);
+    padding-bottom: 8px;
+}
+
+h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 12px 0 6px 0;
+    padding: 6px 8px;
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.05));
+    border-left: 4px solid var(--chinese-red);
+    color: var(--level-1);
+}
+
+h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 8px 0 4px 0;
+    color: var(--level-2);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.status-bar {
+    background: linear-gradient(135deg, var(--chinese-red), #B71C1C);
+    color: white;
+    padding: 12px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
+}
+
+.status-bar .checkmark {
+    font-size: 32px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 12px 0;
+}
+
+.card {
+    background: white;
+    border: 1px solid rgba(139, 0, 0, 0.2);
+    border-radius: 4px;
+    padding: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.card.full-width {
+    grid-column: span 2;
+}
+
+.card.integrated {
+    border-left: 4px solid #28a745;
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.03), white);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--chinese-gold);
+}
+
+.card-title {
+    font-weight: 700;
+    color: var(--level-1);
+    font-size: 13px;
+}
+
+.badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge.complete {
+    background: #28a745;
+    color: white;
+}
+
+.badge.design-char {
+    background: var(--chinese-gold);
+    color: var(--ink-black);
+}
+
+.badge.design-goal {
+    background: #007bff;
+    color: white;
+}
+
+.todo-item {
+    margin: 8px 0;
+    padding: 8px;
+    background: rgba(255, 215, 0, 0.05);
+    border-left: 3px solid var(--chinese-gold);
+}
+
+.todo-number {
+    font-weight: 700;
+    color: var(--chinese-red);
+    font-size: 14px;
+}
+
+.integration-point {
+    margin: 6px 0;
+    padding: 6px;
+    background: rgba(40, 167, 69, 0.05);
+    border-left: 2px solid #28a745;
+    font-size: 12px;
+}
+
+.integration-point strong {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.location-ref {
+    font-family: 'Courier New', monospace;
+    background: rgba(139, 0, 0, 0.05);
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 11px;
+    color: var(--level-2);
+}
+
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 12px;
+}
+
+.summary-table th {
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    color: white;
+    padding: 6px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.summary-table td {
+    padding: 6px;
+    border: 1px solid rgba(139, 0, 0, 0.1);
+    vertical-align: top;
+}
+
+.summary-table tr:nth-child(even) {
+    background: rgba(255, 215, 0, 0.03);
+}
+
+code {
+    background: rgba(245, 245, 220, 0.5);
+    padding: 2px 4px;
+    border-radius: 2px;
+    font-size: 11px;
+    color: var(--level-2);
+}
+
+.theoretical-link {
+    margin: 8px 0;
+    padding: 8px;
+    background: linear-gradient(135deg, rgba(0, 123, 255, 0.05), white);
+    border-left: 3px solid #007bff;
+    font-size: 12px;
+}
+
+.theoretical-link::before {
+    content: "🔗 ";
+    font-size: 14px;
+}
+
+.section-number {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background: var(--chinese-red);
+    color: white;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 24px;
+    font-weight: 700;
+    font-size: 12px;
+    margin-right: 6px;
+}
+
+ul {
+    margin-left: 20px;
+    list-style: none;
+}
+
+ul li {
+    position: relative;
+    padding-left: 8px;
+    margin: 4px 0;
+}
+
+ul li::before {
+    content: "▸";
+    position: absolute;
+    left: -12px;
+    color: var(--chinese-red);
+    font-size: 10px;
+}
+
+.highlight-box {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 255, 255, 0.5));
+    border: 2px solid var(--chinese-gold);
+    padding: 12px;
+    margin: 12px 0;
+    border-radius: 4px;
+}
+
+.highlight-box h3 {
+    margin-top: 0;
+    color: var(--chinese-red);
+}
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+    <span class="checkmark">✅</span>
+    ALL TODO ITEMS SUCCESSFULLY INTEGRATED INTO DESIGN.md
+</div>
+
+<h1>TODO Integration Complete Summary</h1>
+
+<div class="highlight-box">
+    <h3>Integration Overview</h3>
+    <p><strong>Status:</strong> All 6 theoretical foundations + 4 implementation capabilities fully integrated</p>
+    <p><strong>Changes:</strong> Added 4 new design characteristics (C₉-C₁₂), 3 new design goals (D₉-D₁₁), comprehensive theoretical framework, and detailed implementation mapping</p>
+    <p><strong>Location:</strong> DESIGN.md lines 1-386 (TODO section removed from top)</p>
+</div>
+
+<h2>Theoretical Foundations → Design Integration</h2>
+
+<div class="grid">
+    <div class="card integrated">
+        <div class="card-header">
+            <div class="card-title"><span class="section-number">1</span>Rich Web Content Access</div>
+            <span class="badge complete">✓ Integrated</span>
+        </div>
+        <div class="todo-item">
+            <span class="todo-number">TODO #1:</span> Allow direct access to rich web content + traditional research workflows (CorpusStudio)
+        </div>
+        <div class="integration-point">
+            <strong>Design Response:</strong> <span class="location-ref">C₁₀</span> Universal Artifact Substrate + <span class="location-ref">D₁</span> Transform Any Webpage
+        </div>
+        <ul>
+            <li><strong>How:</strong> Any webpage URL → artifact (not just clipped elements)</li>
+            <li><strong>Implementation:</strong> "Add URL" button imports full webpage as conversational artifact</li>
+            <li><strong>Benefit:</strong> Integrates with bookmarks → artifacts, browser tabs → canvas nodes</li>
+        </ul>
+        <div class="theoretical-link">
+            <strong>Section:</strong> Design Goals (D₁), Approach Thesis (C₁₀), Mapping Section (lines 253-257)
+        </div>
+    </div>
+
+    <div class="card integrated">
+        <div class="card-header">
+            <div class="card-title"><span class="section-number">2</span>Non-linearity in Understanding</div>
+            <span class="badge complete">✓ Integrated</span>
+        </div>
+        <div class="todo-item">
+            <span class="todo-number">TODO #2:</span> Account for non-linearity when understanding and emerging ideas
+        </div>
+        <div class="integration-point">
+            <strong>Design Response:</strong> <span class="location-ref">C₉</span> Inter-Artifact Communication + <span class="location-ref">D₁₁</span> Non-Linear Knowledge Construction + <span class="location-ref">C₇</span> Spatial Anchoring
+        </div>
+        <ul>
+            <li><strong>How:</strong> Spatial canvas allows jumping between artifacts as understanding develops</li>
+            <li><strong>Implementation:</strong> Artifact-to-artifact queries create visible connection lines</li>
+            <li><strong>Benefit:</strong> Non-linearity becomes feature, not bug; mirrors actual understanding</li>
+        </ul>
+        <div class="theoretical-link">
+            <strong>Section:</strong> Distributed Cognitive Networks (lines 214-245), Design Goals (D₁₁), Mapping Section (lines 259-263)
+        </div>
+    </div>
+
+    <div class="card integrated">
+        <div class="card-header">
+            <div class="card-title"><span class="section-number">3</span>DMI vs. Knowledge Construction</div>
+            <span class="badge complete">✓ Integrated</span>
+        </div>
+        <div class="todo-item">
+            <span class="todo-number">TODO #3:</span> Unlike Direct Manipulation Interfaces, focus on knowledge construction
+        </div>
+        <div class="integration-point">
+            <strong>Design Response:</strong> Distributed Cognitive Networks Framework + <span class="location-ref">C₁₂</span> In-Artifact Manipulation
+        </div>
+        <ul>
+            <li><strong>How:</strong> Manipulation (editing, annotating) IS knowledge construction made visible</li>
+            <li><strong>Implementation:</strong> Direct editing in artifacts, annotation layers, restructuring tools</li>
+            <li><strong>Benefit:</strong> Thinking becomes visible and persistent; manipulation = externalization</li>
+        </ul>
+        <div class="theoretical-link">
+            <strong>Section:</strong> Distributed Cognitive Networks (lines 214-245), Design Goals (D₉), Mapping Section (lines 265-269)
+        </div>
+    </div>
+
+    <div class="card integrated">
+        <div class="card-header">
+            <div class="card-title"><span class="section-number">4</span>"Output as Input" Principle</div>
+            <span class="badge complete">✓ Integrated</span>
+        </div>
+        <div class="todo-item">
+            <span class="todo-number">TODO #4:</span> Visual Information Thinking - every output is also input, enables flow state
+        </div>
+        <div class="integration-point">
+            <strong>Design Response:</strong> <span class="location-ref">C₁₁</span> Generative UI Navigation + <span class="location-ref">D₂</span> UI as a Service
+        </div>
+        <ul>
+            <li><strong>How:</strong> Every artifact can spawn new artifacts; "learn more" buttons generate UIs on demand</li>
+            <li><strong>Implementation:</strong> Special <code>&lt;learn-more&gt;</code> elements trigger artifact generation</li>
+            <li><strong>Benefit:</strong> Exploration never terminates; continuous consumption → generation → exploration</li>
+        </ul>
+        <div class="theoretical-link">
+            <strong>Section:</strong> Approach Thesis (C₁₁), Design Goals (D₂), Supporting Evidence (line 120), Mapping Section (lines 271-275)
+        </div>
+    </div>
+
+    <div class="card integrated">
+        <div class="card-header">
+            <div class="card-title"><span class="section-number">5</span>Overview-Detail Interfaces</div>
+            <span class="badge complete">✓ Integrated</span>
+        </div>
+        <div class="todo-item">
+            <span class="todo-number">TODO #5:</span> Overview-Detail crucial for mental schema formation
+        </div>
+        <div class="integration-point">
+            <strong>Design Response:</strong> <span class="location-ref">C₅</span> Progressive Disclosure + <span class="location-ref">C₁₁</span> Generative UI + <span class="location-ref">C₇</span> Spatial Anchoring
+        </div>
+        <ul>
+            <li><strong>How:</strong> High-level overview on canvas, drill into detail by generating/opening artifacts</li>
+            <li><strong>Implementation:</strong> Canvas shows card previews; clicking opens full artifact; "learn more" generates detail views</li>
+            <li><strong>Benefit:</strong> Maintains overview while exploring depth (addresses O₂)</li>
+        </ul>
+        <div class="theoretical-link">
+            <strong>Section:</strong> Approach Thesis (C₅, C₁₁), Variable Mapping (lines 139-142), Mapping Section (lines 277-281)
+        </div>
+    </div>
+
+    <div class="card integrated">
+        <div class="card-header">
+            <div class="card-title"><span class="section-number">6</span>Non-Linear Information Seeking</div>
+            <span class="badge complete">✓ Integrated</span>
+        </div>
+        <div class="todo-item">
+            <span class="todo-number">TODO #6:</span> Information seeking requires jumping around, clarifying queries iteratively
+        </div>
+        <div class="integration-point">
+            <strong>Design Response:</strong> Distributed Cognitive Networks Framework
+        </div>
+        <ul>
+            <li><strong>How:</strong> Artifacts can be explored in any order; spatial arrangement shows relationships</li>
+            <li><strong>Implementation:</strong> Non-linear navigation via spatial canvas + artifact-to-artifact queries</li>
+            <li><strong>Benefit:</strong> System supports natural non-linear pattern of information seeking</li>
+        </ul>
+        <div class="theoretical-link">
+            <strong>Section:</strong> Distributed Cognitive Networks (lines 214-245), Supporting Evidence (lines 119-120), Mapping Section (lines 283-287)
+        </div>
+    </div>
+</div>
+
+<h2>Implementation Capabilities → Design Integration</h2>
+
+<div class="grid">
+    <div class="card integrated">
+        <div class="card-header">
+            <div class="card-title">Direct HTML Text Manipulation</div>
+            <span class="badge complete">✓ Integrated</span>
+        </div>
+        <div class="integration-point">
+            <strong>Design Response:</strong> <span class="location-ref">C₁₂</span> In-Artifact Content Manipulation + <span class="location-ref">D₉</span>
+        </div>
+        <ul>
+            <li><strong>How:</strong> Artifacts have editable regions, not just read-only displays</li>
+            <li><strong>Implementation:</strong> ContentEditable regions within artifacts, annotation overlays</li>
+            <li><strong>Status:</strong> Requires implementation (not in current Chrome extension)</li>
+        </ul>
+        <div class="theoretical-link">
+            <strong>Section:</strong> Important Capability #1 (lines 289-293), Phase 4 Roadmap (lines 407-410)
+        </div>
+    </div>
+
+    <div class="card integrated">
+        <div class="card-header">
+            <div class="card-title">"Learn More" Generative UI</div>
+            <span class="badge complete">✓ Integrated</span>
+        </div>
+        <div class="integration-point">
+            <strong>Design Response:</strong> <span class="location-ref">C₁₁</span> Generative UI Navigation + <span class="location-ref">D₂</span>
+        </div>
+        <ul>
+            <li><strong>How:</strong> Special interactive elements trigger LLM to generate new artifact UI</li>
+            <li><strong>Implementation:</strong> <code>&lt;learn-more&gt;</code> custom elements → LLM generates HTML → new artifact created</li>
+            <li><strong>Status:</strong> Requires implementation (major new feature)</li>
+        </ul>
+        <div class="theoretical-link">
+            <strong>Section:</strong> Important Capability #2 (lines 300-308), Phase 3 Roadmap (lines 402-405)
+        </div>
+    </div>
+
+    <div class="card integrated">
+        <div class="card-header">
+            <div class="card-title">Sticky Notes as Artifacts</div>
+            <span class="badge complete">✓ Integrated</span>
+        </div>
+        <div class="integration-point">
+            <strong>Design Response:</strong> <span class="location-ref">C₁₀</span> Universal Artifact Substrate + <span class="location-ref">D₁₀</span>
+        </div>
+        <ul>
+            <li><strong>How:</strong> Everything is a <code>Card</code> artifact—notes, clippings, generated UIs</li>
+            <li><strong>Implementation:</strong> "New Note" button creates blank artifact; same conversation/manipulation capabilities</li>
+            <li><strong>Status:</strong> Partially implemented (Card type exists, needs note creation UI)</li>
+        </ul>
+        <div class="theoretical-link">
+            <strong>Section:</strong> Important Capability #3 (lines 310-314), Phase 2 Roadmap (lines 396-400)
+        </div>
+    </div>
+
+    <div class="card integrated">
+        <div class="card-header">
+            <div class="card-title">File & Screenshot Uploads</div>
+            <span class="badge complete">✓ Integrated</span>
+        </div>
+        <div class="integration-point">
+            <strong>Design Response:</strong> <span class="location-ref">C₁₀</span> + <span class="location-ref">D₁₀</span> + <span class="location-ref">D₁</span>
+        </div>
+        <ul>
+            <li><strong>How:</strong> Drag-and-drop files/screenshots → create <code>Card</code> artifact with file data</li>
+            <li><strong>Implementation:</strong> Images/PDFs/documents stored in IndexedDB, same conversation capabilities</li>
+            <li><strong>Inspiration:</strong> tldraw computer treats images, text, audio as "components" with equal status</li>
+            <li><strong>Status:</strong> Requires implementation (new feature)</li>
+        </ul>
+        <div class="theoretical-link">
+            <strong>Section:</strong> Important Capability #4 (lines 316-358), Phase 2 Roadmap (lines 398-399), Implementation Guide (docs/file-artifacts-implementation.md)
+        </div>
+    </div>
+</div>
+
+<h2>New Design Elements Created</h2>
+
+<table class="summary-table">
+    <tr>
+        <th>Element</th>
+        <th>Symbol</th>
+        <th>Description</th>
+        <th>Location in DESIGN.md</th>
+    </tr>
+    <tr>
+        <td><strong>Design Goal</strong></td>
+        <td>D₉</td>
+        <td>Enable direct manipulation of artifact content (edit, annotate, restructure)</td>
+        <td>Lines 61</td>
+    </tr>
+    <tr>
+        <td><strong>Design Goal</strong></td>
+        <td>D₁₀</td>
+        <td>Treat sticky-notes and clipped webpages as the same data structure</td>
+        <td>Lines 62</td>
+    </tr>
+    <tr>
+        <td><strong>Design Goal</strong></td>
+        <td>D₁₁</td>
+        <td>Support emergent, non-linear knowledge construction through artifact networks</td>
+        <td>Lines 63</td>
+    </tr>
+    <tr>
+        <td><strong>Characteristic</strong></td>
+        <td>C₉</td>
+        <td>Inter-artifact communication channels</td>
+        <td>Lines 77</td>
+    </tr>
+    <tr>
+        <td><strong>Characteristic</strong></td>
+        <td>C₁₀</td>
+        <td>Universal artifact substrate (any content type)</td>
+        <td>Lines 78</td>
+    </tr>
+    <tr>
+        <td><strong>Characteristic</strong></td>
+        <td>C₁₁</td>
+        <td>Generative UI navigation ("learn more" buttons spawn artifacts)</td>
+        <td>Lines 79</td>
+    </tr>
+    <tr>
+        <td><strong>Characteristic</strong></td>
+        <td>C₁₂</td>
+        <td>In-artifact content manipulation (direct editing)</td>
+        <td>Lines 80</td>
+    </tr>
+    <tr>
+        <td><strong>Section</strong></td>
+        <td>New</td>
+        <td>"From Human-AI Interaction to Distributed Cognitive Networks"</td>
+        <td>Lines 214-245</td>
+    </tr>
+    <tr>
+        <td><strong>Section</strong></td>
+        <td>New</td>
+        <td>"Mapping Revised Design to TODO Integration Items"</td>
+        <td>Lines 249-310</td>
+    </tr>
+    <tr>
+        <td><strong>Section</strong></td>
+        <td>New</td>
+        <td>"Design Evolution Summary" (before/after comparison)</td>
+        <td>Lines 314-386</td>
+    </tr>
+</table>
+
+<h2>Key Conceptual Shift</h2>
+
+<div class="highlight-box">
+    <h3>Original → Revised Design Paradigm</h3>
+    <table class="summary-table">
+        <tr>
+            <th>Dimension</th>
+            <th>Original Design</th>
+            <th>Revised Design (TODO-Integrated)</th>
+        </tr>
+        <tr>
+            <td><strong>Scope</strong></td>
+            <td>LLM-generated HTML outputs</td>
+            <td>Any web content + files + screenshots + notes + generated UIs</td>
+        </tr>
+        <tr>
+            <td><strong>Interaction Model</strong></td>
+            <td>Human ↔ AI-generated element (1:1)</td>
+            <td>Human ↔ Artifact Network ↔ Artifacts (many:many)</td>
+        </tr>
+        <tr>
+            <td><strong>Information Flow</strong></td>
+            <td>Linear (generate → consume)</td>
+            <td>Cyclic (consume → manipulate → generate → explore)</td>
+        </tr>
+        <tr>
+            <td><strong>Artifact Role</strong></td>
+            <td>Display surface for AI outputs</td>
+            <td>Cognitive partners with agency that communicate with each other</td>
+        </tr>
+        <tr>
+            <td><strong>Knowledge Location</strong></td>
+            <td>In individual artifacts</td>
+            <td>In the network of relationships between artifacts</td>
+        </tr>
+        <tr>
+            <td><strong>Theoretical Basis</strong></td>
+            <td>Clark's common ground + element-level interaction</td>
+            <td>Distributed cognition + extended mind + evolutionary structures (Nelson)</td>
+        </tr>
+    </table>
+</div>
+
+<h2>Implementation Roadmap Status</h2>
+
+<div class="grid">
+    <div class="card" style="background: rgba(40, 167, 69, 0.05); border-left: 4px solid #28a745;">
+        <div class="card-header">
+            <div class="card-title">Phase 1: Current Implementation ✅</div>
+            <span class="badge complete">Complete</span>
+        </div>
+        <ul>
+            <li>Element capture from webpages</li>
+            <li>Spatial canvas with React Flow</li>
+            <li>Per-card conversation history</li>
+            <li>Card data structure</li>
+        </ul>
+    </div>
+
+    <div class="card" style="background: rgba(255, 193, 7, 0.05); border-left: 4px solid #ffc107;">
+        <div class="card-header">
+            <div class="card-title">Phase 2: Universal Artifact Substrate</div>
+            <span class="badge" style="background: #ffc107; color: black;">In Progress</span>
+        </div>
+        <ul>
+            <li>Import any URL as full-page artifact</li>
+            <li>Create blank note artifacts</li>
+            <li><strong>Drag-and-drop file/screenshot uploads</strong> (NEW)</li>
+            <li>File storage in IndexedDB with metadata extraction</li>
+            <li>Unify all artifact types under single <code>Card</code> type</li>
+        </ul>
+    </div>
+
+    <div class="card" style="background: rgba(255, 193, 7, 0.05); border-left: 4px solid #ffc107;">
+        <div class="card-header">
+            <div class="card-title">Phase 3: Generative UI Navigation</div>
+            <span class="badge" style="background: #ffc107; color: black;">In Progress</span>
+        </div>
+        <ul>
+            <li>Special <code>&lt;learn-more&gt;</code> elements in artifacts</li>
+            <li>LLM generates new artifact UI on demand</li>
+            <li>"Every output becomes input" implementation</li>
+        </ul>
+    </div>
+
+    <div class="card" style="background: rgba(108, 117, 125, 0.05); border-left: 4px solid #6c757d;">
+        <div class="card-header">
+            <div class="card-title">Phase 4: In-Artifact Manipulation</div>
+            <span class="badge" style="background: #6c757d; color: white;">Planned</span>
+        </div>
+        <ul>
+            <li>ContentEditable regions within artifacts</li>
+            <li>Annotation layer overlays</li>
+            <li>Restructuring tools (reorder, highlight, collapse sections)</li>
+        </ul>
+    </div>
+
+    <div class="card" style="background: rgba(108, 117, 125, 0.05); border-left: 4px solid #6c757d;">
+        <div class="card-header">
+            <div class="card-title">Phase 5: Inter-Artifact Communication</div>
+            <span class="badge" style="background: #6c757d; color: white;">Planned</span>
+        </div>
+        <ul>
+            <li>Message routing between artifacts</li>
+            <li>Artifact agents can query other artifacts</li>
+            <li>Visual connection lines showing relationships</li>
+            <li>Context propagation across artifact network</li>
+        </ul>
+    </div>
+</div>
+
+<div class="highlight-box" style="margin-top: 20px;">
+    <h3>🎯 Integration Complete - Next Steps</h3>
+    <p><strong>All TODO items have been fully integrated into the design document.</strong></p>
+    <p>The original TODO section has been removed from DESIGN.md (lines 1-21 deleted).</p>
+    <p><strong>Key Deliverables Created:</strong></p>
+    <ul>
+        <li>Comprehensive theoretical framework connecting all 6 TODO items</li>
+        <li>4 new design characteristics (C₉-C₁₂) and 3 new design goals (D₉-D₁₁)</li>
+        <li>Detailed "Mapping Revised Design to TODO Integration Items" section</li>
+        <li>"Design Evolution Summary" with before/after comparison</li>
+        <li>Implementation roadmap with phase-by-phase breakdown</li>
+        <li>Complete file artifacts implementation guide (<code>docs/file-artifacts-implementation.md</code>)</li>
+    </ul>
+    <p><strong>Ready to proceed with implementation according to the roadmap.</strong></p>
+</div>
+
+</body>
+</html>

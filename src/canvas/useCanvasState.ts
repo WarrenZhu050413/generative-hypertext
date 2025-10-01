@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Node, Edge, NodeChange, applyNodeChanges } from '@xyflow/react';
 import type { Card, CanvasState, StorageStats } from '@/types/card';
+import type { CardConnection, ConnectionType } from '@/types/connection';
+import { loadConnections, saveConnections } from '@/utils/connectionStorage';
+import { generateId } from '@/utils/storage';
 
 const STORAGE_KEY = 'nabokov_canvas_state';
 const CARDS_KEY = 'cards'; // Must match the key used in src/utils/storage.ts
@@ -29,6 +32,9 @@ interface UseCanvasStateReturn {
   setFilters: (filters: FilterState) => void;
   availableDomains: string[];
   availableTags: string[];
+  connections: CardConnection[];
+  addConnection: (source: string, target: string, type: ConnectionType, label?: string) => Promise<void>;
+  removeConnection: (connectionId: string) => Promise<void>;
 }
 
 /**
@@ -41,8 +47,9 @@ interface UseCanvasStateReturn {
  */
 export function useCanvasState(): UseCanvasStateReturn {
   const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges] = useState<Edge[]>([]); // No connections between cards
+  const [edges, setEdges] = useState<Edge[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
+  const [connections, setConnections] = useState<CardConnection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<StorageStats | null>(null);
@@ -88,6 +95,16 @@ export function useCanvasState(): UseCanvasStateReturn {
       if (savedFilters) {
         setFiltersState(savedFilters);
       }
+
+      // Load connections
+      const loadedConnections = await loadConnections();
+      console.log('[Canvas] Loaded connections count:', loadedConnections.length);
+      setConnections(loadedConnections);
+
+      // Convert connections to React Flow edges
+      const flowEdges = loadedConnections.map(connectionToEdge);
+      setEdges(flowEdges);
+      console.log('[Canvas] Created React Flow edges count:', flowEdges.length);
 
       // Convert cards to React Flow nodes
       const flowNodes = loadedCards.map((card, index) =>
@@ -359,6 +376,91 @@ export function useCanvasState(): UseCanvasStateReturn {
     setFiltersState(newFilters);
   }, []);
 
+  /**
+   * Convert Connection to React Flow Edge
+   */
+  const connectionToEdge = (connection: CardConnection): Edge => {
+    const edgeStyles = {
+      'generated-from': { stroke: '#D4AF37', strokeWidth: 2 },
+      'references': { stroke: '#8B7355', strokeWidth: 1, strokeDasharray: '5,5' },
+      'related': { stroke: '#B89C82', strokeWidth: 1 },
+      'contradicts': { stroke: '#8B0000', strokeWidth: 2 },
+      'custom': { stroke: '#8B7355', strokeWidth: 1 },
+    };
+
+    return {
+      id: connection.id,
+      source: connection.source,
+      target: connection.target,
+      type: 'smoothstep',
+      label: connection.label,
+      style: edgeStyles[connection.type] || edgeStyles.related,
+      animated: connection.type === 'generated-from',
+      markerEnd: {
+        type: 'arrowclosed',
+        width: 20,
+        height: 20,
+        color: edgeStyles[connection.type]?.stroke || '#B89C82',
+      },
+    };
+  };
+
+  /**
+   * Add a new connection between two cards
+   */
+  const addConnection = useCallback(async (
+    source: string,
+    target: string,
+    type: ConnectionType,
+    label?: string
+  ) => {
+    try {
+      const newConnection: CardConnection = {
+        id: generateId(),
+        source,
+        target,
+        type,
+        label,
+        metadata: {
+          createdAt: Date.now(),
+          createdBy: 'user',
+        },
+      };
+
+      const updatedConnections = [...connections, newConnection];
+      setConnections(updatedConnections);
+      await saveConnections(updatedConnections);
+
+      // Update edges
+      const newEdge = connectionToEdge(newConnection);
+      setEdges(prev => [...prev, newEdge]);
+
+      console.log('[Canvas] Connection created:', newConnection);
+    } catch (err) {
+      console.error('[Canvas] Error adding connection:', err);
+      throw err;
+    }
+  }, [connections]);
+
+  /**
+   * Remove a connection by ID
+   */
+  const removeConnection = useCallback(async (connectionId: string) => {
+    try {
+      const updatedConnections = connections.filter(c => c.id !== connectionId);
+      setConnections(updatedConnections);
+      await saveConnections(updatedConnections);
+
+      // Update edges
+      setEdges(prev => prev.filter(e => e.id !== connectionId));
+
+      console.log('[Canvas] Connection removed:', connectionId);
+    } catch (err) {
+      console.error('[Canvas] Error removing connection:', err);
+      throw err;
+    }
+  }, [connections]);
+
   return {
     nodes,
     edges,
@@ -373,5 +475,8 @@ export function useCanvasState(): UseCanvasStateReturn {
     setFilters,
     availableDomains,
     availableTags,
+    connections,
+    addConnection,
+    removeConnection,
   };
 }

@@ -137,6 +137,13 @@ export const DEFAULT_SHORTCUTS: Record<string, Omit<KeyboardShortcut, 'handler'>
     category: 'canvas',
     enabled: true,
   },
+  toggleConnectionMode: {
+    id: 'toggleConnectionMode',
+    key: 'c',
+    description: 'Toggle connection mode',
+    category: 'canvas',
+    enabled: true,
+  },
   escape: {
     id: 'escape',
     key: 'Escape',

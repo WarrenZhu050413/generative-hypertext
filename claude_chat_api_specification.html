@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Interface API Specification</title>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --jade-green: #00A86B;
+            --ink-black: #2B2B2B;
+            --paper-beige: #F5F5DC;
+            --light-cream: #FAFAF0;
+            --level-1: #000;
+            --level-2: #333;
+            --level-3: #666;
+            --level-4: #999;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            margin: 0;
+            padding: 4px;
+            width: 100vw;
+            max-width: 100%;
+            line-height: 1.3;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 900;
+            margin: 8px 0;
+            padding: 8px 4px;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 8px 0 4px 0;
+            padding: 4px;
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.03);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 6px 0 3px 0;
+            color: var(--level-2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h4 {
+            font-size: 13px;
+            font-weight: 500;
+            margin: 4px 0 2px 0;
+            color: var(--level-3);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            transition: all 0.2s ease;
+            padding: 4px 8px;
+            margin: 2px;
+            font-size: 12px;
+            line-height: 1.2;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+            border-color: var(--chinese-gold);
+        }
+
+        .important-always-visible {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+            border: 2px solid var(--chinese-gold);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+
+        .important-always-visible h2 {
+            color: var(--chinese-red);
+            margin-top: 0;
+            border-left: none;
+            background: none;
+        }
+
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        .collapsible {
+            margin: 6px 0;
+            width: 100%;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 8px 10px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+            border-left: 3px solid var(--chinese-gold);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+        }
+
+        .collapsible-header .arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-size: 12px;
+        }
+
+        .collapsible.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 10px;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 10000px;
+            padding: 10px;
+        }
+
+        .collapsible.critical .collapsible-header {
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.08);
+            font-weight: 700;
+        }
+
+        .collapsible.secondary .collapsible-header {
+            border-left: 2px solid #999;
+            background: rgba(0, 0, 0, 0.02);
+            font-size: 13px;
+        }
+
+        .collapsible.full-width {
+            grid-column: span 2;
+        }
+
+        .dense-list {
+            list-style: none;
+            padding: 0;
+            margin: 6px 0 6px 10px;
+        }
+
+        .dense-list li {
+            padding: 3px 0 3px 14px;
+            position: relative;
+            line-height: 1.4;
+        }
+
+        .dense-list li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--chinese-red);
+            font-size: 11px;
+        }
+
+        .dense-list li strong {
+            color: var(--level-2);
+            font-weight: 600;
+        }
+
+        .metric {
+            display: inline-block;
+            background: white;
+            border: 1px solid var(--chinese-gold);
+            padding: 3px 8px;
+            margin: 2px;
+            border-radius: 2px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .metric.important {
+            background: var(--chinese-gold);
+            color: white;
+            font-weight: 700;
+        }
+
+        .critical { color: var(--chinese-red); font-weight: 700; }
+        .success { color: var(--jade-green); font-weight: 600; }
+        .warning { color: var(--chinese-gold); font-weight: 600; }
+        .muted { color: var(--level-4); font-size: 12px; }
+
+        pre, code {
+            background: linear-gradient(135deg, rgba(245, 245, 220, 0.3), rgba(255, 255, 255, 0.5));
+            border: 1px solid rgba(139, 0, 0, 0.1);
+            padding: 2px 4px;
+            margin: 2px 0;
+            font-size: 12px;
+            line-height: 1.3;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+        }
+
+        pre {
+            padding: 6px 8px;
+            margin: 4px 0;
+            overflow-x: auto;
+        }
+
+        .indent-1 { margin-left: 16px; }
+        .indent-2 { margin-left: 32px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 6px 0;
+            font-size: 12px;
+        }
+
+        th {
+            background: var(--chinese-red);
+            color: white;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 4px 8px;
+            text-align: left;
+        }
+
+        td {
+            border: 1px solid #ddd;
+            padding: 4px 8px;
+        }
+
+        tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+
+        @media (max-width: 800px) {
+            .two-column-layout {
+                grid-template-columns: 1fr;
+            }
+            .collapsible.full-width {
+                grid-column: span 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div style="margin: 8px 0; text-align: right;">
+        <button id="expand-all">Expand All</button>
+        <button id="collapse-all">Collapse All</button>
+    </div>
+
+    <div class="important-always-visible">
+        <h1>💬 Chat Interface API Specification</h1>
+        <div class="two-column-layout">
+            <div>
+                <h3>🎯 Purpose</h3>
+                <p>Define the chat interface API for floating windows in Nabokov's Web. Every window has a built-in chat at the bottom for conversing with Claude about the card content.</p>
+            </div>
+            <div>
+                <h3>🔧 Architecture</h3>
+                <p>Chat interface lives at the bottom of each FloatingWindow. Uses existing Message type from card.ts. Integrates with mock content generator (Phase 3) and real Claude backend (Phase 5).</p>
+                <div class="metric important">Component: FloatingWindowChat.tsx</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="two-column-layout">
+        <!-- Left Column: Type Definitions -->
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>📋 Type Definitions</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Message Type (from card.ts)</h4>
+                <pre><code>interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+  streaming?: boolean;
+  parentId?: string;
+}</code></pre>
+
+                <h4>WindowState Extension</h4>
+                <pre><code>interface WindowState {
+  cardId: string;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+  minimized: boolean;
+  zIndex: number;
+
+  // Chat-specific state
+  chatInput: string;           // Current input value
+  conversationMessages: Message[];  // Full conversation
+  scrollPosition: number;      // Content scroll position
+  isStreaming: boolean;        // Claude is responding
+}</code></pre>
+
+                <h4>Chat Service Interface</h4>
+                <pre><code>interface ChatService {
+  sendMessage(
+    cardId: string,
+    userMessage: string,
+    cardContent: string
+  ): AsyncGenerator&lt;string&gt;;
+
+  stopStreaming(cardId: string): void;
+
+  getConversation(cardId: string): Message[];
+
+  clearConversation(cardId: string): void;
+}</code></pre>
+            </div>
+        </div>
+
+        <!-- Right Column: Component API -->
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>⚙️ Component API</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>FloatingWindowChat Props</h4>
+                <pre><code>interface FloatingWindowChatProps {
+  cardId: string;
+  cardContent: string;
+  messages: Message[];
+  currentInput: string;
+  isStreaming: boolean;
+
+  onSendMessage: (message: string) => void;
+  onInputChange: (value: string) => void;
+  onStopStreaming: () => void;
+  onClearChat: () => void;
+}</code></pre>
+
+                <h4>Usage in FloatingWindow</h4>
+                <pre><code>const FloatingWindow = ({ windowState }) => {
+  const handleSendMessage = async (msg: string) => {
+    const stream = chatService.sendMessage(
+      windowState.cardId,
+      msg,
+      cardContent
+    );
+
+    for await (const chunk of stream) {
+      // Append to assistant message
+      updateMessage(chunk);
+    }
+  };
+
+  return (
+    &lt;div className="floating-window"&gt;
+      &lt;div className="window-header"&gt;...&lt;/div&gt;
+      &lt;div className="window-content"&gt;
+        {/* Card content */}
+      &lt;/div&gt;
+      &lt;FloatingWindowChat
+        cardId={windowState.cardId}
+        cardContent={card.content}
+        messages={windowState.conversationMessages}
+        currentInput={windowState.chatInput}
+        isStreaming={windowState.isStreaming}
+        onSendMessage={handleSendMessage}
+        onInputChange={updateChatInput}
+        onStopStreaming={stopStreaming}
+        onClearChat={clearChat}
+      /&gt;
+    &lt;/div&gt;
+  );
+};</code></pre>
+            </div>
+        </div>
+
+        <!-- Service Implementation -->
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>🔨 Service Implementation</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>File: src/services/chatService.ts</h4>
+                <pre><code>class ChatService {
+  private conversations = new Map&lt;string, Message[]&gt;();
+  private abortControllers = new Map&lt;string, AbortController&gt;();
+
+  async *sendMessage(
+    cardId: string,
+    userMessage: string,
+    cardContent: string
+  ): AsyncGenerator&lt;string&gt; {
+    // Add user message
+    const userMsg: Message = {
+      id: generateId(),
+      role: 'user',
+      content: userMessage,
+      timestamp: Date.now()
+    };
+    this.addMessage(cardId, userMsg);
+
+    // Create assistant message
+    const assistantMsg: Message = {
+      id: generateId(),
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+      streaming: true,
+      parentId: userMsg.id
+    };
+    this.addMessage(cardId, assistantMsg);
+
+    // Stream response
+    const controller = new AbortController();
+    this.abortControllers.set(cardId, controller);
+
+    try {
+      const stream = await mockContentGenerator.generate(
+        userMessage,
+        cardContent,
+        controller.signal
+      );
+
+      for await (const chunk of stream) {
+        assistantMsg.content += chunk;
+        yield chunk;
+      }
+
+      assistantMsg.streaming = false;
+      this.saveConversation(cardId);
+    } finally {
+      this.abortControllers.delete(cardId);
+    }
+  }
+
+  stopStreaming(cardId: string): void {
+    this.abortControllers.get(cardId)?.abort();
+  }
+
+  getConversation(cardId: string): Message[] {
+    return this.conversations.get(cardId) || [];
+  }
+
+  clearConversation(cardId: string): void {
+    this.conversations.delete(cardId);
+    this.saveConversation(cardId);
+  }
+
+  private addMessage(cardId: string, msg: Message): void {
+    const conv = this.conversations.get(cardId) || [];
+    conv.push(msg);
+    this.conversations.set(cardId, conv);
+  }
+
+  private async saveConversation(cardId: string): Promise&lt;void&gt; {
+    const card = await getCardById(cardId);
+    card.conversation = this.getConversation(cardId);
+    await saveCard(card);
+  }
+}</code></pre>
+            </div>
+        </div>
+
+        <!-- UI Components -->
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>🎨 UI Components</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>FloatingWindowChat.tsx</h4>
+                <pre><code>const FloatingWindowChat: React.FC&lt;Props&gt; = ({
+  messages,
+  currentInput,
+  isStreaming,
+  onSendMessage,
+  onInputChange,
+  onStopStreaming,
+  onClearChat
+}) => {
+  const messagesEndRef = useRef&lt;HTMLDivElement&gt;(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: 'smooth'
+    });
+  }, [messages]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentInput.trim() || isStreaming) return;
+    onSendMessage(currentInput);
+    onInputChange('');
+  };
+
+  return (
+    &lt;div className="chat-container"&gt;
+      &lt;div className="chat-messages"&gt;
+        {messages.map(msg => (
+          &lt;div
+            key={msg.id}
+            className={`message ${msg.role}`}
+          &gt;
+            &lt;div className="message-content"&gt;
+              {msg.content}
+            &lt;/div&gt;
+            {msg.streaming && (
+              &lt;span className="streaming-indicator"&gt;
+                ▸
+              &lt;/span&gt;
+            )}
+          &lt;/div&gt;
+        ))}
+        &lt;div ref={messagesEndRef} /&gt;
+      &lt;/div&gt;
+
+      &lt;form onSubmit={handleSubmit} className="chat-input-form"&gt;
+        &lt;input
+          type="text"
+          value={currentInput}
+          onChange={e => onInputChange(e.target.value)}
+          placeholder="Ask about this card..."
+          disabled={isStreaming}
+          className="chat-input"
+        /&gt;
+        {isStreaming ? (
+          &lt;button
+            type="button"
+            onClick={onStopStreaming}
+          &gt;
+            ⏹ Stop
+          &lt;/button&gt;
+        ) : (
+          &lt;button type="submit"&gt;
+            ↑ Send
+          &lt;/button&gt;
+        )}
+        &lt;button
+          type="button"
+          onClick={onClearChat}
+          className="clear-btn"
+        &gt;
+          🗑️
+        &lt;/button&gt;
+      &lt;/form&gt;
+    &lt;/div&gt;
+  );
+};</code></pre>
+
+                <h4>Styling</h4>
+                <pre><code>.chat-container {
+  border-top: 1px solid var(--chinese-gold);
+  background: rgba(255, 215, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  height: 200px;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.message {
+  margin: 4px 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.message.user {
+  background: rgba(139, 0, 0, 0.1);
+  align-self: flex-end;
+}
+
+.message.assistant {
+  background: rgba(255, 215, 0, 0.1);
+  align-self: flex-start;
+}
+
+.streaming-indicator {
+  display: inline-block;
+  animation: pulse 1s infinite;
+}
+
+.chat-input-form {
+  display: flex;
+  padding: 8px;
+  gap: 4px;
+  border-top: 1px solid #ddd;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--chinese-gold);
+  border-radius: 3px;
+}</code></pre>
+            </div>
+        </div>
+
+        <!-- State Persistence -->
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>💾 State Persistence</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Auto-Save Strategy</h4>
+                <ul class="dense-list">
+                    <li><strong>Chat Input:</strong> Debounced save every 500ms to windowState.chatInput</li>
+                    <li><strong>Messages:</strong> Save to card.conversation immediately after each message completes</li>
+                    <li><strong>Scroll Position:</strong> Save on scroll end (debounced 300ms)</li>
+                    <li><strong>Minimize/Maximize:</strong> Preserve all state, no unmounting</li>
+                </ul>
+
+                <h4>Load on Window Open</h4>
+                <pre><code>const loadWindowState = (cardId: string): WindowState => {
+  const card = getCardById(cardId);
+  const savedState = windowStorage.get(cardId);
+
+  return {
+    cardId,
+    position: savedState?.position || { x: 100, y: 100 },
+    size: savedState?.size || { width: 600, height: 500 },
+    minimized: savedState?.minimized || false,
+    zIndex: getNextZIndex(),
+
+    // Restore chat state
+    chatInput: savedState?.chatInput || '',
+    conversationMessages: card.conversation || [],
+    scrollPosition: savedState?.scrollPosition || 0,
+    isStreaming: false
+  };
+};</code></pre>
+
+                <h4>Save on State Change</h4>
+                <pre><code>const saveWindowState = debounce((state: WindowState) => {
+  windowStorage.set(state.cardId, {
+    position: state.position,
+    size: state.size,
+    minimized: state.minimized,
+    chatInput: state.chatInput,
+    scrollPosition: state.scrollPosition
+  });
+}, 500);</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Width Sections -->
+    <div class="collapsible full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>🔄 Integration Flow</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Complete Message Flow</h3>
+
+            <h4>1. User Sends Message</h4>
+            <div class="indent-1">
+                <code>User types → Enter → onSendMessage(text)</code>
+            </div>
+
+            <h4>2. Create User Message</h4>
+            <pre><code>const userMsg: Message = {
+  id: generateId(),
+  role: 'user',
+  content: text,
+  timestamp: Date.now()
+};
+windowState.conversationMessages.push(userMsg);</code></pre>
+
+            <h4>3. Create Streaming Assistant Message</h4>
+            <pre><code>const assistantMsg: Message = {
+  id: generateId(),
+  role: 'assistant',
+  content: '',
+  timestamp: Date.now(),
+  streaming: true,
+  parentId: userMsg.id
+};
+windowState.conversationMessages.push(assistantMsg);</code></pre>
+
+            <h4>4. Stream Response</h4>
+            <pre><code>const stream = chatService.sendMessage(
+  cardId,
+  text,
+  cardContent
+);
+
+for await (const chunk of stream) {
+  assistantMsg.content += chunk;
+  forceUpdate(); // Trigger re-render
+}
+
+assistantMsg.streaming = false;</code></pre>
+
+            <h4>5. Save to Card</h4>
+            <pre><code>card.conversation = windowState.conversationMessages;
+await saveCard(card);</code></pre>
+
+            <h4>6. Clear Input</h4>
+            <pre><code>windowState.chatInput = '';
+saveWindowState(windowState);</code></pre>
+        </div>
+    </div>
+
+    <div class="collapsible full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>🧪 Testing Strategy</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Unit Tests (Vitest)</h3>
+            <table>
+                <tr>
+                    <th>Test</th>
+                    <th>Description</th>
+                    <th>Assert</th>
+                </tr>
+                <tr>
+                    <td>ChatService.sendMessage</td>
+                    <td>Adds user message and streams assistant response</td>
+                    <td>Conversation has both messages, streaming flag toggles</td>
+                </tr>
+                <tr>
+                    <td>ChatService.stopStreaming</td>
+                    <td>Aborts ongoing stream</td>
+                    <td>AbortController.abort() called</td>
+                </tr>
+                <tr>
+                    <td>ChatService.clearConversation</td>
+                    <td>Removes all messages for card</td>
+                    <td>getConversation returns empty array</td>
+                </tr>
+                <tr>
+                    <td>Message persistence</td>
+                    <td>Messages saved to card.conversation</td>
+                    <td>card.conversation matches service state</td>
+                </tr>
+            </table>
+
+            <h3>Component Tests (React Testing Library)</h3>
+            <table>
+                <tr>
+                    <th>Test</th>
+                    <th>Description</th>
+                    <th>Assert</th>
+                </tr>
+                <tr>
+                    <td>Render messages</td>
+                    <td>Displays all messages in order</td>
+                    <td>Message count matches props</td>
+                </tr>
+                <tr>
+                    <td>Input change</td>
+                    <td>Calls onInputChange with new value</td>
+                    <td>onInputChange called with text</td>
+                </tr>
+                <tr>
+                    <td>Send message</td>
+                    <td>Form submit calls onSendMessage</td>
+                    <td>onSendMessage called, input cleared</td>
+                </tr>
+                <tr>
+                    <td>Stop streaming</td>
+                    <td>Stop button appears when streaming</td>
+                    <td>onStopStreaming called on click</td>
+                </tr>
+                <tr>
+                    <td>Auto-scroll</td>
+                    <td>Scrolls to bottom on new message</td>
+                    <td>scrollIntoView called</td>
+                </tr>
+            </table>
+
+            <h3>E2E Tests (Playwright)</h3>
+            <pre><code>test('chat preserves state on minimize', async ({ page }) => {
+  await page.click('[data-testid="open-window"]');
+
+  // Type message but don't send
+  await page.fill('.chat-input', 'My question');
+
+  // Minimize window
+  await page.click('[data-testid="minimize-btn"]');
+
+  // Maximize window
+  await page.click('[data-testid="maximize-btn"]');
+
+  // Input value preserved
+  const value = await page.$eval('.chat-input', el => el.value);
+  expect(value).toBe('My question');
+});
+
+test('streaming response updates UI', async ({ page }) => {
+  await page.click('[data-testid="open-window"]');
+
+  await page.fill('.chat-input', 'Test question');
+  await page.click('button[type="submit"]');
+
+  // Wait for streaming to start
+  await page.waitForSelector('.streaming-indicator');
+
+  // Wait for streaming to complete
+  await page.waitForSelector('.message.assistant:not(:has(.streaming-indicator))');
+
+  // Verify message content
+  const content = await page.$eval(
+    '.message.assistant .message-content',
+    el => el.textContent
+  );
+  expect(content.length).toBeGreaterThan(0);
+});</code></pre>
+        </div>
+    </div>
+
+    <div class="collapsible full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📚 API Reference Summary</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <table>
+                <tr>
+                    <th>Interface</th>
+                    <th>Method/Property</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td rowspan="4"><strong>ChatService</strong></td>
+                    <td>sendMessage(cardId, message, context)</td>
+                    <td>Send message, returns AsyncGenerator for streaming</td>
+                </tr>
+                <tr>
+                    <td>stopStreaming(cardId)</td>
+                    <td>Abort ongoing stream for card</td>
+                </tr>
+                <tr>
+                    <td>getConversation(cardId)</td>
+                    <td>Get all messages for card</td>
+                </tr>
+                <tr>
+                    <td>clearConversation(cardId)</td>
+                    <td>Delete all messages for card</td>
+                </tr>
+                <tr>
+                    <td rowspan="5"><strong>FloatingWindowChat</strong></td>
+                    <td>messages: Message[]</td>
+                    <td>Conversation history to display</td>
+                </tr>
+                <tr>
+                    <td>currentInput: string</td>
+                    <td>Current input field value</td>
+                </tr>
+                <tr>
+                    <td>onSendMessage(text)</td>
+                    <td>Callback when user sends message</td>
+                </tr>
+                <tr>
+                    <td>onInputChange(value)</td>
+                    <td>Callback when input changes</td>
+                </tr>
+                <tr>
+                    <td>onStopStreaming()</td>
+                    <td>Callback to stop streaming response</td>
+                </tr>
+                <tr>
+                    <td rowspan="3"><strong>WindowState</strong></td>
+                    <td>chatInput: string</td>
+                    <td>Preserved input text (for minimize/maximize)</td>
+                </tr>
+                <tr>
+                    <td>conversationMessages: Message[]</td>
+                    <td>Full conversation loaded from card</td>
+                </tr>
+                <tr>
+                    <td>isStreaming: boolean</td>
+                    <td>Whether Claude is currently responding</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('[data-collapsible]').forEach(function(section) {
+                const isOpen = section.getAttribute('data-collapsible') === 'open';
+                section.classList.add('collapsible');
+                if (isOpen) section.classList.add('open');
+            });
+
+            document.querySelectorAll('.collapsible-header').forEach(function(header) {
+                header.addEventListener('click', function() {
+                    const collapsible = this.closest('.collapsible');
+                    collapsible.classList.toggle('open');
+                });
+            });
+
+            const expandAllBtn = document.getElementById('expand-all');
+            const collapseAllBtn = document.getElementById('collapse-all');
+
+            if (expandAllBtn) {
+                expandAllBtn.addEventListener('click', function() {
+                    document.querySelectorAll('.collapsible').forEach(function(c) {
+                        c.classList.add('open');
+                    });
+                });
+            }
+
+            if (collapseAllBtn) {
+                collapseAllBtn.addEventListener('click', function() {
+                    document.querySelectorAll('.collapsible').forEach(function(c) {
+                        c.classList.remove('open');
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

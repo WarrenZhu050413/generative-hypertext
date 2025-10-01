@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playwright Chrome Extension Testing - Deep Dive</title>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --paper-beige: #FAF7F2;
+            --light-cream: #F5F0E8;
+            --ink-black: #2C2C2C;
+            --level-1: #8B0000;
+            --level-2: #A0522D;
+            --level-3: #696969;
+            --level-4: #999999;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', sans-serif;
+            line-height: 1.4;
+            font-size: 14px;
+            width: 100vw;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        .container { width: 100%; padding: 16px; }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 900;
+            margin: 12px 0;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(139, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 16px 0 8px 0;
+            padding: 8px 12px;
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.05);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 12px 0 6px 0;
+            padding: 6px 8px;
+            color: var(--level-2);
+            border-left: 3px solid var(--chinese-gold);
+            background: rgba(255, 215, 0, 0.08);
+        }
+
+        h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 8px 0 4px 0;
+            color: var(--level-3);
+        }
+
+        .critical-box {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.08), rgba(255, 215, 0, 0.05));
+            border: 3px solid var(--chinese-red);
+            border-radius: 6px;
+            padding: 16px;
+            margin: 16px 0;
+            box-shadow: 0 4px 12px rgba(139, 0, 0, 0.15);
+        }
+
+        .critical-box h2 {
+            color: var(--chinese-red);
+            margin-top: 0;
+            border: none;
+            background: transparent;
+            padding-left: 0;
+        }
+
+        .important-box {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.12), white);
+            border: 2px solid var(--chinese-gold);
+            border-radius: 4px;
+            padding: 12px;
+            margin: 12px 0;
+            box-shadow: 0 2px 8px rgba(139, 0, 0, 0.1);
+        }
+
+        .collapsible {
+            margin: 10px 0;
+            border: 1px solid rgba(139, 0, 0, 0.15);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.06), rgba(255, 215, 0, 0.03));
+            border-left: 4px solid var(--chinese-gold);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            color: var(--level-2);
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.12), rgba(255, 215, 0, 0.06));
+        }
+
+        .collapsible-header .arrow {
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-weight: bold;
+        }
+
+        .collapsible.open .arrow { transform: rotate(90deg); }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+            padding: 0 14px;
+            background: white;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 10000px;
+            padding: 14px;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 12px 0;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            border-radius: 4px;
+            padding: 12px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .card.priority {
+            border: 2px solid var(--chinese-red);
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.03), white);
+        }
+
+        code {
+            background: rgba(245, 245, 220, 0.4);
+            border: 1px solid rgba(139, 0, 0, 0.15);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'SF Mono', 'Consolas', monospace;
+            font-size: 12px;
+            color: #333;
+        }
+
+        pre {
+            background: linear-gradient(135deg, rgba(245, 245, 220, 0.3), rgba(255, 255, 255, 0.5));
+            border: 1px solid rgba(139, 0, 0, 0.15);
+            border-radius: 4px;
+            padding: 12px;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        pre code {
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        ul, ol {
+            margin: 8px 0 8px 28px;
+            line-height: 1.7;
+        }
+
+        li { margin: 6px 0; }
+
+        strong {
+            color: var(--level-2);
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 0 4px;
+        }
+
+        .badge.red { background: var(--chinese-red); color: white; }
+        .badge.gold { background: var(--chinese-gold); color: #333; }
+        .badge.green { background: #90EE90; color: #333; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 13px;
+            background: white;
+        }
+
+        th, td {
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            padding: 8px 10px;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(139, 0, 0, 0.1);
+            font-weight: 600;
+            color: var(--level-2);
+        }
+
+        .step {
+            background: white;
+            border-left: 4px solid var(--chinese-gold);
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .step strong {
+            color: var(--chinese-red);
+        }
+
+        .divider {
+            height: 2px;
+            background: linear-gradient(90deg, var(--chinese-red), transparent);
+            margin: 20px 0;
+        }
+
+        .vs-comparison {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 16px;
+            align-items: center;
+            margin: 12px 0;
+        }
+
+        .vs-label {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--chinese-red);
+        }
+
+        .highlight {
+            background: rgba(255, 215, 0, 0.2);
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Playwright Chrome Extension Testing</h1>
+        <p style="text-align: center; color: var(--level-3); margin-bottom: 20px;">
+            Deep dive into testing Chrome extensions with Playwright - The challenges, solutions, and real implementation
+        </p>
+
+        <div class="critical-box">
+            <h2>⚠️ The Fundamental Problem</h2>
+            <p style="font-size: 16px; margin-bottom: 12px;"><strong>Standard Playwright CANNOT load Chrome extensions.</strong></p>
+
+            <p>When you use <code>chromium.launch()</code> or <code>browser.newPage()</code>, Chrome starts in a clean profile without access to:</p>
+            <ul>
+                <li>Extension files (dist/)</li>
+                <li>chrome.* APIs (chrome.storage, chrome.tabs, etc.)</li>
+                <li>Service workers or background scripts</li>
+                <li>Content scripts injected into pages</li>
+                <li>Extension pages (chrome-extension://...)</li>
+            </ul>
+
+            <div style="background: white; padding: 12px; border-radius: 4px; margin-top: 12px;">
+                <h4>❌ This doesn't work:</h4>
+                <pre><code>// Standard Playwright - no extension support
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto('https://example.com');
+// Extension is NOT loaded - Cmd+Shift+E does nothing</code></pre>
+            </div>
+        </div>
+
+        <div class="important-box">
+            <h2>✅ The Solution: <code>launchPersistentContext</code></h2>
+            <p><strong>Use Playwright's persistent context with Chrome extension flags.</strong> This simulates installing an extension manually.</p>
+
+            <pre><code>import { chromium } from 'playwright';
+import path from 'path';
+
+const extensionPath = path.join(__dirname, 'dist');
+const context = await chromium.launchPersistentContext('', {
+  headless: false,  // ← REQUIRED: Extensions need headed mode
+  args: [
+    '--disable-extensions-except=' + extensionPath,  // Allow this extension
+    '--load-extension=' + extensionPath,              // Load the extension
+  ],
+});
+
+const page = await context.newPage();
+await page.goto('https://example.com');
+// ✅ Extension is loaded! Cmd+Shift+E works!</code></pre>
+
+            <h4 style="margin-top: 16px;">Key Parameters Explained:</h4>
+            <table>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Purpose</th>
+                </tr>
+                <tr>
+                    <td><code>''</code> (first arg)</td>
+                    <td>Empty string = fresh temporary profile (no user data)</td>
+                </tr>
+                <tr>
+                    <td><code>headless: false</code></td>
+                    <td>Extensions ONLY work in headed mode (browser visible)</td>
+                </tr>
+                <tr>
+                    <td><code>--disable-extensions-except</code></td>
+                    <td>Disable all extensions EXCEPT the one at this path</td>
+                </tr>
+                <tr>
+                    <td><code>--load-extension</code></td>
+                    <td>Load unpacked extension from this path</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>🔬 Two Testing Approaches</h2>
+
+        <div class="vs-comparison">
+            <div class="card priority">
+                <h3>Manual Test Scripts</h3>
+                <p><span class="badge gold">test-scripts/*.mjs</span></p>
+                <p><strong>Purpose:</strong> Quick verification, debugging, iterative development</p>
+                <ul>
+                    <li>Plain JavaScript/TypeScript</li>
+                    <li>No test framework overhead</li>
+                    <li>Direct console output</li>
+                    <li>Can keep browser open (30s pause)</li>
+                    <li>Screenshot capture for debugging</li>
+                </ul>
+                <p><strong>Run:</strong> <code>node test-scripts/test-canvas-direct.mjs</code></p>
+            </div>
+
+            <div class="vs-label">VS</div>
+
+            <div class="card priority">
+                <h3>Formal E2E Tests</h3>
+                <p><span class="badge green">tests/e2e/*.spec.ts</span></p>
+                <p><strong>Purpose:</strong> CI/CD, regression testing, assertions</p>
+                <ul>
+                    <li>Playwright Test framework</li>
+                    <li>expect() assertions</li>
+                    <li>Fixtures for reusability</li>
+                    <li>Parallel execution</li>
+                    <li>HTML test reports</li>
+                </ul>
+                <p><strong>Run:</strong> <code>npm run test:e2e</code></p>
+            </div>
+        </div>
+
+        <div class="collapsible open">
+            <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                <span>📝 Manual Test Script: <code>test-canvas-direct.mjs</code></span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>Location:</strong> <code>test-scripts/test-canvas-direct.mjs</code></p>
+                <p><strong>Purpose:</strong> Tests the complete flow: element capture → storage → Canvas rendering</p>
+
+                <h4>Full Script Breakdown:</h4>
+                <pre><code>import { chromium } from 'playwright';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+async function test() {
+  console.log('🧪 Testing Canvas Page Directly\n');
+
+  // CRITICAL: Path must be relative to test-scripts/
+  const ext = path.join(__dirname, '..', 'dist');  // Go up one level
+
+  const ctx = await chromium.launchPersistentContext('', {
+    headless: false,
+    args: [
+      '--disable-extensions-except=' + ext,
+      '--load-extension=' + ext
+    ]
+  });
+
+  // Step 1: Capture an element
+  const page = await ctx.newPage();
+  await page.goto('https://example.com');
+  await page.waitForTimeout(1000);
+
+  console.log('📋 Step 1: Capture a test element');
+  await page.keyboard.press('Meta+Shift+KeyE');  // Trigger selector
+  await page.waitForTimeout(500);
+  await page.click('h1');  // Click element to capture
+  await page.waitForTimeout(2000);
+  console.log('  ✅ Element captured\n');
+
+  // Step 2: Get extension ID
+  await page.waitForTimeout(2000);
+  const serviceWorkers = ctx.serviceWorkers();
+
+  let extId = null;
+  if (serviceWorkers.length > 0) {
+    // Extract ID from: chrome-extension://mkdbacmghakikjkemcahonodffmphffp/...
+    extId = serviceWorkers[0].url().match(/chrome-extension:\/\/([a-z]+)\//)?.[1];
+  }
+
+  if (!extId) {
+    console.log('❌ Could not find extension ID');
+    await ctx.close();
+    return;
+  }
+
+  console.log('📋 Step 2: Opening Canvas page');
+  console.log('  Extension ID:', extId);
+
+  // Step 3: Open Canvas and verify
+  const canvasPage = await ctx.newPage();
+  const canvasUrl = \`chrome-extension://\${extId}/src/canvas/index.html\`;
+
+  // Capture console messages
+  canvasPage.on('console', msg => {
+    console.log('  [Console]', msg.text());
+  });
+
+  // Capture errors
+  canvasPage.on('pageerror', error => {
+    console.error('  [Page Error]', error.message);
+  });
+
+  await canvasPage.goto(canvasUrl, { waitUntil: 'networkidle' });
+  await canvasPage.waitForTimeout(3000);
+
+  console.log('\n📋 Step 3: Checking Canvas DOM');
+
+  // Check React root
+  const rootContent = await canvasPage.evaluate(() => {
+    const root = document.getElementById('root');
+    return {
+      exists: !!root,
+      hasChildren: root?.children.length > 0,
+    };
+  });
+
+  console.log('  Root element:', rootContent.exists ? '✅' : '❌');
+  console.log('  Has content:', rootContent.hasChildren ? '✅' : '❌');
+
+  // Check React Flow
+  const reactFlowExists = await canvasPage.evaluate(() => {
+    return !!document.querySelector('.react-flow');
+  });
+  console.log('  React Flow canvas:', reactFlowExists ? '✅' : '❌');
+
+  // Count card nodes
+  const nodeCount = await canvasPage.evaluate(() => {
+    return document.querySelectorAll('[data-id]').length;
+  });
+  console.log('  Card nodes rendered:', nodeCount);
+
+  // Take screenshot for debugging
+  await canvasPage.screenshot({ path: 'canvas-debug.png', fullPage: true });
+  console.log('\n📸 Screenshot saved to canvas-debug.png');
+
+  console.log('\n✅ Test complete!');
+  console.log('⏸️  Keeping browser open for 30 seconds...\n');
+  await canvasPage.waitForTimeout(30000);  // Keep open for inspection
+
+  await ctx.close();
+}
+
+test().catch(console.error);</code></pre>
+
+                <h4 style="margin-top: 16px;">Console Output Example:</h4>
+                <pre><code>🧪 Testing Canvas Page Directly
+
+📋 Step 1: Capture a test element
+  ✅ Element captured
+
+  Service workers: 1
+  Background pages: 0
+📋 Step 2: Opening Canvas page
+  Extension ID: mkdbacmghakikjkemcahonodffmphffp
+  [Console] [Canvas] Starting to load canvas state...
+  [Console] [Canvas] Loaded cards count: 1
+  [Console] [Canvas] Created React Flow nodes count: 1
+
+📋 Step 3: Checking Canvas DOM
+  Root element: ✅
+  Has content: ✅
+  React Flow canvas: ✅
+  Card nodes rendered: 3
+
+📸 Screenshot saved to canvas-debug.png
+
+✅ Test complete!
+⏸️  Keeping browser open for 30 seconds...</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                <span>🧩 Formal E2E Tests with Fixtures</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>Location:</strong> <code>tests/e2e/*.spec.ts</code></p>
+                <p><strong>Fixture:</strong> <code>tests/fixtures/extension.ts</code></p>
+
+                <h4>Custom Playwright Fixture Pattern</h4>
+                <p>Fixtures allow reusable setup for extension testing:</p>
+
+                <pre><code>// tests/fixtures/extension.ts
+import { test as base, chromium, type BrowserContext } from '@playwright/test';
+import path from 'path';
+
+type ExtensionFixtures = {
+  context: BrowserContext;
+  extensionId: string;
+};
+
+export const test = base.extend&lt;ExtensionFixtures&gt;({
+  // Override context to load extension
+  context: async ({}, use) => {
+    const extensionPath = path.join(__dirname, '../../dist');
+
+    const context = await chromium.launchPersistentContext('', {
+      headless: false,  // Extensions need headed mode
+      args: [
+        \`--disable-extensions-except=\${extensionPath}\`,
+        \`--load-extension=\${extensionPath}\`,
+        '--no-sandbox',
+      ],
+    });
+
+    await use(context);  // Provide context to tests
+    await context.close();
+  },
+
+  // Provide extension ID
+  extensionId: async ({ context }, use) => {
+    let [background] = context.serviceWorkers();
+    if (!background) {
+      background = await context.waitForEvent('serviceworker');
+    }
+
+    const extensionId = background.url().split('/')[2];
+    await use(extensionId);
+  },
+});
+
+export { expect } from '@playwright/test';</code></pre>
+
+                <h4 style="margin-top: 16px;">Using the Fixture in Tests:</h4>
+                <pre><code>// tests/e2e/extension-load.spec.ts
+import { test, expect } from '../fixtures/extension';
+
+test('should load extension without errors', async ({ context }) => {
+  const page = await context.newPage();
+  await page.goto('https://example.com');
+
+  const errors: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+
+  await page.waitForTimeout(2000);
+  expect(errors.length).toBe(0);
+});
+
+test('should activate element selector', async ({ context }) => {
+  const page = await context.newPage();
+  await page.goto('https://example.com');
+
+  // Press keyboard shortcut
+  const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+  await page.keyboard.press(\`\${modifier}+Shift+E\`);
+
+  await page.waitForTimeout(1000);
+
+  // Check for shadow DOM container
+  const shadowHosts = await page.$$('div[id*="nabokov"]');
+  expect(shadowHosts.length).toBeGreaterThan(0);
+});</code></pre>
+
+                <h4 style="margin-top: 16px;">Helper Functions:</h4>
+                <pre><code>// Get extension storage
+export async function getExtensionStorage(
+  context: BrowserContext,
+  keys?: string | string[]
+): Promise&lt;any&gt; {
+  const page = await context.newPage();
+  return await page.evaluate(async (storageKeys) => {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(storageKeys || null, (items) => {
+        resolve(items);
+      });
+    });
+  }, keys);
+}
+
+// Set extension storage
+export async function setExtensionStorage(
+  context: BrowserContext,
+  items: Record&lt;string, any&gt;
+): Promise&lt;void&gt; {
+  const page = await context.newPage();
+  await page.evaluate(async (data) => {
+    return new Promise&lt;void&gt;((resolve) => {
+      chrome.storage.local.set(data, () => resolve());
+    });
+  }, items);
+}
+
+// Open Canvas page
+export async function openCanvasPage(
+  context: BrowserContext,
+  extensionId: string
+): Promise&lt;void&gt; {
+  const canvasUrl = \`chrome-extension://\${extensionId}/src/canvas/index.html\`;
+  const page = await context.newPage();
+  await page.goto(canvasUrl);
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>🔑 Critical Testing Techniques</h2>
+
+        <div class="two-column">
+            <div class="card">
+                <h4>1. Getting Extension ID</h4>
+                <p>Extension ID is random (e.g., <code>mkdbacmghakikjkemcahonodffmphffp</code>). Must extract it dynamically:</p>
+                <pre><code>// Method 1: From service worker URL
+const serviceWorkers = ctx.serviceWorkers();
+const extId = serviceWorkers[0]
+  .url()
+  .match(/chrome-extension:\/\/([a-z]+)\//)?.[1];
+
+// Method 2: From page context
+const extId = await page.evaluate(() => {
+  return chrome.runtime.id;
+});</code></pre>
+            </div>
+
+            <div class="card">
+                <h4>2. Console Listening</h4>
+                <p>Capture console messages for debugging:</p>
+                <pre><code>page.on('console', msg => {
+  const text = msg.text();
+  if (text.includes('[Canvas]')) {
+    console.log('Canvas:', text);
+  }
+});
+
+// Capture errors
+page.on('pageerror', error => {
+  console.error('Error:', error.message);
+});</code></pre>
+            </div>
+
+            <div class="card">
+                <h4>3. Accessing chrome.storage</h4>
+                <p>Test data persistence:</p>
+                <pre><code>// Check storage from page context
+const result = await page.evaluate(async () => {
+  const data = await chrome.storage.local.get(['cards']);
+  return {
+    count: data.cards?.length || 0,
+    cards: data.cards || []
+  };
+});
+
+console.log('Cards:', result.count);</code></pre>
+            </div>
+
+            <div class="card">
+                <h4>4. Screenshot Debugging</h4>
+                <p>Capture visual state:</p>
+                <pre><code>// Full page screenshot
+await page.screenshot({
+  path: 'canvas-debug.png',
+  fullPage: true
+});
+
+// Element screenshot
+const element = await page.$('.card');
+await element.screenshot({
+  path: 'card.png'
+});</code></pre>
+            </div>
+
+            <div class="card">
+                <h4>5. DOM Inspection</h4>
+                <p>Verify React rendering:</p>
+                <pre><code>// Check if React mounted
+const rootExists = await page.evaluate(() => {
+  const root = document.getElementById('root');
+  return {
+    exists: !!root,
+    hasChildren: root?.children.length > 0,
+    innerHTML: root?.innerHTML.substring(0, 200)
+  };
+});
+
+// Check specific selectors
+const flowExists = await page.evaluate(() => {
+  return !!document.querySelector('.react-flow');
+});</code></pre>
+            </div>
+
+            <div class="card">
+                <h4>6. Keyboard Shortcuts</h4>
+                <p>Simulate user input:</p>
+                <pre><code>// Platform-specific modifier
+const modifier = process.platform === 'darwin'
+  ? 'Meta'   // Mac: Cmd
+  : 'Control'; // Win/Linux: Ctrl
+
+// Press shortcut
+await page.keyboard.press(\`\${modifier}+Shift+E\`);
+await page.waitForTimeout(500);
+
+// Click element
+await page.click('h1');</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                <span>⚡ Path Resolution Issues</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Problem: Test scripts in <code>test-scripts/</code> need to load <code>dist/</code></h4>
+
+                <div class="two-column">
+                    <div>
+                        <h4>❌ Wrong (original):</h4>
+                        <pre><code>// test-scripts/test-canvas-direct.mjs
+const ext = path.join(__dirname, 'dist');
+// Looks for: test-scripts/dist/ ← doesn't exist!</code></pre>
+                    </div>
+                    <div>
+                        <h4>✅ Correct (fixed):</h4>
+                        <pre><code>// test-scripts/test-canvas-direct.mjs
+const ext = path.join(__dirname, '..', 'dist');
+// Looks for: NabokovsWeb/dist/ ← correct!</code></pre>
+                    </div>
+                </div>
+
+                <h4 style="margin-top: 16px;">Directory Structure Context:</h4>
+                <pre><code>NabokovsWeb/
+├── dist/                        ← Extension build output
+│   ├── manifest.json
+│   ├── src/
+│   └── assets/
+├── test-scripts/                ← Manual test scripts
+│   ├── test-canvas-direct.mjs   ← Needs to go up one level (..)
+│   └── test-capture.mjs
+└── tests/
+    └── e2e/                     ← Formal E2E tests
+        └── extension-load.spec.ts  ← Needs to go up two levels (../..)</code></pre>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>🎯 What Gets Tested</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Test Category</th>
+                    <th>What's Verified</th>
+                    <th>How</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Extension Loading</strong></td>
+                    <td>Extension installs without errors</td>
+                    <td>Check console for errors, verify service worker exists</td>
+                </tr>
+                <tr>
+                    <td><strong>Keyboard Shortcuts</strong></td>
+                    <td>Cmd+Shift+E activates selector</td>
+                    <td>Press key combo, check for shadow DOM container</td>
+                </tr>
+                <tr>
+                    <td><strong>Element Capture</strong></td>
+                    <td>Clicking element saves card</td>
+                    <td>Click element, check chrome.storage.local</td>
+                </tr>
+                <tr>
+                    <td><strong>Screenshot Capture</strong></td>
+                    <td>Screenshots saved to IndexedDB</td>
+                    <td>Capture element, verify IndexedDB entry</td>
+                </tr>
+                <tr>
+                    <td><strong>Canvas Rendering</strong></td>
+                    <td>Cards display on Canvas</td>
+                    <td>Open Canvas, count React Flow nodes, verify DOM</td>
+                </tr>
+                <tr>
+                    <td><strong>Storage Persistence</strong></td>
+                    <td>Data persists across reloads</td>
+                    <td>Save card, close browser, reopen, verify still there</td>
+                </tr>
+                <tr>
+                    <td><strong>Error Handling</strong></td>
+                    <td>Screenshot failures don't block capture</td>
+                    <td>Capture on CORS-blocked page, verify card still saves</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="collapsible">
+            <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                <span>📊 Real Test Results Example</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Running: <code>node test-scripts/test-canvas-direct.mjs</code></h4>
+                <pre style="background: #000; color: #0f0; padding: 16px; font-family: monospace;"><code>🧪 Testing Canvas Page Directly
+
+📋 Step 1: Capture a test element
+  ✅ Element captured
+
+  Service workers: 1
+  Background pages: 0
+📋 Step 2: Opening Canvas page
+  Extension ID: mkdbacmghakikjkemcahonodffmphffp
+  [Console] [Canvas] Starting to load canvas state...
+  [Console] [Canvas] Loading from keys: [cards, nabokov_canvas_state, nabokov_filters]
+  [Console] [Canvas] Raw storage result: {cards: Array(1)}
+  [Console] [Canvas] Loaded cards count: 1
+  [Console] [Canvas] Loaded cards: [Object]
+  [Console] [Canvas] Canvas state: undefined
+  [Console] [Canvas] Saved filters: undefined
+  [Console] [Canvas] Created React Flow nodes count: 1
+  [Console] [Canvas] React Flow nodes: [Object]
+  [Console] [Canvas] Nodes state set
+  [Console] [Canvas] Canvas state loaded successfully
+  [Console] [Canvas] Loading complete, isLoading set to false
+  [Console] Saved position/size changes for 1 cards
+
+📋 Step 3: Checking Canvas DOM
+  Root element: ✅
+  Has content: ✅
+  Preview: &lt;div style="width: 100vw; height: 100vh; background: rgb(250, 247, 242);"&gt;&lt;div style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 24
+  React Flow canvas: ✅
+  Card nodes rendered: 3
+
+📸 Screenshot saved to canvas-debug.png
+
+✅ Test complete!
+⏸️  Keeping browser open for 30 seconds...</code></pre>
+
+                <p style="margin-top: 16px;"><strong>Interpretation:</strong></p>
+                <ul>
+                    <li>✅ Extension loaded successfully (1 service worker detected)</li>
+                    <li>✅ Element captured and saved to storage</li>
+                    <li>✅ Canvas loaded 1 card from storage</li>
+                    <li>✅ React Flow created 1 node</li>
+                    <li>✅ DOM shows 3 elements (node + controls)</li>
+                    <li>✅ No errors in console</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>⚙️ Why This Approach Works</h2>
+
+        <div class="important-box">
+            <h3>Understanding <code>launchPersistentContext</code></h3>
+            <p><strong>Persistent Context = Simulated User Profile</strong></p>
+
+            <p style="margin-top: 12px;">When you use <code>launchPersistentContext('')</code>:</p>
+            <ol>
+                <li><strong>Creates temporary user data directory</strong> (like <code>~/.config/chromium/Default</code>)</li>
+                <li><strong>Loads extension from dist/ as "Developer mode"</strong> (like manually loading unpacked extension)</li>
+                <li><strong>Registers service worker</strong> from manifest.json</li>
+                <li><strong>Injects content scripts</strong> into <code>&lt;all_urls&gt;</code></li>
+                <li><strong>Enables chrome.* APIs</strong> (storage, tabs, runtime, etc.)</li>
+                <li><strong>Generates extension ID</strong> (random, like mkdbacmghakikjkemcahonodffmphffp)</li>
+            </ol>
+
+            <p style="margin-top: 12px;"><strong>The context persists for the entire test session</strong>, so:</p>
+            <ul>
+                <li>chrome.storage data remains between page navigations</li>
+                <li>Service worker stays active</li>
+                <li>Extension state is maintained</li>
+            </ul>
+        </div>
+
+        <div class="two-column">
+            <div class="card">
+                <h4>🚫 Limitations</h4>
+                <ul>
+                    <li><strong>Headed mode only</strong> - Can't run headless (extensions require UI)</li>
+                    <li><strong>Slower tests</strong> - Browser UI adds overhead</li>
+                    <li><strong>Random extension ID</strong> - Must extract dynamically each run</li>
+                    <li><strong>No chrome://extensions</strong> - Page often blocked by Playwright</li>
+                    <li><strong>Extension reload</strong> - Can't simulate clicking reload button</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h4>✅ Workarounds</h4>
+                <ul>
+                    <li><strong>Run in CI with Xvfb</strong> - Virtual display for headed tests</li>
+                    <li><strong>Parallel execution</strong> - Run multiple browsers simultaneously</li>
+                    <li><strong>Dynamic ID extraction</strong> - Get from service worker URL</li>
+                    <li><strong>Direct URL navigation</strong> - Go to <code>chrome-extension://{id}/...</code></li>
+                    <li><strong>Fresh context per test</strong> - Close and reopen to simulate reload</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                <span>🔍 Debugging Tips</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>1. Keep Browser Open After Test</h4>
+                <pre><code>await page.waitForTimeout(30000);  // 30 seconds
+// Don't close context immediately - manually inspect</code></pre>
+
+                <h4>2. Enable Verbose Console Logging</h4>
+                <pre><code>page.on('console', msg => {
+  console.log(\`[\${msg.type()}]\`, msg.text());
+});
+
+page.on('pageerror', error => {
+  console.error('[PAGE ERROR]', error);
+});
+
+page.on('response', response => {
+  console.log(\`HTTP \${response.status()}: \${response.url()}\`);
+});</code></pre>
+
+                <h4>3. Take Screenshots at Every Step</h4>
+                <pre><code>await page.screenshot({ path: 'step1-before-click.png' });
+await page.click('h1');
+await page.screenshot({ path: 'step2-after-click.png' });
+await page.goto(canvasUrl);
+await page.screenshot({ path: 'step3-canvas.png' });</code></pre>
+
+                <h4>4. Inspect Storage State</h4>
+                <pre><code>const storage = await page.evaluate(async () => {
+  const all = await chrome.storage.local.get(null);
+  return JSON.stringify(all, null, 2);
+});
+console.log('Storage:', storage);</code></pre>
+
+                <h4>5. Check Service Worker Status</h4>
+                <pre><code>const workers = context.serviceWorkers();
+console.log('Service workers:', workers.length);
+workers.forEach(w => {
+  console.log('  URL:', w.url());
+  console.log('  Scope:', w.evaluate(() => self.registration.scope));
+});</code></pre>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <h2>📚 Summary: Complete Testing Workflow</h2>
+
+        <div class="step">
+            <strong>Step 1:</strong> Build extension → <code>npm run build</code> → generates <code>dist/</code>
+        </div>
+
+        <div class="step">
+            <strong>Step 2:</strong> Write test script using <code>launchPersistentContext</code> with <code>--load-extension</code> flag
+        </div>
+
+        <div class="step">
+            <strong>Step 3:</strong> Run test → <code>node test-scripts/test-canvas-direct.mjs</code>
+        </div>
+
+        <div class="step">
+            <strong>Step 4:</strong> Browser opens with extension loaded (visible UI)
+        </div>
+
+        <div class="step">
+            <strong>Step 5:</strong> Test simulates user actions: keyboard shortcuts, clicks, navigation
+        </div>
+
+        <div class="step">
+            <strong>Step 6:</strong> Verify results: console logs, DOM inspection, storage checks, screenshots
+        </div>
+
+        <div class="step">
+            <strong>Step 7:</strong> Browser stays open for manual inspection (optional 30s pause)
+        </div>
+
+        <div class="step">
+            <strong>Step 8:</strong> Context closes, temporary profile deleted
+        </div>
+
+        <div style="margin-top: 24px; padding: 16px; background: white; border: 2px solid var(--chinese-gold); border-radius: 4px;">
+            <p style="margin: 0; color: var(--level-2); font-weight: 600; text-align: center;">
+                🎭 This approach enables full E2E testing of Chrome extensions without manual intervention
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function toggleCollapsible(header) {
+            const collapsible = header.parentElement;
+            collapsible.classList.toggle('open');
+        }
+
+        // Open first collapsible by default
+        document.addEventListener('DOMContentLoaded', function() {
+            const firstCollapsible = document.querySelector('.collapsible');
+            if (firstCollapsible) {
+                firstCollapsible.classList.add('open');
+            }
+        });
+    </script>
+</body>
+</html>

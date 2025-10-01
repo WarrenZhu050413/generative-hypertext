@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan: Nabokov's Web Design Implementation Roadmap</title>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --jade-green: #00A86B;
+            --ink-black: #2B2B2B;
+            --paper-beige: #F5F5DC;
+            --light-cream: #FAFAF0;
+            --level-1: #000;
+            --level-2: #333;
+            --level-3: #666;
+            --level-4: #999;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            margin: 0;
+            padding: 8px;
+            width: 100vw;
+            max-width: 100%;
+            line-height: 1.3;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin: 8px 0;
+            padding: 12px 8px;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 12px 0 6px 0;
+            padding: 6px;
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.03);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 6px 0 3px 8px;
+            color: var(--level-2);
+            letter-spacing: 0.3px;
+        }
+
+        h4 {
+            font-size: 13px;
+            font-weight: 500;
+            margin: 4px 0 2px 16px;
+            color: var(--level-3);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            transition: all 0.2s ease;
+            padding: 4px 12px;
+            margin: 2px;
+            font-size: 13px;
+            line-height: 1.2;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+            border-color: var(--chinese-gold);
+        }
+
+        .collapsible {
+            margin: 6px 0;
+            width: 100%;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+            border-left: 3px solid var(--chinese-gold);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+        }
+
+        .collapsible-header .arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-size: 12px;
+        }
+
+        .collapsible.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 12px;
+            margin-left: 12px;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 8000px;
+            padding: 12px;
+        }
+
+        .collapsible.critical .collapsible-header {
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.08);
+            font-weight: 700;
+        }
+
+        .collapsible.secondary .collapsible-header {
+            border-left: 2px solid #999;
+            background: rgba(0, 0, 0, 0.02);
+            font-size: 13px;
+        }
+
+        .important-always-visible {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+            border: 2px solid var(--chinese-gold);
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+
+        .important-always-visible h2 {
+            color: var(--chinese-red);
+            margin-top: 0;
+            border-left: none;
+            background: none;
+        }
+
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+            margin: 8px 0;
+        }
+
+        .two-column-layout .collapsible.full-width {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 900px) {
+            .two-column-layout {
+                grid-template-columns: 1fr;
+            }
+            .two-column-layout .collapsible.full-width {
+                grid-column: span 1;
+            }
+        }
+
+        .dense-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 8px 12px;
+        }
+
+        .dense-list li {
+            padding: 4px 0 4px 16px;
+            border-left: 2px solid transparent;
+            position: relative;
+            line-height: 1.5;
+        }
+
+        .dense-list li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--chinese-red);
+            font-size: 12px;
+        }
+
+        .dense-list li strong {
+            color: var(--level-2);
+            font-weight: 600;
+        }
+
+        .indent-1 { margin-left: 12px; }
+        .indent-2 { margin-left: 24px; }
+        .indent-3 { margin-left: 36px; }
+
+        .metric {
+            display: inline-block;
+            background: white;
+            border: 1px solid var(--chinese-gold);
+            padding: 3px 8px;
+            margin: 2px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .metric.important {
+            background: var(--chinese-gold);
+            color: white;
+            font-weight: 700;
+        }
+
+        .critical { color: var(--chinese-red); font-weight: 700; }
+        .success { color: var(--jade-green); font-weight: 600; }
+        .warning { color: var(--chinese-gold); font-weight: 600; }
+        .muted { color: var(--level-4); font-size: 12px; }
+
+        pre, code {
+            background: linear-gradient(135deg, rgba(245, 245, 220, 0.3), rgba(255, 255, 255, 0.5));
+            border: 1px solid rgba(139, 0, 0, 0.1);
+            padding: 3px 6px;
+            margin: 2px 0;
+            font-size: 12px;
+            line-height: 1.3;
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            border-radius: 2px;
+        }
+
+        pre {
+            padding: 8px;
+            margin: 6px 0;
+            overflow-x: auto;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, var(--chinese-red), transparent);
+            margin: 12px 0;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            border-radius: 3px;
+            padding: 8px;
+            margin: 6px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.priority {
+            border: 2px solid var(--chinese-gold);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+
+        th {
+            background: var(--chinese-red);
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+        td:first-child { font-weight: 600; color: var(--level-2); }
+    </style>
+</head>
+<body>
+    <!-- Expand/Collapse Controls -->
+    <div style="margin: 8px 0; text-align: right;">
+        <button id="expand-all">Expand All</button>
+        <button id="collapse-all">Collapse All</button>
+    </div>
+
+    <!-- Executive Summary (Always Visible) -->
+    <div class="important-always-visible">
+        <h1>📋 Implementation Roadmap: Moving Nabokov's Web to Design Vision</h1>
+        <div class="two-column-layout">
+            <div>
+                <h3>Current State</h3>
+                <ul class="dense-list">
+                    <li><strong>✅ Phase 1 Complete:</strong> Element capture, spatial canvas, card storage</li>
+                    <li><strong>✅ Working Features:</strong> Screenshot capture, React Flow canvas, basic conversations</li>
+                    <li><strong>Gap:</strong> Missing AI-as-backend infrastructure, no generative UI, no inter-artifact communication</li>
+                </ul>
+            </div>
+            <div>
+                <h3>Target State</h3>
+                <ul class="dense-list">
+                    <li><strong>Phase 1.5:</strong> CardMutationAPI (AI manipulates DOM)</li>
+                    <li><strong>Phase 2:</strong> Universal artifacts (URLs, notes, files)</li>
+                    <li><strong>Phase 3-5:</strong> Generative UI, direct manipulation, artifact networks</li>
+                </ul>
+                <div class="metric important">Complexity: High</div>
+                <div class="metric">Estimated: 4-6 weeks</div>
+            </div>
+        </div>
+        <h3>Core Design Principles</h3>
+        <p style="margin: 8px 0; line-height: 1.5;">Transform Nabokov from a <strong>web clipper</strong> into a <strong>distributed cognitive network</strong> where artifacts are active cognitive partners that can communicate with each other and generate new artifacts on demand.</p>
+    </div>
+
+    <!-- Two-Column Layout for Main Content -->
+    <div class="two-column-layout">
+
+        <!-- LEFT COLUMN: Implementation Steps -->
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>⚡ Phase 1.5: CardMutationAPI Infrastructure</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <p class="muted">Foundation for AI-as-backend architecture. Claude responds with DOM operations, not just text.</p>
+
+                <h4>Step 1: Define CardMutationAPI Interface</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/types/mutation-api.ts</code></li>
+                    <li><strong>Action:</strong> Create TypeScript interface for DOM manipulation operations</li>
+                    <li><strong>Operations:</strong>
+                        <div class="indent-1 muted">
+                            <code>replaceContent()</code>, <code>appendSection()</code>, <code>setAttribute()</code><br>
+                            <code>highlight()</code>, <code>annotate()</code>, <code>collapse()</code>, <code>expand()</code><br>
+                            <code>injectReference()</code>, <code>createConnection()</code>
+                        </div>
+                    </li>
+                </ul>
+
+                <h4>Step 2: Implement Custom Interactive Elements</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/components/interactive-elements/</code></li>
+                    <li><strong>Elements:</strong>
+                        <div class="indent-1 muted">
+                            <code>&lt;learn-more&gt;</code> - Spawns new artifacts<br>
+                            <code>&lt;artifact-ref&gt;</code> - References other artifacts<br>
+                            <code>&lt;expand-section&gt;</code> - Progressive disclosure
+                        </div>
+                    </li>
+                    <li><strong>Implementation:</strong> Web Components with Shadow DOM, registered globally</li>
+                </ul>
+
+                <h4>Step 3: Background Worker Message Router</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/background/mutation-handler.ts</code></li>
+                    <li><strong>Action:</strong> Route custom element interactions to Claude API</li>
+                    <li><strong>Flow:</strong>
+                        <div class="indent-1 muted">
+                            User clicks <code>&lt;learn-more&gt;</code> → Background worker captures context → Send to Claude with CardMutationAPI → Execute DOM operations
+                        </div>
+                    </li>
+                </ul>
+
+                <h4>Step 4: DOM Operation Executor</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/utils/dom-executor.ts</code></li>
+                    <li><strong>Action:</strong> Safely execute Claude's mutation operations on card content</li>
+                    <li><strong>Security:</strong> Whitelist allowed operations, sanitize all HTML insertions</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Testing Strategy for Phase 1.5 -->
+        <div class="collapsible secondary" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>✓ Testing Phase 1.5 (Playwright)</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Test 1: Custom Element Registration</h4>
+                <pre>const page = await context.newPage();
+await page.goto(canvasUrl);
+const hasElements = await page.evaluate(() => {
+  return Boolean(
+    customElements.get('learn-more') &&
+    customElements.get('artifact-ref')
+  );
+});
+expect(hasElements).toBe(true);</pre>
+
+                <h4>Test 2: CardMutationAPI Execution</h4>
+                <pre>// Create card with &lt;learn-more&gt;
+await createTestCard('&lt;learn-more topic="test"&gt;');
+await page.click('learn-more');
+// Verify new artifact created
+const cards = await getAllCards(page);
+expect(cards.length).toBe(2);</pre>
+
+                <h4>Test 3: DOM Manipulation</h4>
+                <pre>await executeMutation({
+  operation: 'highlight',
+  selector: 'p',
+  note: 'Important'
+});
+const hasHighlight = await page.evaluate(() =>
+  document.querySelector('mark') !== null
+);
+expect(hasHighlight).toBe(true);</pre>
+            </div>
+        </div>
+
+        <!-- Phase 2: Universal Artifacts -->
+        <div class="collapsible critical" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>📦 Phase 2: Universal Artifact Substrate</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <p class="muted">Unify all content types under single Card interface</p>
+
+                <h4>Step 5: Extend Card Type for Files</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/types/card.ts</code></li>
+                    <li><strong>Action:</strong> Add optional <code>fileData</code> field to Card interface</li>
+                    <li><strong>Fields:</strong> fileName, fileType, fileSize, fileUrl, extractedText</li>
+                </ul>
+
+                <h4>Step 6: Implement URL Import</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/canvas/Toolbar.tsx</code></li>
+                    <li><strong>Action:</strong> Add "Import URL" button that fetches and creates full-page artifact</li>
+                    <li><strong>Implementation:</strong> Use <code>fetch()</code> + DOMPurify, preserve original HTML</li>
+                </ul>
+
+                <h4>Step 7: Implement Note Creation</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/canvas/Toolbar.tsx</code></li>
+                    <li><strong>Action:</strong> Add "New Note" button that creates blank editable artifact</li>
+                    <li><strong>UI:</strong> ContentEditable div with auto-save on blur</li>
+                </ul>
+
+                <h4>Step 8: File Drop Handler</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/canvas/Canvas.tsx</code></li>
+                    <li><strong>Action:</strong> Add drag-and-drop zone for files and screenshots</li>
+                    <li><strong>Supported:</strong> Images (PNG, JPG), PDFs, text files, documents</li>
+                    <li><strong>Storage:</strong> Store file blobs in IndexedDB, metadata in Card</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Testing Phase 2 -->
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>✓ Testing Phase 2 (Playwright)</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Test 4: URL Import</h4>
+                <pre>await page.click('[data-testid="import-url"]');
+await page.fill('input[type="url"]',
+  'https://example.com');
+await page.click('button[type="submit"]');
+const cards = await getAllCards(page);
+expect(cards[0].metadata.url)
+  .toBe('https://example.com');</pre>
+
+                <h4>Test 5: Note Creation</h4>
+                <pre>await page.click('[data-testid="new-note"]');
+await page.fill('[contenteditable]',
+  'Test note content');
+await page.click('body'); // blur
+const cards = await getAllCards(page);
+expect(cards[0].content)
+  .toContain('Test note');</pre>
+
+                <h4>Test 6: File Upload</h4>
+                <pre>const filePath = path.join(__dirname,
+  'fixtures/test.png');
+const [fileChooser] = await Promise.all([
+  page.waitForEvent('filechooser'),
+  page.click('[data-testid="upload-file"]')
+]);
+await fileChooser.setFiles([filePath]);
+const cards = await getAllCards(page);
+expect(cards[0].fileData.fileName)
+  .toBe('test.png');</pre>
+            </div>
+        </div>
+
+        <!-- Phase 3: Generative UI -->
+        <div class="collapsible critical" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>🎨 Phase 3: Generative UI Navigation</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <p class="muted">"Output as input" - every artifact can spawn new artifacts</p>
+
+                <h4>Step 9: Learn-More Element Handler</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/background/learn-more-handler.ts</code></li>
+                    <li><strong>Action:</strong> When user clicks <code>&lt;learn-more&gt;</code>, generate new artifact UI via Claude</li>
+                    <li><strong>Context:</strong> Send parent artifact content + topic + user's canvas state</li>
+                </ul>
+
+                <h4>Step 10: Artifact Generation Pipeline</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/utils/artifact-generator.ts</code></li>
+                    <li><strong>Action:</strong> Claude generates HTML → Sanitize → Create new Card → Position on canvas</li>
+                    <li><strong>Positioning:</strong> Auto-arrange near parent artifact with connection line</li>
+                </ul>
+
+                <h4>Step 11: UI Template Library</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/templates/ui-templates.ts</code></li>
+                    <li><strong>Action:</strong> Provide Claude with reusable UI component templates</li>
+                    <li><strong>Templates:</strong> Timeline view, comparison table, concept map, detail drill-down</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Testing Phase 3 -->
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>✓ Testing Phase 3 (Playwright)</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Test 7: Artifact Spawning</h4>
+                <pre>// Create artifact with learn-more
+const initialCount = await getCardCount(page);
+await page.click('learn-more[topic="test"]');
+await page.waitForTimeout(3000); // AI gen
+const newCount = await getCardCount(page);
+expect(newCount).toBe(initialCount + 1);</pre>
+
+                <h4>Test 8: Connection Lines</h4>
+                <pre>await page.click('learn-more');
+await page.waitForSelector('.react-flow__edge');
+const edges = await page.$$('.react-flow__edge');
+expect(edges.length).toBeGreaterThan(0);</pre>
+            </div>
+        </div>
+
+        <!-- Phase 4: Direct Manipulation -->
+        <div class="collapsible critical" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>✏️ Phase 4: In-Artifact Manipulation</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <p class="muted">Direct editing and annotation makes thinking visible</p>
+
+                <h4>Step 12: ContentEditable Regions</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/canvas/CardNode.tsx</code></li>
+                    <li><strong>Action:</strong> Make card content editable in "edit mode"</li>
+                    <li><strong>UI:</strong> Toggle button, auto-save on blur, track changes in <code>card.versions</code></li>
+                </ul>
+
+                <h4>Step 13: Annotation Layer</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/components/AnnotationLayer.tsx</code></li>
+                    <li><strong>Action:</strong> Overlay for text selection → highlight → add note</li>
+                    <li><strong>Storage:</strong> Store annotations in <code>card.annotations: Array&lt;{text, note, position}&gt;</code></li>
+                </ul>
+
+                <h4>Step 14: AI-Powered Manipulation</h4>
+                <ul class="dense-list">
+                    <li><strong>Integration:</strong> User highlights text → Context menu → "Ask Claude" → CardMutationAPI responds</li>
+                    <li><strong>Operations:</strong> Summarize, expand, rewrite, add context</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Testing Phase 4 -->
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>✓ Testing Phase 4 (Playwright)</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Test 9: Content Editing</h4>
+                <pre>await page.click('[data-testid="edit-mode"]');
+const editable = await page.$('[contenteditable]');
+await editable.fill('New content');
+await page.click('body');
+const card = await getCard(page, cardId);
+expect(card.content).toContain('New content');</pre>
+
+                <h4>Test 10: Annotation</h4>
+                <pre>await page.selectText('important text');
+await page.click('[data-testid="annotate"]');
+await page.fill('[data-testid="note"]', 'Key point');
+const annotations = await getAnnotations(page);
+expect(annotations[0].note).toBe('Key point');</pre>
+            </div>
+        </div>
+
+        <!-- Phase 5: Inter-Artifact Communication -->
+        <div class="collapsible critical" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>🔗 Phase 5: Artifact Networks</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <p class="muted">Artifacts communicate with each other, creating distributed cognitive network</p>
+
+                <h4>Step 15: Message Router</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/background/artifact-router.ts</code></li>
+                    <li><strong>Action:</strong> Route messages between artifacts via background worker</li>
+                    <li><strong>Protocol:</strong> <code>{from: cardId, to: cardId, query: string, context: object}</code></li>
+                </ul>
+
+                <h4>Step 16: Artifact-Ref Element</h4>
+                <ul class="dense-list">
+                    <li><strong>Implementation:</strong> <code>&lt;artifact-ref target="card-123" query="What does this say about X?"&gt;</code></li>
+                    <li><strong>Behavior:</strong> Click → Send query to target artifact → Inject response via CardMutationAPI</li>
+                </ul>
+
+                <h4>Step 17: Visual Connection Lines</h4>
+                <ul class="dense-list">
+                    <li><strong>File:</strong> <code>src/canvas/ConnectionLines.tsx</code></li>
+                    <li><strong>Action:</strong> Render React Flow edges between artifacts with active conversations</li>
+                    <li><strong>Styling:</strong> Color-coded by relationship type (reference, query, derived-from)</li>
+                </ul>
+
+                <h4>Step 18: Context Propagation</h4>
+                <ul class="dense-list">
+                    <li><strong>Logic:</strong> When artifact A queries artifact B, extract relevant excerpt from B and inject into A</li>
+                    <li><strong>UI:</strong> Show "Referenced from B" with link back to source</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Testing Phase 5 -->
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>✓ Testing Phase 5 (Playwright)</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Test 11: Inter-Artifact Query</h4>
+                <pre>// Create two artifacts
+await createCard(page, 'Card A');
+await createCard(page, 'Card B',
+  '&lt;artifact-ref target="card-a"&gt;');
+await page.click('artifact-ref');
+await page.waitForTimeout(2000);
+const contentB = await getCardContent(page, 'card-b');
+expect(contentB).toContain('Card A');</pre>
+
+                <h4>Test 12: Connection Lines</h4>
+                <pre>await page.click('artifact-ref');
+const edges = await page.$$eval(
+  '.react-flow__edge',
+  els => els.map(el => el.dataset.source)
+);
+expect(edges).toContain('card-b');</pre>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Full-Width Sections -->
+
+    <!-- Prerequisites & Context -->
+    <div class="collapsible secondary full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📍 Prerequisites & Context</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Current Implementation Analysis</h3>
+            <div class="two-column-layout">
+                <div class="card">
+                    <h4 class="success">✅ What's Working</h4>
+                    <ul class="dense-list">
+                        <li>Element capture via Cmd+Shift+E</li>
+                        <li>Shadow DOM isolation in ElementSelector</li>
+                        <li>Screenshot capture (with fallback)</li>
+                        <li>Card storage (chrome.storage.local + IndexedDB)</li>
+                        <li>React Flow canvas with spatial layout</li>
+                        <li>Basic card metadata (tags, stars, timestamps)</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4 class="critical">❌ What's Missing</h4>
+                    <ul class="dense-list">
+                        <li>AI integration (no Claude API calls yet)</li>
+                        <li>CardMutationAPI infrastructure</li>
+                        <li>Custom interactive elements</li>
+                        <li>Generative UI capabilities</li>
+                        <li>Inter-artifact communication</li>
+                        <li>Direct content manipulation</li>
+                        <li>File/URL import</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Design Vision Summary</h3>
+            <p style="margin: 8px 0; line-height: 1.5;">The design document describes a system where <strong>artifacts are active cognitive partners</strong>, not passive displays. Key innovations:</p>
+            <ul class="dense-list">
+                <li><strong>Universal Substrate:</strong> Any content (webpage, note, file) becomes an artifact</li>
+                <li><strong>Output as Input:</strong> Every artifact can spawn new artifacts via "learn more" buttons</li>
+                <li><strong>Distributed Cognition:</strong> Artifacts communicate with each other, creating knowledge networks</li>
+                <li><strong>Direct Manipulation:</strong> Edit, annotate, restructure content to externalize thinking</li>
+                <li><strong>AI as Infrastructure:</strong> Claude operates on artifacts through surgical DOM manipulations</li>
+            </ul>
+
+            <h3>Key Files to Understand</h3>
+            <table>
+                <tr>
+                    <th>File</th>
+                    <th>Purpose</th>
+                    <th>Lines</th>
+                </tr>
+                <tr>
+                    <td><code>src/types/card.ts</code></td>
+                    <td>Single source of truth for Card interface</td>
+                    <td>98</td>
+                </tr>
+                <tr>
+                    <td><code>src/background/index.ts</code></td>
+                    <td>Service worker, handles keyboard commands, screenshot capture</td>
+                    <td>107</td>
+                </tr>
+                <tr>
+                    <td><code>src/canvas/Canvas.tsx</code></td>
+                    <td>Main canvas component, React Flow wrapper</td>
+                    <td>~200</td>
+                </tr>
+                <tr>
+                    <td><code>src/canvas/CardNode.tsx</code></td>
+                    <td>Card rendering, Chinese aesthetic styling</td>
+                    <td>223</td>
+                </tr>
+                <tr>
+                    <td><code>src/components/ElementSelector.tsx</code></td>
+                    <td>Element picker, Shadow DOM, capture pipeline</td>
+                    <td>~400</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Potential Issues & Mitigations -->
+    <div class="collapsible secondary full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>⚠️ Potential Issues & Mitigations</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <div class="two-column-layout">
+                <div>
+                    <h3 class="warning">Technical Challenges</h3>
+                    <div class="card">
+                        <h4>Issue 1: AI Response Time</h4>
+                        <p class="muted">CardMutationAPI needs ~3s response time. User may click away.</p>
+                        <p><strong>Mitigation:</strong> Show loading spinner on clicked element, make operations async and non-blocking</p>
+                    </div>
+
+                    <div class="card">
+                        <h4>Issue 2: Storage Limits</h4>
+                        <p class="muted">chrome.storage.local has ~5MB limit after JSON serialization</p>
+                        <p><strong>Mitigation:</strong> Store only metadata in storage.local, move large content to IndexedDB. Implement pagination/lazy-loading for canvas.</p>
+                    </div>
+
+                    <div class="card">
+                        <h4>Issue 3: Custom Elements in React</h4>
+                        <p class="muted">React doesn't handle custom elements well, may re-render and lose state</p>
+                        <p><strong>Mitigation:</strong> Use <code>dangerouslySetInnerHTML</code> for artifact content with custom elements. Implement proper event delegation.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="warning">Design Challenges</h3>
+                    <div class="card">
+                        <h4>Issue 4: Context Overload</h4>
+                        <p class="muted">Sending all artifact content to Claude exceeds token limits</p>
+                        <p><strong>Mitigation:</strong> Implement smart context extraction - send only relevant excerpts, use embeddings for semantic search across artifacts.</p>
+                    </div>
+
+                    <div class="card">
+                        <h4>Issue 5: UI Complexity</h4>
+                        <p class="muted">Too many features can overwhelm users</p>
+                        <p><strong>Mitigation:</strong> Progressive disclosure - start with basic features (Phase 1.5-2), gate advanced features (Phase 3-5) behind "Advanced Mode" toggle.</p>
+                    </div>
+
+                    <div class="card">
+                        <h4>Issue 6: Security</h4>
+                        <p class="muted">Executing AI-generated DOM operations is risky</p>
+                        <p><strong>Mitigation:</strong> Whitelist allowed operations in CardMutationAPI, sanitize all HTML with DOMPurify, run operations in sandboxed iframe.</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Testing Gotchas</h3>
+            <ul class="dense-list">
+                <li><strong>Extension Reload:</strong> Must reload extension in <code>chrome://extensions</code> after build</li>
+                <li><strong>Playwright Context:</strong> Use <code>launchPersistentContext</code> with <code>--load-extension</code> flag</li>
+                <li><strong>Headed Mode Required:</strong> Extensions don't work in headless Chromium</li>
+                <li><strong>Service Worker Timing:</strong> Background worker may not be ready immediately, add retry logic</li>
+                <li><strong>Storage Mocking:</strong> Use <code>chrome.storage.local.set/get</code> directly in tests, avoid mocking</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Testing Infrastructure -->
+    <div class="collapsible full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>🧪 Complete Testing Strategy</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Playwright Test Setup</h3>
+            <pre>// tests/e2e/extension.fixture.ts
+import { test as base, chromium } from '@playwright/test';
+import path from 'path';
+
+export const test = base.extend({
+  context: async ({}, use) => {
+    const extensionPath = path.join(__dirname, '../../dist');
+    const context = await chromium.launchPersistentContext('', {
+      headless: false,
+      args: [
+        `--disable-extensions-except=${extensionPath}`,
+        `--load-extension=${extensionPath}`,
+      ],
+    });
+    await use(context);
+    await context.close();
+  },
+
+  extensionId: async ({ context }, use) => {
+    const [background] = context.serviceWorkers();
+    const extId = background.url().match(/chrome-extension:\/\/([a-z]+)\//)?.[1];
+    await use(extId);
+  },
+});</pre>
+
+            <h3>Helper Functions</h3>
+            <pre>// tests/e2e/helpers.ts
+export async function getAllCards(page) {
+  return await page.evaluate(async () => {
+    const result = await chrome.storage.local.get(['cards']);
+    return result.cards || [];
+  });
+}
+
+export async function createTestCard(page, content) {
+  return await page.evaluate(async (html) => {
+    const card = {
+      id: `test-${Date.now()}`,
+      content: html,
+      metadata: { url: 'test', title: 'Test', domain: 'test' },
+      starred: false,
+      tags: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await chrome.storage.local.set({ cards: [card] });
+    return card.id;
+  }, content);
+}
+
+export async function executeMutation(page, operation) {
+  return await page.evaluate(async (op) => {
+    // Send message to background worker
+    return await chrome.runtime.sendMessage({
+      type: 'EXECUTE_MUTATION',
+      operation: op,
+    });
+  }, operation);
+}</pre>
+
+            <h3>Integration Test Examples</h3>
+            <div class="two-column-layout">
+                <pre>// Test: Full capture pipeline
+test('element capture creates card', async ({
+  context, extensionId
+}) => {
+  const page = await context.newPage();
+  await page.goto('https://example.com');
+
+  // Trigger element selector
+  await page.keyboard.press('Meta+Shift+E');
+  await page.waitForSelector('.element-selector');
+
+  // Click element
+  await page.click('h1');
+
+  // Verify card created
+  await page.waitForTimeout(1000);
+  const cards = await getAllCards(page);
+  expect(cards.length).toBe(1);
+  expect(cards[0].content).toContain('Example');
+});</pre>
+
+                <pre>// Test: Learn-more spawns artifact
+test('learn-more generates new artifact', async ({
+  context, extensionId
+}) => {
+  const page = await context.newPage();
+  const canvasUrl = `chrome-extension://${extensionId}/src/canvas/index.html`;
+  await page.goto(canvasUrl);
+
+  // Create card with learn-more
+  await createTestCard(page,
+    '&lt;learn-more topic="test"&gt;Learn More&lt;/learn-more&gt;'
+  );
+  await page.reload();
+
+  const initialCount = await getAllCards(page);
+  await page.click('learn-more');
+  await page.waitForTimeout(3000); // AI generation
+
+  const newCards = await getAllCards(page);
+  expect(newCards.length).toBe(initialCount.length + 1);
+});</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Post-Implementation -->
+    <div class="collapsible full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📊 Post-Implementation & Future Work</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Documentation Needs</h3>
+            <ul class="dense-list">
+                <li><strong>CardMutationAPI Reference:</strong> Document all operations with examples</li>
+                <li><strong>Custom Element Guide:</strong> How to create new interactive elements</li>
+                <li><strong>Artifact Communication Protocol:</strong> Message format and routing rules</li>
+                <li><strong>Testing Guide:</strong> How to write E2E tests for new features</li>
+            </ul>
+
+            <h3>Performance Optimization</h3>
+            <ul class="dense-list">
+                <li><strong>Virtual Canvas:</strong> Only render cards in viewport (react-window integration)</li>
+                <li><strong>Debounced Storage:</strong> Batch card updates to reduce storage writes</li>
+                <li><strong>Lazy Loading:</strong> Load card content on-demand when expanded</li>
+                <li><strong>IndexedDB Pagination:</strong> Load screenshots in batches of 20</li>
+            </ul>
+
+            <h3>Future Features (Ted Nelson-inspired)</h3>
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>Description</th>
+                    <th>Priority</th>
+                </tr>
+                <tr>
+                    <td>Parallel Documents</td>
+                    <td>Side-by-side view with visual connection lines between aligned sections</td>
+                    <td class="warning">Medium</td>
+                </tr>
+                <tr>
+                    <td>Version Tracking</td>
+                    <td>Track artifact evolution with linked passages across versions</td>
+                    <td class="success">High</td>
+                </tr>
+                <tr>
+                    <td>Card Merge/Split</td>
+                    <td>Combine multiple cards into composite, preserve ability to unmerge</td>
+                    <td class="success">High</td>
+                </tr>
+                <tr>
+                    <td>Artifact Templates</td>
+                    <td>Library of UI templates Claude can use (timeline, comparison, concept map)</td>
+                    <td class="warning">Medium</td>
+                </tr>
+            </table>
+
+            <h3>Metrics to Track</h3>
+            <ul class="dense-list">
+                <li><strong>User Engagement:</strong> Number of artifacts created per session</li>
+                <li><strong>AI Operations:</strong> CardMutationAPI calls per artifact</li>
+                <li><strong>Network Activity:</strong> Inter-artifact queries per day</li>
+                <li><strong>Storage Usage:</strong> Total cards, IndexedDB size, chrome.storage.local usage</li>
+                <li><strong>Performance:</strong> Canvas render time, artifact generation latency</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Implementation Timeline -->
+    <div class="collapsible full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📅 Suggested Implementation Timeline</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <table>
+                <tr>
+                    <th>Phase</th>
+                    <th>Duration</th>
+                    <th>Deliverables</th>
+                    <th>Testing</th>
+                </tr>
+                <tr>
+                    <td><strong>1.5: CardMutationAPI</strong></td>
+                    <td>1.5 weeks</td>
+                    <td>
+                        • API interface definition<br>
+                        • Custom elements (learn-more, artifact-ref)<br>
+                        • Background worker router<br>
+                        • DOM executor with security
+                    </td>
+                    <td>Tests 1-3</td>
+                </tr>
+                <tr>
+                    <td><strong>2: Universal Artifacts</strong></td>
+                    <td>1 week</td>
+                    <td>
+                        • Extended Card type<br>
+                        • URL import functionality<br>
+                        • Note creation<br>
+                        • File drop handler
+                    </td>
+                    <td>Tests 4-6</td>
+                </tr>
+                <tr>
+                    <td><strong>3: Generative UI</strong></td>
+                    <td>1 week</td>
+                    <td>
+                        • Learn-more handler<br>
+                        • Artifact generation pipeline<br>
+                        • UI template library<br>
+                        • Auto-positioning logic
+                    </td>
+                    <td>Tests 7-8</td>
+                </tr>
+                <tr>
+                    <td><strong>4: Direct Manipulation</strong></td>
+                    <td>1 week</td>
+                    <td>
+                        • ContentEditable regions<br>
+                        • Annotation layer<br>
+                        • AI-powered manipulation<br>
+                        • Version tracking
+                    </td>
+                    <td>Tests 9-10</td>
+                </tr>
+                <tr>
+                    <td><strong>5: Artifact Networks</strong></td>
+                    <td>1.5 weeks</td>
+                    <td>
+                        • Message router<br>
+                        • Artifact-ref implementation<br>
+                        • Visual connection lines<br>
+                        • Context propagation
+                    </td>
+                    <td>Tests 11-12</td>
+                </tr>
+            </table>
+            <p style="margin: 12px 0; font-weight: 600;">Total Estimated Time: <span class="metric important">6 weeks</span></p>
+            <p class="muted">Note: This assumes full-time development. Adjust timelines based on available hours per week.</p>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+    <p style="text-align: center; margin: 16px 0; color: var(--level-4); font-size: 12px;">
+        Generated by Claude Code • Based on DESIGN.md analysis • Ready for implementation
+    </p>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-create collapsibles for sections marked with data-collapsible
+        document.querySelectorAll('[data-collapsible]').forEach(function(section) {
+            const isOpen = section.getAttribute('data-collapsible') === 'open';
+            section.classList.add('collapsible');
+            if (isOpen) section.classList.add('open');
+        });
+
+        // Handle collapsible clicks
+        document.querySelectorAll('.collapsible-header').forEach(function(header) {
+            header.addEventListener('click', function() {
+                const collapsible = this.closest('.collapsible');
+                collapsible.classList.toggle('open');
+            });
+        });
+
+        // Expand/Collapse all buttons
+        const expandAllBtn = document.getElementById('expand-all');
+        const collapseAllBtn = document.getElementById('collapse-all');
+
+        if (expandAllBtn) {
+            expandAllBtn.addEventListener('click', function() {
+                document.querySelectorAll('.collapsible').forEach(function(c) {
+                    c.classList.add('open');
+                });
+            });
+        }
+
+        if (collapseAllBtn) {
+            collapseAllBtn.addEventListener('click', function() {
+                document.querySelectorAll('.collapsible').forEach(function(c) {
+                    c.classList.remove('open');
+                });
+            });
+        }
+    });
+    </script>
+</body>
+</html>

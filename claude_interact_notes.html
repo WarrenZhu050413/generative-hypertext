@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INTERACT Research Notes</title>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --ink-black: #2C2C2C;
+            --paper-beige: #F5F5DC;
+            --light-cream: #FFFEF0;
+            --level-1: #8B0000;
+            --level-2: #CD5C5C;
+            --level-3: #666;
+            --level-4: #999;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            line-height: 1.3;
+            font-size: 13px;
+            padding: 12px;
+            max-width: 100%;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin: 8px 0 12px 0;
+            padding: 8px 0;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            border-bottom: 3px solid var(--chinese-gold);
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 10px 0 6px 0;
+            padding: 6px 8px;
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.05);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 6px 0 4px 8px;
+            color: var(--level-2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h4 {
+            font-size: 13px;
+            font-weight: 600;
+            margin: 4px 0 2px 0;
+            color: var(--level-2);
+        }
+
+        .metadata {
+            font-size: 11px;
+            color: var(--level-4);
+            margin-bottom: 8px;
+        }
+
+        .collapsible {
+            margin: 6px 0;
+            width: 100%;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 8px 10px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.06), rgba(255, 215, 0, 0.03));
+            border-left: 3px solid var(--chinese-gold);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.12), rgba(255, 215, 0, 0.06));
+        }
+
+        .collapsible-header .arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-size: 12px;
+            margin-right: 8px;
+        }
+
+        .collapsible.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 10000px;
+            padding: 10px 12px;
+        }
+
+        .critical {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), white);
+            border: 2px solid var(--chinese-gold);
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 3px;
+        }
+
+        .note-entry {
+            margin: 8px 0;
+            padding: 8px;
+            background: white;
+            border-left: 2px solid rgba(139, 0, 0, 0.2);
+            border-radius: 2px;
+        }
+
+        .note-entry.highlighted {
+            border-left: 3px solid var(--chinese-red);
+            background: rgba(255, 215, 0, 0.08);
+        }
+
+        .timestamp {
+            font-weight: 600;
+            color: var(--chinese-red);
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .tags {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin: 4px 0;
+        }
+
+        .tag {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.1));
+            color: var(--chinese-red);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .paper-ref {
+            background: rgba(139, 0, 0, 0.03);
+            padding: 6px 8px;
+            margin: 4px 0;
+            border-left: 2px solid var(--chinese-gold);
+            font-size: 12px;
+        }
+
+        .paper-ref a {
+            color: var(--chinese-red);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .paper-ref a:hover {
+            text-decoration: underline;
+        }
+
+        .quote {
+            font-style: italic;
+            color: var(--level-3);
+            padding: 6px 10px;
+            margin: 6px 0;
+            border-left: 3px solid var(--chinese-gold);
+            background: rgba(255, 215, 0, 0.05);
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 8px 0;
+        }
+
+        .theme-card {
+            background: white;
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            border-radius: 3px;
+            padding: 8px;
+            margin: 6px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .theme-card.priority {
+            border: 2px solid var(--chinese-gold);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, var(--chinese-red), transparent);
+            margin: 12px 0;
+        }
+
+        code {
+            background: rgba(245, 245, 220, 0.5);
+            padding: 2px 4px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 16px;
+            padding: 8px;
+            background: rgba(139, 0, 0, 0.03);
+            border-radius: 3px;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+
+        .stat-item {
+            font-weight: 600;
+        }
+
+        .stat-value {
+            color: var(--chinese-red);
+            font-weight: 700;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+        }
+
+        .controls {
+            position: sticky;
+            top: 0;
+            background: var(--paper-beige);
+            padding: 8px;
+            border-bottom: 2px solid var(--chinese-gold);
+            z-index: 100;
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button onclick="expandAll()">Expand All</button>
+        <button onclick="collapseAll()">Collapse All</button>
+    </div>
+
+    <h1>INTERACT Research Notes</h1>
+
+    <div class="stats">
+        <div class="stat-item">Total Notes: <span class="stat-value">56</span></div>
+        <div class="stat-item">Date Range: <span class="stat-value">Sep 23-29, 2025</span></div>
+        <div class="stat-item">Key Themes: <span class="stat-value">8</span></div>
+    </div>
+
+    <div class="critical">
+        <h2>Core Concepts & Design Principles</h2>
+        <div class="two-column">
+            <div class="theme-card priority">
+                <h4>🎯 Central Vision</h4>
+                <p><strong>Information coexistence</strong> - destination content viewed without leaving source context (macOS Quick Look, Wikipedia previews, Google Scholar popups)</p>
+                <p style="margin-top:6px;"><strong>Hierarchical discovery</strong> - organize AND discover knowledge even when information incomplete</p>
+            </div>
+            <div class="theme-card priority">
+                <h4>🔧 Core Mechanisms</h4>
+                <p><strong>Tight coupling</strong> - outputs become inputs seamlessly</p>
+                <p style="margin-top:4px;"><strong>Details on demand</strong> - progressive disclosure via colocation and spatial UI</p>
+                <p style="margin-top:4px;"><strong>Reversible actions</strong> - highlight changes, enable undo</p>
+            </div>
+        </div>
+        <div class="theme-card">
+            <h4>💡 Key Innovations</h4>
+            <ul style="margin-left:16px;line-height:1.5;">
+                <li><strong>Living output</strong> - LLM output as collaborative canvas for editing (vs. static chat)</li>
+                <li><strong>Deictic gestures</strong> - pointing/spatial interaction beyond language-only</li>
+                <li><strong>Feedforward design</strong> - see outline before detail (errors compound)</li>
+                <li><strong>Modular export</strong> - every HTML element natively exports as JSON/Markdown</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="collapsible open">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>Key Theoretical Frameworks</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="two-column">
+                <div class="theme-card">
+                    <h4>Direct Manipulation Principles</h4>
+                    <div class="quote">Visual representation of action world, rapid/incremental/reversible actions, selection by pointing, immediate continuous results display</div>
+                    <p style="margin-top:6px;font-size:12px;">Source: Visual Information Seeking (Shneiderman)</p>
+                </div>
+                <div class="theme-card">
+                    <h4>Information Seeking as Non-Linear</h4>
+                    <p style="font-size:12px;"><strong>8 parallel subprocesses:</strong> Define Problem, Recognize, Formulate, Execute, Examine, Extract, Reflect (not a pipeline but dynamic system)</p>
+                    <p style="margin-top:4px;font-size:12px;"><strong>Exploratory search:</strong> Maximize recall over precision</p>
+                </div>
+            </div>
+
+            <div class="theme-card priority" style="margin-top:8px;">
+                <h4>Personal Dynamic Media (Alan Kay)</h4>
+                <div class="quote">"Every message is a simulation of some idea... the computer as medium can be all other media if embedding/viewing methods sufficiently provided. This metamedium is active—can respond to queries—enabling two-way conversation never before available except through individual teacher."</div>
+                <p style="margin-top:6px;font-size:12px;">Connection: INTERACT as computational media - malleable, user-shapeable software</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>Related Systems & Prior Art (30+ papers)</div>
+        </div>
+        <div class="collapsible-content">
+            <h3>Multimodal Interaction Systems</h3>
+            <div class="note-entry highlighted">
+                <div class="timestamp">DirectGPT</div>
+                <div class="paper-ref"><a href="https://arxiv.org/pdf/2310.03691" target="_blank">DirectGPT: Direct Manipulation + LLMs</a></div>
+                <p>Decouples action from object. Prompts reused as toolbar buttons. <strong>Key difference:</strong> DirectGPT for manipulation/creation, INTERACT for learning/absorption</p>
+                <div class="tags"><span class="tag">#DirectGPT</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">Deictic Gestures</div>
+                <div class="paper-ref">Combining Deictic Gestures and Natural Language for Referent Identification</div>
+                <div class="quote">"Spatial deixis saves speaker generation and hearer analysis of complex descriptions. Allows reference when linguistic reference impossible (e.g., one of dozen similar objects). Permits vagueness using everyday terms."</div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">InterChat</div>
+                <div class="paper-ref">InterChat: Enhancing Generative Visual Analytics using Multimodal Interactions</div>
+                <p>Visual indicators for time-series, scatterplots - more efficient than language-only for pattern description</p>
+            </div>
+
+            <h3 style="margin-top:12px;">Overview-Detail Patterns</h3>
+            <div class="note-entry">
+                <div class="timestamp">Malleable Overview-Detail Interfaces</div>
+                <div class="paper-ref"><a href="https://arxiv.org/pdf/2503.07782" target="_blank">Malleable Overview-Detail Interfaces</a></div>
+                <div class="quote">"Information tasks involve iterative foraging, sensemaking, decision-making - searching, browsing, collecting across sources, making sense through representations. Users need to organize/preview many entities and inspect details."</div>
+                <p style="margin-top:6px;"><strong>INTERACT innovation:</strong> Makes this pattern <em>generative</em> with LLM chat as detail-on-demand mechanism</p>
+            </div>
+
+            <h3 style="margin-top:12px;">Document Collaboration</h3>
+            <div class="two-column">
+                <div class="note-entry">
+                    <div class="timestamp">PaperBridge</div>
+                    <div class="paper-ref"><a href="https://arxiv.org/pdf/2507.14527" target="_blank">PaperBridge: Human-AI Co-Exploration</a></div>
+                    <p>Synthesizes documents into coherent narrative via slide drafts. <strong>Gap:</strong> Doesn't consider learning context or building for oneself</p>
+                </div>
+                <div class="note-entry">
+                    <div class="timestamp">WordCraft</div>
+                    <p>Collaborating with AI in word documents - super cool</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top:12px;">Design Intent Systems</h3>
+            <div class="note-entry">
+                <div class="timestamp">Brickify, Canvil, FusAIn</div>
+                <p><strong>Brickify:</strong> Direct manipulation on design tokens - deictic pointing beyond language</p>
+                <p style="margin-top:4px;"><strong>Canvil:</strong> Intent formulation via prompting challenging when outcome hard to describe in words</p>
+                <p style="margin-top:4px;"><strong>FusAIn:</strong> Pen-based deictic gestures for generative AI visual prompts</p>
+            </div>
+
+            <h3 style="margin-top:12px;">Web Malleability</h3>
+            <div class="note-entry">
+                <div class="timestamp">Webstrates & Stylette</div>
+                <div class="paper-ref">Webstrates - Software as Computational Media</div>
+                <p>Web documents as dynamic media with custom representations of same DOM. Real-time collaboration.</p>
+                <p style="margin-top:4px;"><strong>Stylette:</strong> Click components + natural language to change website styles. Similar intent but for modification vs. exploration</p>
+                <div class="tags"><span class="tag">#webstrates</span><span class="tag">#computational-media</span><span class="tag">#personal-digital-sovereignty</span></div>
+            </div>
+
+            <h3 style="margin-top:12px;">Other Notable Systems</h3>
+            <div class="note-entry">
+                <div class="timestamp">Various</div>
+                <p><strong>Misty:</strong> UI prototyping through interactive conceptual blending</p>
+                <p style="margin-top:4px;"><strong>AbstractExplorer:</strong> Structure-mapping theory for comparative close reading at scale</p>
+                <p style="margin-top:4px;"><strong>Visual Story-Writing:</strong> Easier to manipulate abstracted representations than words</p>
+                <p style="margin-top:4px;"><strong>DynamicVis:</strong> Natural language → UI elements on webpage for interaction</p>
+                <p style="margin-top:4px;"><strong>LaMI:</strong> LLMs for multi-modal human-robot interaction (embodied experiences beyond chatbox)</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>User Research & Learning Preferences</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="theme-card priority">
+                <h4>Net Generation Learning Characteristics</h4>
+                <div class="quote">"Hypertext minds - they leap around. Linear thought less common than bricolage. Inductive discovery - making observations, formulating hypotheses. Crave interactivity. Image-rich over text. Refuse to read large amounts of text. Experiential - like doing not just thinking. Prefer graphics before text. Random access like hypertext. Parallel process and multi-task. Immediate gratification and frequent rewards."</div>
+                <div class="tags"><span class="tag">#net-generation</span><span class="tag">#learning-styles</span><span class="tag">#bricolage</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">Exploratory Search Insights</div>
+                <p><strong>Investigative searching:</strong> More concerned with recall (maximizing possibly relevant objects) than precision</p>
+                <p style="margin-top:4px;"><strong>Challenge for INTERACT:</strong> How to display more at beginning without overwhelming?</p>
+                <p style="margin-top:4px;"><strong>Relevance feedback problem:</strong> People unwilling to provide feedback in turn-taking model → Need buttons/gestures like "explain further", "search related content" (user-definable prompts)</p>
+                <div class="tags"><span class="tag">#exploratory-search</span><span class="tag">#information-seeking</span><span class="tag">#relevance-feedback</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>Design Features & Implementation Ideas</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="two-column">
+                <div class="theme-card">
+                    <h4>Interaction Patterns</h4>
+                    <ul style="margin-left:16px;line-height:1.5;font-size:12px;">
+                        <li>Text-based overlap during LLM generation (vs. turn-taking)</li>
+                        <li>Reorganize information by moving around</li>
+                        <li>Highlight changes when output updates</li>
+                        <li>Global overview/detail preferences via context/prompts</li>
+                    </ul>
+                </div>
+                <div class="theme-card">
+                    <h4>Human-Centric View</h4>
+                    <p style="font-size:12px;">Treat human beings as center. Human-centric view of all interactions.</p>
+                    <p style="margin-top:6px;font-size:12px;">Learning vs. creating distinction - absorbing information rather than taking information</p>
+                </div>
+            </div>
+
+            <div class="note-entry highlighted" style="margin-top:8px;">
+                <div class="timestamp">Feedforward in Generative AI</div>
+                <p><strong>Critical insight:</strong> Want to see outline before detail because errors compound. Same for HTML outline first. INTERACT relates to feedforward design.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">Beyond Turn-Taking</div>
+                <p>Frustration with current LLMs: want to overlap, respond, engage during response generation. Currently not possible. INTERACT enables through decoupling question-asking from answer-getting.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>Nabokov's Cards Integration</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="note-entry highlighted">
+                <div class="timestamp">2025-09-26, 9:00 PM</div>
+                <p>Changes LLM conversation into Nabokov card. Card can merge, interact, become parts of other cards.</p>
+            </div>
+
+            <div class="note-entry highlighted">
+                <div class="timestamp">2025-09-26, 12:02 PM</div>
+                <p>Nabokov's cards for prewriting. <strong>Organizing world's knowledge includes organizing one's own knowledge in one's head from the world's knowledge.</strong></p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">Nabokov's Cards Paper Insights</div>
+                <div class="paper-ref"><a href="https://dl.acm.org/doi/pdf/10.1145/3698061.3726916" target="_blank">Nabokov's Cards: AI Assisted Prewriting</a></div>
+                <p>Importance of interactivity and non-linear exploration in idea formulation (writing context)</p>
+            </div>
+
+            <div class="theme-card priority" style="margin-top:8px;">
+                <h4>Spatial Canvas Implementation (2025-09-29)</h4>
+                <div style="font-size:12px;">
+                    <p><strong>Colocation Principle:</strong> Like physical world, things arranged spatially - relevant information next to each other</p>
+
+                    <p style="margin-top:8px;"><strong>Architecture:</strong></p>
+                    <ul style="margin-left:16px;line-height:1.5;margin-top:4px;">
+                        <li>Infinite scrollable workspace with absolute (x,y) positioning</li>
+                        <li>Proximity = implicit relationships</li>
+                        <li>Visual clustering for thematic grouping</li>
+                        <li>Card as atomic unit - self-contained, multiple exports (JSON/MD/HTML)</li>
+                        <li>Every HTML element has data-export attribute</li>
+                    </ul>
+
+                    <p style="margin-top:8px;"><strong>Combination Mechanics:</strong></p>
+                    <ul style="margin-left:16px;line-height:1.5;margin-top:4px;">
+                        <li>Drag card onto another to combine (like paper)</li>
+                        <li>LLM generates fusion based on content types</li>
+                        <li>Decouple to restore originals, regenerate for variations</li>
+                    </ul>
+
+                    <p style="margin-top:8px;"><strong>Tech Stack:</strong> React + react-beautiful-dnd, Canvas/SVG for connections, IndexedDB persistence, GPT-4 for combinations</p>
+                </div>
+                <div class="tags"><span class="tag">#nabokov-cards</span><span class="tag">#spatial-ui</span><span class="tag">#modular-export</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <h2>Chronological Notes</h2>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>September 23, 2025 (30 notes)</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="note-entry">
+                <div class="timestamp">04:18 PM</div>
+                <div class="paper-ref"><a href="https://dl.acm.org/doi/pdf/10.1145/3706598.3714259" target="_blank">Cool paper about creating with AI</a></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">04:19 PM</div>
+                <div class="paper-ref"><a href="https://dl.acm.org/doi/pdf/10.1145/3706598.3713924" target="_blank">Misty: UI Prototyping Through Interactive Conceptual Blending</a></div>
+                <p>Previous work on creating UI with LLMs exists</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">04:26 PM</div>
+                <div class="paper-ref"><a href="https://www.arxiv.org/pdf/2509.11826" target="_blank">Collaborative Document Editing with Multiple Users and AI Agents</a></div>
+                <p>Cases of document editing with users and AI Agents, mainly in document context</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">04:32 PM</div>
+                <div class="paper-ref"><a href="https://arxiv.org/pdf/2507.14527" target="_blank">PaperBridge: Crafting Research Narratives through Human-AI Co-Exploration</a></div>
+                <p>Synthesizes documents into coherent narrative using slide drafts as collaboration engines. Does not consider context where person tries to learn using AI or building for themselves.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">04:34 PM</div>
+                <p><strong>AbstractExplorer:</strong> Leveraging Structure-Mapping Theory to Enhance Comparative Close Reading at Scale. Shows how structured interface can support sensemaking.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">04:36 PM</div>
+                <div class="paper-ref"><a href="https://arxiv.org/pdf/2503.07782" target="_blank">Malleable Overview-Detail Interfaces</a></div>
+                <p>These interfaces help with sensemaking</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">04:37 PM</div>
+                <p>Google Scholar Chrome extension allows sidebar summary - helpful to see overview</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">04:38 PM</div>
+                <p>Using overview-specific design pattern but making it generative. Interface that does this pattern really well. LLM chat may be way to get more specific information that cannot be anticipated.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">07:50 PM</div>
+                <div class="paper-ref"><a href="https://arxiv.org/pdf/2310.03691" target="_blank">DirectGPT</a></div>
+                <p>Direct Manipulation is useful way of thinking. Like idea of decoupling action and object (like specifications vs. input)</p>
+                <div class="tags"><span class="tag">#DirectGPT</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">07:52 PM</div>
+                <p>Difference between work and DirectGPT: DirectGPT about manipulation/editing/putting intents on page. Here: thinking about learning rather than creating, absorbing information rather than taking information</p>
+                <div class="tags"><span class="tag">#DirectGPT</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">07:56 PM</div>
+                <p><strong>Good Idea:</strong> Rapid Operations Through Prompts Reused as Tools. In DirectGPT, as soon as prompt finishes executing, added as button in toolbar. Prompt becomes tool.</p>
+                <div class="tags"><span class="tag">#DirectGPT</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">07:57 PM</div>
+                <p>Reversible Operations Through Undo Mechanisms: Something we need in our system</p>
+                <div class="tags"><span class="tag">#DirectGPT</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">08:00 PM</div>
+                <p>Important to highlight change so user knows when things changed. Related to reversible changes.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">08:11 PM</div>
+                <p>One novelty: treat output as living. Output becomes common ground/canvas for editing. In common LLM tools hard to go back and revisit output except for changing it again.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">08:17 PM</div>
+                <div class="paper-ref"><a href="https://arxiv.org/pdf/2410.07486" target="_blank">Visual Story-Writing: Writing by Manipulating Visual Representations of Stories</a></div>
+                <p>Certain relationships easier to do on abstracted format than words. May be easier to interact/manipulate on that abstracted representation.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:04 PM</div>
+                <div class="quote">"Many information tasks (foraging, sensemaking, decision-making) involve iterative process of searching, browsing, collecting across sources, making sense through representations, collecting new info based on insights. Users need representations to organize and preview many information entities and quickly determine relevant ones by inspecting details. Overview-detail pattern responds to such needs - ubiquitous in information visualization and academic literature review tools."</div>
+                <p style="margin-top:4px;">Source: Malleable Overview-Detail Interfaces</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:06 PM</div>
+                <p>Webstrates treated web documents as dynamic media, enabling custom representations of same DOM element while facilitating real-time, dynamic collaboration</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:11 PM</div>
+                <p>Ability to specify global Overview/Detail preferences based on context/explicit instructions/prompts</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:14 PM</div>
+                <p>Previous work (Malleable Overview-Detail) allows user-customizable interfaces with ability to customize how much info surfaced in overview vs. detail. However, limited in surfacing specific outputs. Here we utilize chat format and embed chats into UI.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:16 PM</div>
+                <div class="quote">"Although thinking goes on in one's head, external media serve to materialize thoughts and, through feedback, to augment the actual paths the thinking follows. Methods discovered in one..."</div>
+                <p style="margin-top:4px;">Source: Alan Kay, Personal Dynamic Media</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:18 PM</div>
+                <div class="quote">"Every message is simulation of some idea. Representational or abstract, isolated or in context, static or dynamic. Essence of medium dependent on way messages embedded, changed, viewed. Though digital computers originally designed for arithmetic computation, ability to simulate any descriptive model means computer as medium can be all other media if embedding/viewing methods sufficiently provided. This new 'metamedium' is active—can respond to queries and experiments—so messages may involve learner in two-way conversation. This property never before available except through medium of individual teacher. Implications vast and compelling."</div>
+                <p style="margin-top:4px;">Source: Alan Kay, Personal Dynamic Media</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:38 PM</div>
+                <p><strong>Combining Deictic Gestures and Natural Language for Referent Identification:</strong> In virtually all current natural-language dialog systems, users can only refer to objects using linguistic descriptions. However, in human face-to-face conversation, participants frequently use various sorts of deictic gestures. Importance of deictic gestures in communication and dialog.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:40 PM</div>
+                <div class="quote">"Our system demonstrates spatial deixis is valuable source of information for identifying referents in natural language dialog systems with pictorial display. Three advantages of pointing gestures: (1) Save speaker generation and hearer analysis of complex referential descriptions, simplifying dialog; (2) Allow reference when linguistic reference simply not possible (think of referring to one out of dozen similar objects); (3) Permit speaker to be vague, imprecise, ambiguous, and use everyday terms instead of precise technical terms unknown to them."</div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:44 PM</div>
+                <p><strong>Beyond Turn-taking:</strong> Introducing Text-based Overlap into Human-LLM Interactions. Frustration with current LLMs: want to overlap, respond, engage when response is being generated. Not currently possible. We enable through decoupling question asking from answer getting (at least for now).</p>
+                <p style="margin-top:4px;"><strong>WordCraft:</strong> Collaborating with AI in word document. Super cool.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:48 PM</div>
+                <p><strong>Feedforward in Generative AI:</strong> Really cool idea. Want to see outline before detail because errors compound. Same for seeing HTML outline first. INTERACT relates to feedforward design.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:50 PM</div>
+                <div class="quote">"Visual analytics frequently require users to identify patterns within visualizations and conduct subsequent analyses. Language-only interactions often fall short in precisely conveying such patterns. For instance, describing fluctuation in time-series chart or identifying clusters in scatterplot can be cumbersome and prone to errors. Similarly, complex analytical tasks (comparing fluctuations in time-series across multiple periods) demand detailed prompts that are time-consuming to construct and susceptible to inaccuracies. Traditional visual analytics systems rely on predefined interaction workflows to simplify specific tasks but lack flexibility for broader range of analytical needs. While LLMs offer flexibility in articulating diverse analytical intents, they confine users to language-based interactions, which can become bottleneck for complex tasks. For example, replicating time-series comparison might necessitate detailed prompt like: 'Compare fluctuations in data from <start_time_a> to <end_time_a> with those from <start_time_b> to <end_time_b> using <chart_type>.' This approach, though flexible, is less intuitive and efficient compared to direct, visually driven interactions (e.g., drawing selection boxes)."</div>
+                <p style="margin-top:4px;">Source: InterChat - Enhancing Generative Visual Analytics using Multimodal Interactions. Shows how visual indicators are very convenient for range of tasks. Similar to deictic idea.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:52 PM</div>
+                <p><strong>Stylette:</strong> Enables end-users to change style of websites they visit by clicking on components and saying desired change in natural language. Computational pipeline transcribes request and predicts plausible CSS properties with LLM, encodes clicked component using CNN to identify and extract styling values from similar components in large-scale dataset. Outputs presented in palette that user can use to iteratively change component's style.</p>
+                <p style="margin-top:4px;">Similar in intent to INTERACT. However, it's about changing the web, uses VAE. Whereas INTERACT more about exploration and understanding.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>September 24, 2025 (21 notes)</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="note-entry">
+                <div class="timestamp">09:33 AM</div>
+                <p>One idea we have: treat human beings as center of all these. Very human-centric view of things</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:36 AM</div>
+                <div class="paper-ref"><a href="https://arxiv.org/pdf/2401.15174" target="_blank">LaMI: Large Language Models for Multi-Modal Human-Robot Interaction</a></div>
+                <p>Experiments with human-AI interaction beyond chatbox form. More embodied experiences like with robots.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:40 AM</div>
+                <p><strong>Intent formulation challenge in image generation:</strong> (C1) Intent formulation via prompting, solely using natural language, can be challenging when outcome is hard to describe in words. Users may lack vocabulary to describe visual styles or high-level impressions they seek to achieve.</p>
+                <p style="margin-top:4px;">Source: Canvil - <a href="https://dl.acm.org/doi/pdf/10.1145/3706598.3714259" target="_blank">Paper link</a>. Related strand of work.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:43 AM</div>
+                <p>What INTERACT is doing: allow hierarchical organization of information. But not only organization - hierarchical discovery of knowledge even when not all information is found.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:45 AM</div>
+                <p><strong>Feature we may want:</strong> Being able to reorganize information by moving them around</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">09:47 AM</div>
+                <div class="paper-ref"><a href="https://dl.acm.org/doi/pdf/10.1145/3706598.3714087" target="_blank">Brickify: Enabling Expressive Design Intent Specification through Direct Manipulation on Design Tokens</a></div>
+                <div class="quote">"Clearly describing what visual elements to use in natural language is challenging due to inconsistent naming standards. For example, colors might be described as 'light red, greenish teal, navy blue, with greyish black' by some designers, and simply as 'orange, green, blue, and black' by others. These subtle differences can lead to significant variations in hues and shades. Uploading reference images for model to 'see' can help when desired element dominates image. However, in complex images, specifying exact element is harder. Designers might describe it as 'the abstract shape with curves in the middle right', but models often struggle with such ambiguous descriptions regarding shape and position."</div>
+                <p style="margin-top:4px;">Previous work like Brickify goes beyond language to use deictic ways of pointing at things</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">10:07 AM</div>
+                <div class="paper-ref"><a href="https://dl.acm.org/doi/pdf/10.1145/3613904.3642639" target="_blank">DynamicVis</a></div>
+                <p>Turns natural language descriptions into UI elements on webpage to facilitate more interaction</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">10:11 AM</div>
+                <div class="paper-ref"><a href="https://dl.acm.org/doi/pdf/10.1145/191666.191775" target="_blank">Visual Information Seeking: Tight Coupling of Dynamic Query Filters with Starfield Displays</a></div>
+                <p><strong>Principles of direct manipulation for design of visual information seeking applications:</strong></p>
+                <ul style="margin-left:16px;line-height:1.5;margin-top:4px;">
+                    <li>Visual representation of world of action including objects and actions</li>
+                    <li>Rapid, incremental and reversible actions</li>
+                    <li>Selection by pointing (not typing)</li>
+                    <li>Immediate and continuous display of results</li>
+                </ul>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">10:18 AM</div>
+                <div class="quote">"However, when designing systems especially for information seeking tasks, additional principles are needed. Key VIS principle is to support browsing, which is distinguished from familiar concepts of query composition and information retrieval because of emphasis on rapid filtering to reduce result sets, progressive refinement of search parameters, continuous reformulation of goals, and visual scanning to identify results."</div>
+                <p style="margin-top:4px;">Visual Information Seeking is closest work (in principle) to our current work. We take idea of tight coupling, where outputs of queries are easily used as inputs.</p>
+                <p style="margin-top:4px;"><strong>Further:</strong> Allow users to select details on demand - heart of hypermedia. Instead of older query facilities requiring alternation between query composition and result interpretation, our designs show results and invite further selections if details needed. In Dynamic HomeFinder, homes shown as simple points of light until user selected one to get details. This principle reduces clutter while query is being shaped and allows users to get further information when needed.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">10:25 AM</div>
+                <p><strong>Information Seeking in Electronic Environment</strong> is foundational thing INTERACT enables.</p>
+                <p style="margin-top:4px;">Says information seeking and learning are related but distinct. Information seeking driven by information problem - to seek curiosity. But part of information seeking: at beginning you don't even understand what information you really want. You just have vague direction, might want some generalizable learning. So you need a map.</p>
+                <div class="tags"><span class="tag">#information-seeking</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">10:26 AM</div>
+                <p>Great thing about Hypertext: jumping, information seeking, giving navigation. But amazing thing about Google Scholar extension and Apple Macbook's way of dealing with links (where you can preview links): information you're jumping to can coexist from information you're jumping from. That is AMAZING!</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">10:36 AM</div>
+                <p><strong>Systems with information coexistence property</strong> - where destination content can be viewed without leaving source context:</p>
+                <p style="margin-top:4px;"><strong>ACADEMIC:</strong> Google Scholar Button (popup preview of top 3 papers), MaxFocus (sidebar split-screen), ScholarInsight (hover tooltips)</p>
+                <p style="margin-top:4px;"><strong>OS-LEVEL:</strong> macOS Quick Look (space bar for files/websites), Vision Pro (3D layered information planes)</p>
+                <p style="margin-top:4px;"><strong>BROWSER:</strong> Auto Side Preview (search results in right panel), Linkover (instant link preview on hover)</p>
+                <p style="margin-top:4px;"><strong>WIKIPEDIA:</strong> Page Preview feature - hovering over internal links shows article summary/intro in popup card without leaving current article</p>
+                <p style="margin-top:4px;"><strong>KEY INNOVATION:</strong> Maintains cognitive flow while exploring - implements tight coupling (outputs become inputs) and details-on-demand from hypermedia principles</p>
+                <p style="margin-top:4px;"><strong>2024 TRENDS:</strong> Popover API improvements, spatial UI design, AI-driven adaptive previews</p>
+                <p style="margin-top:4px;">Connects to Visual Information Seeking principles - rapid/reversible actions, selection by pointing, continuous results display</p>
+            </div>
+
+            <div class="note-entry highlighted">
+                <div class="timestamp">10:42 AM</div>
+                <p><strong>Analysis of information seeking in Information Seeking in Electronic Environments</strong> shows information seeking is highly non-linear environment, involving many subprocesses that may go to each other.</p>
+                <div style="margin-top:6px;">
+                    <p><strong>PARALLEL SUBPROCESS ACTIVATION:</strong></p>
+                    <p style="margin-top:4px;">1. <strong>Continuous Background Processes (Sentinels)</strong> - Define Problem remains active throughout search, Recognize Problem stays alert for related needs, Reflect continuously monitors progress</p>
+                    <p style="margin-top:4px;">2. <strong>Opportunistic Branching</strong> - While extracting from one source, execute search in another tab; While examining results, simultaneously formulate refined query; Select alternative systems while waiting for execution</p>
+                    <p style="margin-top:4px;">3. <strong>Cognitive Parallelism</strong> - Pattern recognition while actively reading, associative thinking across tasks, subconscious incubation of problems</p>
+                    <p style="margin-top:4px;">4. <strong>Interleaved Processing</strong> - Rapid switching that appears parallel: Examine + Define + Reflect in quick succession</p>
+                </div>
+                <div style="margin-top:6px;">
+                    <p><strong>KEY INSIGHTS:</strong></p>
+                    <ul style="margin-left:16px;line-height:1.5;margin-top:4px;">
+                        <li>Figure 3.3 shows 8 subprocesses with three transition types: Default (most likely), High Probability (dashed), Low Probability (thin)</li>
+                        <li>Define Problem and Examine Results are critical hub nodes - most processes return to these</li>
+                        <li>Electronic environments enable more parallelism through multiple windows/tabs, instant execution, copy/paste between sources</li>
+                        <li>Experts can maintain more parallel processes due to automated skills and pattern recognition</li>
+                        <li>Browsing has more parallel activations than analytical search</li>
+                        <li>Interruptions are costly because they disrupt multiple parallel processes simultaneously</li>
+                    </ul>
+                </div>
+                <div style="margin-top:6px;">
+                    <p><strong>THEORETICAL IMPLICATIONS:</strong></p>
+                    <ul style="margin-left:16px;line-height:1.5;margin-top:4px;">
+                        <li>Information seeking is not pipeline but complex system with dynamic interactions</li>
+                        <li>Information seeker acts as conductor orchestrating parallel activities based on goals, opportunities, constraints</li>
+                        <li>Electronic systems can overwhelm cognitive capacity by enabling more parallelism than we can handle</li>
+                        <li>Model distinguishes from simpler linear search models by showing recursive, parallel, opportunistic subprocess activation</li>
+                    </ul>
+                </div>
+                <div class="tags"><span class="tag">#information-seeking</span><span class="tag">#research</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">10:58 AM</div>
+                <div class="quote">"Serendipitous browsing done to stimulate analogical thinking is another kind of investigative search. Investigative searching more concerned with recall (maximizing number of possibly relevant objects retrieved) than precision (minimizing number of possibly irrelevant objects retrieved) - thus not well supported by today's Web search engines highly tuned toward precision in first page of results. This explains why so many specialized search services emerging to augment general search engines. Because experts typically know which information resources to use, they can formulate precise analytical queries but require sophisticated browsing services that also provide annotation and result manipulation tools."</div>
+                <p style="margin-top:4px;">Source: EXPLORATORY SEARCH: FROM FINDING TO UNDERSTANDING</p>
+                <p style="margin-top:4px;">About maximizing recall. Need to display a lot more at beginning. One thing INTERACT needs to solve: How to make it not so overwhelming?</p>
+                <div class="tags"><span class="tag">#exploratory-search</span><span class="tag">#information-seeking</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">10:59 AM</div>
+                <div class="quote">"There is also substantial evidence in IR literature that relevance feedback—asking information seekers to make relevance judgments about returned objects and then executing revised query based on those judgments—is powerful way to improve retrieval. However, practice shows people often unwilling to take added step to provide feedback when search paradigm is classic turn-taking model."</div>
+                <p style="margin-top:4px;">Source: EXPLORATORY SEARCH: FROM FINDING TO UNDERSTANDING</p>
+                <p style="margin-top:4px;">Note that here, this means not only should we have expanded chat window, maybe we need buttons and special gestures for things like "explain further", "search related content", etc. These can even be user defined prompts and buttons.</p>
+                <div class="tags"><span class="tag">#relevance-feedback</span><span class="tag">#interface-design</span></div>
+            </div>
+
+            <div class="note-entry highlighted">
+                <div class="timestamp">11:06 AM</div>
+                <div class="quote">"Bricolage—individuals raised with computer deal with information differently compared to previous cohorts: 'they develop hypertext minds, they leap around.' Linear thought process much less common than bricolage, or ability to piece information together from multiple sources."</div>
+                <p style="margin-top:4px;">Source: Is It Age or IT: First Steps Toward Understanding the Net Generation</p>
+                <p style="margin-top:4px;"><strong>Key characteristics:</strong></p>
+                <ul style="margin-left:16px;line-height:1.5;margin-top:4px;">
+                    <li>Net Gen oriented toward inductive discovery - making observations, formulating hypotheses, figuring out rules</li>
+                    <li>Crave interactivity. Rapid pace of information means choose not to pay attention if class not interactive, unengaging, or too slow</li>
+                    <li>May need encouragement to stop experiencing and spend time reflecting</li>
+                    <li>More comfortable in image-rich environments than text</li>
+                    <li>Will refuse to read large amounts of text (long reading assignment or lengthy instructions)</li>
+                    <li>Study altered instructions from text-based step-by-step to graphic layout: refusals dropped, post-test scores increased</li>
+                    <li>Experiential nature - like doing things, not just thinking or talking</li>
+                    <li>Learning is participatory; knowing depends on practice and participation</li>
+                    <li>Digital resources enable experiential learning - in tune with Net Gen preferences</li>
+                    <li>Rather than being told, would construct own learning, assembling information, tools, frameworks from variety of sources</li>
+                    <li>Immediacy: "used to receiving information really fast. Like to parallel process and multitask. Thrive on immediate gratification"</li>
+                    <li>Expectation of immediacy holds for access to friends, services, responses to questions</li>
+                </ul>
+                <div class="tags"><span class="tag">#net-generation</span><span class="tag">#learning-styles</span><span class="tag">#bricolage</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">11:09 AM</div>
+                <div class="quote">"Digital Natives are used to receiving information really fast. They like to parallel process and multi-task. They prefer their graphics before their text rather than the opposite. They prefer random access (like hypertext). They function best when networked. They thrive on instant gratification and frequent rewards. They prefer games to 'serious' work."</div>
+                <p style="margin-top:4px;">Source: Digital Natives, Digital Immigrants</p>
+                <p style="margin-top:4px;"><strong>Pedagogical preferences:</strong> They wanted written instructions; we wanted computer movies. They wanted traditional pedagogical language of "learning objectives," "mastery", etc.; our goal was to completely eliminate any language that even smacked of education.</p>
+                <p style="margin-top:4px;">Multi-tasking, parallel process, jumping, random access.</p>
+                <div class="tags"><span class="tag">#digital-natives</span><span class="tag">#learning-preferences</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">11:20 AM</div>
+                <p><strong>FusAIn:</strong> Composing Generative AI Visual Prompts Using Pen-based Interaction. Uses pointing and drawing (deictic gestures) to express user intent with success.</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">11:31 AM</div>
+                <div class="paper-ref"><a href="https://dl.acm.org/doi/pdf/10.1145/3698061.3726916" target="_blank">Nabokov's Cards: An AI Assisted Prewriting System to Support Bottom-Up Creative Writing</a></div>
+                <p>Shows importance of interactivity and non-linear exploration in idea formulation in context of writing</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">11:45 AM</div>
+                <div class="quote">"The web is inherently malleable. Websites are rendered out of documents—HTML, CSS, and JavaScript code—which are transmitted to the user's browser and, thus, can be readily accessed and modified on the user side. This malleability allows users to improve their experiences on the web by personalizing pages."</div>
+                <p style="margin-top:4px;">We take advantage of affordance of web pages to be able to change easily to achieve our goals</p>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">04:39 PM</div>
+                <p><strong>Software as Computational Media</strong> - LIVE 2021 Keynote (40 minutes)</p>
+                <div class="quote">"In this talk, I will present research on how to create software that can be shaped by its users in use. The concept of applications is ubiquitous and completely taken for granted in modern computing. Software doesn't have to be synonymous with applications, and there is great potential to be unlocked if we break out of them. In this talk, I will argue for renewed focus on developing computational media and show efforts we have undertaken to demonstrate how software can be made differently. I will, among other things, present past and present work on the Webstrates platform."</div>
+                <p style="margin-top:4px;">We want to be able to write our own software, to develop our own environment (that is software, the ability to manipulate)</p>
+                <p style="margin-top:4px;">Problem of compatibility to any environment can be solved by using simplest stacks: HTML, Javascript, and (potentially) REACT</p>
+                <div class="tags"><span class="tag">#webstrates</span><span class="tag">#computational-media</span></div>
+            </div>
+
+            <div class="note-entry">
+                <div class="timestamp">04:50 PM</div>
+                <p><strong>Personal Digital Sovereignty:</strong> We should create computational media that allows users to piece together their own computation environments</p>
+                <p style="margin-top:6px;"><strong>Idea:</strong> INTERACT should support polysemanticity.</p>
+                <ul style="margin-left:16px;line-height:1.5;margin-top:4px;">
+                    <li>Something like: I can attach this chat window to anywhere on the web and it will work</li>
+                    <li>I can really easily customize for everything!</li>
+                </ul>
+                <div class="tags"><span class="tag">#personal-digital-sovereignty</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>September 26, 2025 (2 notes)</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="note-entry highlighted">
+                <div class="timestamp">9:00 PM</div>
+                <p>Changes a LLM conversation into a Nabokov card. And then that card can merge, interact, and become parts of other cards.</p>
+            </div>
+
+            <div class="note-entry highlighted">
+                <div class="timestamp">12:02 PM</div>
+                <p>Nabokov's cards. Prewriting. <strong>Organizing the world's knowledge includes organizing one's own knowledge in one's head from the world's knowledge.</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible">
+        <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <div><span class="arrow">▶</span>September 29, 2025 (3 notes)</div>
+        </div>
+        <div class="collapsible-content">
+            <div class="note-entry highlighted">
+                <div class="timestamp">1:11 PM</div>
+                <p>I think a really important thing is that, just like the physical world, things should be arranged spatially, where relevant information is put next to each other. <strong>This principle of colocation is really important.</strong></p>
+            </div>
+
+            <div class="note-entry highlighted">
+                <div class="timestamp">01:33 PM</div>
+                <p>Another principle that we need: <strong>Every single HTML element should be able to be natively exported as JSON or as markdown.</strong></p>
+                <div class="tags"><span class="tag">#html</span><span class="tag">#export</span></div>
+            </div>
+
+            <div class="note-entry highlighted">
+                <div class="timestamp">01:34 PM</div>
+                <p><strong>Building Nabokov's Cards system with spatial arrangement and modular export</strong></p>
+
+                <div style="margin-top:8px;">
+                    <p><strong>KEY INSIGHTS FROM PAPER:</strong></p>
+                    <ul style="margin-left:16px;line-height:1.5;margin-top:4px;">
+                        <li>Bottom-up creativity: fragments combine into larger ideas</li>
+                        <li>Non-linear workflows essential for creative writing</li>
+                        <li>Drag-and-drop metaphor encourages experimentation</li>
+                        <li>Modular thinking helps writers see patterns</li>
+                    </ul>
+                </div>
+
+                <div style="margin-top:8px;">
+                    <p><strong>IMPLEMENTATION PLAN:</strong></p>
+
+                    <p style="margin-top:6px;"><strong>1. Spatial Canvas</strong></p>
+                    <ul style="margin-left:16px;line-height:1.5;">
+                        <li>Infinite scrollable workspace</li>
+                        <li>Cards positioned absolutely with (x,y) coords</li>
+                        <li>Proximity = implicit relationships</li>
+                        <li>Visual clustering for thematic grouping</li>
+                    </ul>
+
+                    <p style="margin-top:6px;"><strong>2. Card as Atomic Unit</strong></p>
+                    <ul style="margin-left:16px;line-height:1.5;">
+                        <li>Each card fully self-contained</li>
+                        <li>Multiple export formats (JSON/MD/HTML)</li>
+                        <li>Unique IDs for tracking/combination</li>
+                        <li>Metadata for context (tags, timestamps, connections)</li>
+                    </ul>
+
+                    <p style="margin-top:6px;"><strong>3. Combination Mechanics</strong></p>
+                    <ul style="margin-left:16px;line-height:1.5;">
+                        <li>Drag card onto another to combine (like paper)</li>
+                        <li>LLM generates fusion based on content types</li>
+                        <li>Decouple to restore originals</li>
+                        <li>Regenerate for variations</li>
+                    </ul>
+
+                    <p style="margin-top:6px;"><strong>4. Export Architecture</strong></p>
+                    <ul style="margin-left:16px;line-height:1.5;">
+                        <li>Every HTML element has data-export attribute</li>
+                        <li>Right-click any element → Export as...</li>
+                        <li>Batch export selected cards</li>
+                        <li>Maintain relationships in export</li>
+                    </ul>
+
+                    <p style="margin-top:6px;"><strong>5. Colocation Principle</strong></p>
+                    <ul style="margin-left:16px;line-height:1.5;">
+                        <li>Related cards physically near each other</li>
+                        <li>Distance = conceptual distance</li>
+                        <li>Stash areas for temporary storage</li>
+                        <li>Multiple workspaces for different projects</li>
+                    </ul>
+                </div>
+
+                <div style="margin-top:8px;">
+                    <p><strong>TECHNICAL STACK:</strong></p>
+                    <ul style="margin-left:16px;line-height:1.5;margin-top:4px;">
+                        <li>React with react-beautiful-dnd</li>
+                        <li>Canvas/SVG for connection visualization</li>
+                        <li>IndexedDB for persistence</li>
+                        <li>GPT-4 for combinations</li>
+                        <li>Electron for desktop app (optional)</li>
+                    </ul>
+                </div>
+
+                <div class="tags"><span class="tag">#nabokov-cards</span><span class="tag">#spatial-ui</span><span class="tag">#modular-export</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleCollapsible(header) {
+            const collapsible = header.parentElement;
+            collapsible.classList.toggle('open');
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.classList.add('open');
+            });
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.classList.remove('open');
+            });
+        }
+
+        // Open first collapsible by default
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstCollapsible = document.querySelector('.collapsible');
+            if (firstCollapsible) {
+                firstCollapsible.classList.add('open');
+            }
+        });
+    </script>
+</body>
+</html>

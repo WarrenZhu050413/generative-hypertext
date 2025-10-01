@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoDB Beginner's Guide</title>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --paper-beige: #F5F5DC;
+            --light-cream: #FFFEF0;
+            --ink-black: #1a1a1a;
+            --level-1: #8B0000;
+            --level-2: #CD5C5C;
+            --level-3: #666;
+            --level-4: #999;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            line-height: 1.3;
+            font-size: 14px;
+            width: 100vw;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            padding: 12px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin: 8px 0;
+            padding: 10px 8px;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 10px 0 4px 0;
+            padding: 6px 8px;
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.03);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 6px 0 3px 0;
+            color: var(--level-2);
+            padding-left: 4px;
+        }
+
+        h4 {
+            font-size: 13px;
+            font-weight: 600;
+            margin: 4px 0 2px 8px;
+            color: var(--level-3);
+        }
+
+        .important-always-visible {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+            border: 2px solid var(--chinese-gold);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .collapsible {
+            margin: 6px 0;
+            width: 100%;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 6px 10px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+            border-left: 3px solid var(--chinese-gold);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+        }
+
+        .collapsible-header .arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-size: 12px;
+            margin-right: 6px;
+        }
+
+        .collapsible.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 10000px;
+            padding: 10px 12px;
+        }
+
+        .collapsible.critical .collapsible-header {
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.08);
+            font-weight: 700;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 8px 0;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            border-radius: 3px;
+            padding: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.priority {
+            border: 2px solid var(--chinese-gold);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+        }
+
+        pre, code {
+            background: linear-gradient(135deg, rgba(245, 245, 220, 0.3), rgba(255, 255, 255, 0.5));
+            border: 1px solid rgba(139, 0, 0, 0.1);
+            padding: 2px 5px;
+            font-size: 13px;
+            line-height: 1.3;
+            font-family: "SF Mono", Monaco, Consolas, monospace;
+            border-radius: 2px;
+        }
+
+        pre {
+            padding: 8px 10px;
+            margin: 6px 0;
+            overflow-x: auto;
+        }
+
+        pre code {
+            border: none;
+            padding: 0;
+            background: none;
+        }
+
+        ul, ol {
+            margin: 6px 0 6px 20px;
+        }
+
+        li {
+            margin: 3px 0;
+            line-height: 1.4;
+        }
+
+        strong {
+            color: var(--level-2);
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            background: var(--chinese-red);
+            color: white;
+            font-size: 11px;
+            border-radius: 3px;
+            margin-left: 6px;
+            font-weight: 600;
+        }
+
+        .badge.warning {
+            background: #ff9800;
+        }
+
+        .badge.info {
+            background: #2196F3;
+        }
+
+        .badge.success {
+            background: #4CAF50;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+
+        th, td {
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(139, 0, 0, 0.1);
+            font-weight: 600;
+        }
+
+        .expand-all {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            border: 2px solid var(--chinese-gold);
+            padding: 10px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .expand-all:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(139, 0, 0, 0.4);
+        }
+
+        .note {
+            background: rgba(33, 150, 243, 0.1);
+            border-left: 3px solid #2196F3;
+            padding: 6px 10px;
+            margin: 6px 0;
+            font-size: 13px;
+        }
+
+        .warning {
+            background: rgba(255, 152, 0, 0.1);
+            border-left: 3px solid #ff9800;
+            padding: 6px 10px;
+            margin: 6px 0;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍃 MongoDB Beginner's Complete Guide</h1>
+
+        <div class="important-always-visible">
+            <h2>What is MongoDB?</h2>
+            <p><strong>MongoDB</strong> is a NoSQL document database that stores data in flexible, JSON-like documents (BSON format). Unlike traditional relational databases with tables and rows, MongoDB uses collections and documents.</p>
+
+            <div class="two-column" style="margin-top: 10px;">
+                <div class="card priority">
+                    <h4>✅ Best For</h4>
+                    <ul style="font-size: 13px;">
+                        <li>Flexible, evolving schemas</li>
+                        <li>Hierarchical data structures</li>
+                        <li>High scalability needs</li>
+                        <li>Rapid development</li>
+                        <li>Real-time analytics</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>❌ Not Ideal For</h4>
+                    <ul style="font-size: 13px;">
+                        <li>Complex transactions</li>
+                        <li>Highly normalized data</li>
+                        <li>Financial accounting systems</li>
+                        <li>Systems requiring SQL joins</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <h2>1. Installation & Setup</h2>
+
+        <div class="collapsible critical open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Installation Methods</span>
+            </div>
+            <div class="collapsible-content">
+                <div class="two-column">
+                    <div>
+                        <h4>Option 1: MongoDB Atlas (Cloud)<span class="badge success">Recommended</span></h4>
+                        <p>Free cloud-hosted MongoDB cluster</p>
+                        <ol style="font-size: 13px;">
+                            <li>Go to <code>mongodb.com/cloud/atlas</code></li>
+                            <li>Create free account</li>
+                            <li>Create M0 cluster (free tier)</li>
+                            <li>Get connection string</li>
+                        </ol>
+                        <pre><code>mongodb+srv://&lt;username&gt;:&lt;password&gt;@cluster0.xxxxx.mongodb.net/</code></pre>
+                    </div>
+                    <div>
+                        <h4>Option 2: Local Installation</h4>
+                        <p><strong>macOS:</strong></p>
+                        <pre><code>brew tap mongodb/brew
+brew install mongodb-community
+brew services start mongodb-community</code></pre>
+                        <p><strong>Ubuntu/Debian:</strong></p>
+                        <pre><code>sudo apt-get install mongodb
+sudo systemctl start mongodb</code></pre>
+                        <p><strong>Windows:</strong> Download MSI from <code>mongodb.com/download</code></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Verify Installation</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code># Start MongoDB shell
+mongosh
+
+# Or specify connection
+mongosh "mongodb://localhost:27017"
+
+# Check version
+db.version()</code></pre>
+            </div>
+        </div>
+
+        <h2>2. Core Concepts</h2>
+
+        <div class="collapsible critical open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Data Structure Hierarchy</span>
+            </div>
+            <div class="collapsible-content">
+                <table>
+                    <tr>
+                        <th>SQL Term</th>
+                        <th>MongoDB Term</th>
+                        <th>Description</th>
+                    </tr>
+                    <tr>
+                        <td>Database</td>
+                        <td><strong>Database</strong></td>
+                        <td>Container for collections</td>
+                    </tr>
+                    <tr>
+                        <td>Table</td>
+                        <td><strong>Collection</strong></td>
+                        <td>Group of documents</td>
+                    </tr>
+                    <tr>
+                        <td>Row</td>
+                        <td><strong>Document</strong></td>
+                        <td>JSON-like data record (BSON)</td>
+                    </tr>
+                    <tr>
+                        <td>Column</td>
+                        <td><strong>Field</strong></td>
+                        <td>Key-value pair in document</td>
+                    </tr>
+                    <tr>
+                        <td>Index</td>
+                        <td><strong>Index</strong></td>
+                        <td>Same concept</td>
+                    </tr>
+                </table>
+
+                <h4>Example Document Structure</h4>
+                <pre><code>{
+  "_id": ObjectId("507f1f77bcf86cd799439011"),
+  "name": "John Doe",
+  "email": "john@example.com",
+  "age": 29,
+  "address": {
+    "street": "123 Main St",
+    "city": "Boston",
+    "state": "MA"
+  },
+  "hobbies": ["reading", "hiking", "photography"],
+  "createdAt": ISODate("2025-01-15T10:30:00Z")
+}</code></pre>
+
+                <div class="note">
+                    <strong>Note:</strong> The <code>_id</code> field is automatically created as a unique identifier (ObjectId) if not provided.
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> BSON Data Types</span>
+            </div>
+            <div class="collapsible-content">
+                <ul>
+                    <li><strong>String</strong> - UTF-8 text</li>
+                    <li><strong>Integer</strong> - 32-bit or 64-bit</li>
+                    <li><strong>Double</strong> - Floating point numbers</li>
+                    <li><strong>Boolean</strong> - true/false</li>
+                    <li><strong>Array</strong> - Lists of values</li>
+                    <li><strong>Object</strong> - Embedded documents</li>
+                    <li><strong>ObjectId</strong> - 12-byte unique identifier</li>
+                    <li><strong>Date</strong> - ISODate format</li>
+                    <li><strong>Null</strong> - Null value</li>
+                    <li><strong>Binary Data</strong> - For storing files</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2>3. Database Operations</h2>
+
+        <div class="collapsible critical open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Basic Database Commands</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>// Show all databases
+show dbs
+
+// Create/switch to database (created on first insert)
+use myDatabase
+
+// Show current database
+db
+
+// Drop database
+db.dropDatabase()
+
+// Show collections in current database
+show collections</code></pre>
+            </div>
+        </div>
+
+        <h2>4. CRUD Operations<span class="badge">Essential</span></h2>
+
+        <div class="collapsible critical open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Create (Insert) Documents</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>insertOne() - Insert single document</h4>
+                <pre><code>db.users.insertOne({
+  name: "Alice Smith",
+  email: "alice@example.com",
+  age: 25,
+  role: "developer"
+})
+
+// Returns: { acknowledged: true, insertedId: ObjectId("...") }</code></pre>
+
+                <h4>insertMany() - Insert multiple documents</h4>
+                <pre><code>db.users.insertMany([
+  { name: "Bob Jones", email: "bob@example.com", age: 30 },
+  { name: "Carol White", email: "carol@example.com", age: 28 },
+  { name: "David Brown", email: "david@example.com", age: 35 }
+])
+
+// Returns: { acknowledged: true, insertedIds: { '0': ObjectId("..."), ... } }</code></pre>
+
+                <div class="warning">
+                    <strong>Warning:</strong> If a document with the same <code>_id</code> already exists, insert operations will fail with a duplicate key error.
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible critical open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Read (Query) Documents</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>find() - Query documents</h4>
+                <div class="two-column">
+                    <div>
+                        <pre><code>// Find all documents
+db.users.find()
+
+// Find with filter
+db.users.find({ age: 25 })
+
+// Find one document
+db.users.findOne({ email: "alice@example.com" })
+
+// Multiple conditions (AND)
+db.users.find({
+  age: 25,
+  role: "developer"
+})</code></pre>
+                    </div>
+                    <div>
+                        <pre><code>// OR condition
+db.users.find({
+  $or: [
+    { age: 25 },
+    { role: "manager" }
+  ]
+})
+
+// Comparison operators
+db.users.find({ age: { $gt: 25 } })  // >
+db.users.find({ age: { $gte: 25 } }) // >=
+db.users.find({ age: { $lt: 30 } })  // <
+db.users.find({ age: { $lte: 30 } }) // <=
+db.users.find({ age: { $ne: 25 } })  // !=</code></pre>
+                    </div>
+                </div>
+
+                <h4>Advanced Query Operators</h4>
+                <pre><code>// IN operator - match any value in array
+db.users.find({ age: { $in: [25, 28, 30] } })
+
+// NOT IN
+db.users.find({ age: { $nin: [25, 28] } })
+
+// EXISTS - field exists
+db.users.find({ phone: { $exists: true } })
+
+// Array contains
+db.users.find({ hobbies: "reading" })
+
+// Array contains all
+db.users.find({ hobbies: { $all: ["reading", "hiking"] } })
+
+// Regex pattern matching
+db.users.find({ name: { $regex: /^A/i } })  // Names starting with 'A'</code></pre>
+
+                <h4>Projection - Select specific fields</h4>
+                <pre><code>// Include only name and email (exclude _id)
+db.users.find({}, { name: 1, email: 1, _id: 0 })
+
+// Exclude specific fields
+db.users.find({}, { password: 0, ssn: 0 })</code></pre>
+
+                <h4>Sorting, Limiting, Skipping</h4>
+                <pre><code>// Sort ascending (1) or descending (-1)
+db.users.find().sort({ age: 1 })
+
+// Limit results
+db.users.find().limit(5)
+
+// Skip results (pagination)
+db.users.find().skip(10).limit(5)
+
+// Chain methods
+db.users.find({ role: "developer" })
+  .sort({ age: -1 })
+  .limit(10)</code></pre>
+
+                <h4>Count documents</h4>
+                <pre><code>db.users.countDocuments({ role: "developer" })</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible critical open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Update Documents</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>updateOne() - Update first matching document</h4>
+                <pre><code>db.users.updateOne(
+  { email: "alice@example.com" },  // Filter
+  { $set: { age: 26 } }             // Update
+)
+
+// Returns: { acknowledged: true, matchedCount: 1, modifiedCount: 1 }</code></pre>
+
+                <h4>updateMany() - Update all matching documents</h4>
+                <pre><code>db.users.updateMany(
+  { role: "developer" },
+  { $set: { department: "Engineering" } }
+)</code></pre>
+
+                <h4>Update Operators</h4>
+                <div class="two-column">
+                    <div>
+                        <pre><code>// $set - Set field value
+{ $set: { status: "active" } }
+
+// $unset - Remove field
+{ $unset: { tempField: "" } }
+
+// $inc - Increment number
+{ $inc: { age: 1, points: 10 } }
+
+// $mul - Multiply
+{ $mul: { price: 1.1 } }</code></pre>
+                    </div>
+                    <div>
+                        <pre><code>// $rename - Rename field
+{ $rename: { "name": "fullName" } }
+
+// $min - Update if new value is less
+{ $min: { lowScore: 50 } }
+
+// $max - Update if new value is greater
+{ $max: { highScore: 100 } }
+
+// $currentDate - Set current date
+{ $currentDate: { lastModified: true } }</code></pre>
+                    </div>
+                </div>
+
+                <h4>Array Update Operators</h4>
+                <pre><code>// $push - Add to array
+db.users.updateOne(
+  { email: "alice@example.com" },
+  { $push: { hobbies: "gaming" } }
+)
+
+// $pull - Remove from array
+db.users.updateOne(
+  { email: "alice@example.com" },
+  { $pull: { hobbies: "gaming" } }
+)
+
+// $addToSet - Add if not exists (unique)
+db.users.updateOne(
+  { email: "alice@example.com" },
+  { $addToSet: { tags: "premium" } }
+)
+
+// $pop - Remove first (-1) or last (1) element
+{ $pop: { hobbies: 1 } }</code></pre>
+
+                <h4>replaceOne() - Replace entire document</h4>
+                <pre><code>db.users.replaceOne(
+  { email: "alice@example.com" },
+  {
+    name: "Alice Smith",
+    email: "alice@example.com",
+    age: 26,
+    role: "senior developer"
+  }
+)
+// Warning: Replaces entire document except _id</code></pre>
+
+                <h4>Upsert - Update or Insert</h4>
+                <pre><code>db.users.updateOne(
+  { email: "newuser@example.com" },
+  { $set: { name: "New User", age: 22 } },
+  { upsert: true }  // Insert if not found
+)</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible critical open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Delete Documents</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>// deleteOne() - Delete first matching document
+db.users.deleteOne({ email: "alice@example.com" })
+
+// deleteMany() - Delete all matching documents
+db.users.deleteMany({ role: "inactive" })
+
+// Delete all documents in collection
+db.users.deleteMany({})
+
+// Drop entire collection
+db.users.drop()</code></pre>
+            </div>
+        </div>
+
+        <h2>5. Indexing<span class="badge warning">Performance</span></h2>
+
+        <div class="collapsible critical">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Why Indexes Matter</span>
+            </div>
+            <div class="collapsible-content">
+                <p>Indexes improve query performance by creating ordered data structures. Without indexes, MongoDB must scan every document (collection scan).</p>
+
+                <div class="two-column">
+                    <div class="card priority">
+                        <h4>With Index</h4>
+                        <p>O(log n) lookup time</p>
+                        <p>Fast queries on indexed fields</p>
+                    </div>
+                    <div class="card">
+                        <h4>Without Index</h4>
+                        <p>O(n) scan time</p>
+                        <p>Slow on large collections</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Creating Indexes</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Single Field Index</h4>
+                <pre><code>// Create ascending index on email
+db.users.createIndex({ email: 1 })
+
+// Create descending index
+db.users.createIndex({ age: -1 })
+
+// Unique index (enforce uniqueness)
+db.users.createIndex({ email: 1 }, { unique: true })</code></pre>
+
+                <h4>Compound Index (Multiple Fields)</h4>
+                <pre><code>// Index on role (ascending) and age (descending)
+db.users.createIndex({ role: 1, age: -1 })
+
+// Use for queries on:
+// - { role: "developer" }
+// - { role: "developer", age: { $gt: 25 } }
+// But NOT efficient for: { age: 30 } alone</code></pre>
+
+                <h4>Text Index (Full-text search)</h4>
+                <pre><code>// Create text index
+db.articles.createIndex({ title: "text", content: "text" })
+
+// Search using text index
+db.articles.find({ $text: { $search: "mongodb tutorial" } })</code></pre>
+
+                <h4>Geospatial Index</h4>
+                <pre><code>// 2dsphere index for coordinates
+db.places.createIndex({ location: "2dsphere" })
+
+// Query nearby locations
+db.places.find({
+  location: {
+    $near: {
+      $geometry: { type: "Point", coordinates: [-73.9667, 40.78] },
+      $maxDistance: 5000  // 5km
+    }
+  }
+})</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Managing Indexes</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>// List all indexes
+db.users.getIndexes()
+
+// Drop specific index
+db.users.dropIndex("email_1")
+
+// Drop all indexes (except _id)
+db.users.dropIndexes()
+
+// Explain query plan (check if index is used)
+db.users.find({ email: "alice@example.com" }).explain("executionStats")</code></pre>
+
+                <div class="note">
+                    <strong>Best Practice:</strong> Create indexes on fields frequently used in queries, sorts, and joins. But don't over-index - each index slows down write operations.
+                </div>
+            </div>
+        </div>
+
+        <h2>6. Aggregation Framework<span class="badge">Advanced</span></h2>
+
+        <div class="collapsible critical">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> What is Aggregation?</span>
+            </div>
+            <div class="collapsible-content">
+                <p>Aggregation processes data records and returns computed results. Think of it as SQL's GROUP BY, but much more powerful with a pipeline of stages.</p>
+
+                <h4>Pipeline Stages</h4>
+                <ul>
+                    <li><strong>$match</strong> - Filter documents (like WHERE)</li>
+                    <li><strong>$group</strong> - Group documents (like GROUP BY)</li>
+                    <li><strong>$project</strong> - Reshape documents (select fields)</li>
+                    <li><strong>$sort</strong> - Sort documents</li>
+                    <li><strong>$limit</strong> - Limit results</li>
+                    <li><strong>$skip</strong> - Skip documents</li>
+                    <li><strong>$lookup</strong> - Join with another collection</li>
+                    <li><strong>$unwind</strong> - Deconstruct arrays</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Aggregation Examples</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Basic Grouping</h4>
+                <pre><code>// Count users by role
+db.users.aggregate([
+  {
+    $group: {
+      _id: "$role",
+      count: { $sum: 1 }
+    }
+  }
+])
+
+// Output: [
+//   { _id: "developer", count: 15 },
+//   { _id: "manager", count: 5 }
+// ]</code></pre>
+
+                <h4>Match → Group → Sort</h4>
+                <pre><code>// Average age by role for active users
+db.users.aggregate([
+  { $match: { status: "active" } },
+  {
+    $group: {
+      _id: "$role",
+      avgAge: { $avg: "$age" },
+      count: { $sum: 1 }
+    }
+  },
+  { $sort: { avgAge: -1 } }
+])</code></pre>
+
+                <h4>Project (Reshape)</h4>
+                <pre><code>db.users.aggregate([
+  {
+    $project: {
+      fullName: { $concat: ["$firstName", " ", "$lastName"] },
+      age: 1,
+      _id: 0
+    }
+  }
+])</code></pre>
+
+                <h4>Unwind Arrays</h4>
+                <pre><code>// Users with hobbies: ["reading", "hiking"]
+// Unwind creates separate document for each hobby
+db.users.aggregate([
+  { $unwind: "$hobbies" },
+  {
+    $group: {
+      _id: "$hobbies",
+      count: { $sum: 1 }
+    }
+  }
+])
+
+// Result: Top hobbies with counts</code></pre>
+
+                <h4>Lookup (Join Collections)</h4>
+                <pre><code>// Join users with their orders
+db.users.aggregate([
+  {
+    $lookup: {
+      from: "orders",
+      localField: "_id",
+      foreignField: "userId",
+      as: "userOrders"
+    }
+  }
+])</code></pre>
+
+                <h4>Complex Pipeline</h4>
+                <pre><code>// Top 5 developers by total project hours
+db.users.aggregate([
+  { $match: { role: "developer" } },
+  { $unwind: "$projects" },
+  {
+    $group: {
+      _id: "$_id",
+      name: { $first: "$name" },
+      totalHours: { $sum: "$projects.hours" }
+    }
+  },
+  { $sort: { totalHours: -1 } },
+  { $limit: 5 }
+])</code></pre>
+            </div>
+        </div>
+
+        <h2>7. Data Modeling<span class="badge info">Design</span></h2>
+
+        <div class="collapsible critical">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Embedding vs Referencing</span>
+            </div>
+            <div class="collapsible-content">
+                <div class="two-column">
+                    <div class="card priority">
+                        <h4>Embedding (Denormalized)</h4>
+                        <pre><code>{
+  "_id": 1,
+  "name": "John",
+  "address": {
+    "street": "123 Main",
+    "city": "Boston"
+  },
+  "orders": [
+    { "item": "Book", "price": 15 },
+    { "item": "Pen", "price": 2 }
+  ]
+}</code></pre>
+                        <strong>Use when:</strong>
+                        <ul style="font-size: 12px;">
+                            <li>1-to-1 relationships</li>
+                            <li>1-to-few relationships</li>
+                            <li>Data accessed together</li>
+                            <li>Read performance critical</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h4>Referencing (Normalized)</h4>
+                        <pre><code>// Users collection
+{ "_id": 1, "name": "John" }
+
+// Orders collection
+{
+  "_id": 101,
+  "userId": 1,
+  "item": "Book",
+  "price": 15
+}</code></pre>
+                        <strong>Use when:</strong>
+                        <ul style="font-size: 12px;">
+                            <li>1-to-many relationships</li>
+                            <li>Many-to-many relationships</li>
+                            <li>Data updated frequently</li>
+                            <li>Large subdocuments (>16MB limit)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Schema Design Patterns</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>1. Attribute Pattern (Flexible fields)</h4>
+                <pre><code>// Instead of: { color: "red", size: "L", material: "cotton" }
+{
+  "attributes": [
+    { "k": "color", "v": "red" },
+    { "k": "size", "v": "L" },
+    { "k": "material", "v": "cotton" }
+  ]
+}
+// Index: db.products.createIndex({ "attributes.k": 1, "attributes.v": 1 })</code></pre>
+
+                <h4>2. Bucket Pattern (Time-series data)</h4>
+                <pre><code>// Group measurements by hour
+{
+  "sensor_id": 123,
+  "timestamp": ISODate("2025-01-15T10:00:00Z"),
+  "measurements": [
+    { "time": "10:00", "temp": 20.5 },
+    { "time": "10:01", "temp": 20.6 },
+    // ... 60 measurements
+  ]
+}</code></pre>
+
+                <h4>3. Computed Pattern (Precompute values)</h4>
+                <pre><code>{
+  "title": "Product A",
+  "reviews": [...],
+  "averageRating": 4.5,  // Computed on write
+  "totalReviews": 127    // Computed on write
+}</code></pre>
+            </div>
+        </div>
+
+        <h2>8. Working with Drivers<span class="badge info">Code</span></h2>
+
+        <div class="collapsible critical">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Node.js Driver</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Installation</h4>
+                <pre><code>npm install mongodb</code></pre>
+
+                <h4>Connection</h4>
+                <pre><code>const { MongoClient } = require('mongodb');
+
+const uri = "mongodb://localhost:27017";
+const client = new MongoClient(uri);
+
+async function run() {
+  try {
+    await client.connect();
+    const database = client.db('myDatabase');
+    const users = database.collection('users');
+
+    // Insert
+    const result = await users.insertOne({
+      name: "Alice",
+      email: "alice@example.com",
+      age: 25
+    });
+    console.log(`Inserted with ID: ${result.insertedId}`);
+
+    // Find
+    const user = await users.findOne({ email: "alice@example.com" });
+    console.log(user);
+
+    // Update
+    await users.updateOne(
+      { email: "alice@example.com" },
+      { $set: { age: 26 } }
+    );
+
+    // Delete
+    await users.deleteOne({ email: "alice@example.com" });
+
+  } finally {
+    await client.close();
+  }
+}
+
+run().catch(console.error);</code></pre>
+
+                <h4>Using async/await with cursor</h4>
+                <pre><code>const cursor = users.find({ age: { $gte: 25 } });
+
+// Iterate through results
+for await (const doc of cursor) {
+  console.log(doc);
+}
+
+// Or convert to array
+const allUsers = await cursor.toArray();</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Python Driver (PyMongo)</span>
+            </div>
+            <div class="collapsible-content">
+                <h4>Installation</h4>
+                <pre><code>pip install pymongo</code></pre>
+
+                <h4>Basic Usage</h4>
+                <pre><code>from pymongo import MongoClient
+
+client = MongoClient('mongodb://localhost:27017/')
+db = client.myDatabase
+users = db.users
+
+# Insert
+result = users.insert_one({
+    "name": "Alice",
+    "email": "alice@example.com",
+    "age": 25
+})
+print(f"Inserted ID: {result.inserted_id}")
+
+# Find
+user = users.find_one({"email": "alice@example.com"})
+print(user)
+
+# Find many
+for user in users.find({"age": {"$gte": 25}}):
+    print(user)
+
+# Update
+users.update_one(
+    {"email": "alice@example.com"},
+    {"$set": {"age": 26}}
+)
+
+# Delete
+users.delete_one({"email": "alice@example.com"})
+
+client.close()</code></pre>
+            </div>
+        </div>
+
+        <h2>9. Transactions<span class="badge">ACID</span></h2>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Multi-Document Transactions</span>
+            </div>
+            <div class="collapsible-content">
+                <p>MongoDB supports ACID transactions across multiple documents/collections (requires replica set or sharded cluster).</p>
+
+                <h4>Node.js Transaction Example</h4>
+                <pre><code>const session = client.startSession();
+
+try {
+  await session.withTransaction(async () => {
+    // Transfer money between accounts
+    await accounts.updateOne(
+      { accountId: "A123" },
+      { $inc: { balance: -100 } },
+      { session }
+    );
+
+    await accounts.updateOne(
+      { accountId: "B456" },
+      { $inc: { balance: 100 } },
+      { session }
+    );
+
+    // Both operations succeed or both fail
+  });
+} finally {
+  await session.endSession();
+}</code></pre>
+
+                <div class="warning">
+                    <strong>Note:</strong> Transactions have performance overhead. Use only when necessary for data consistency.
+                </div>
+            </div>
+        </div>
+
+        <h2>10. Best Practices<span class="badge success">Essential</span></h2>
+
+        <div class="collapsible critical open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Performance Best Practices</span>
+            </div>
+            <div class="collapsible-content">
+                <ol>
+                    <li><strong>Create indexes</strong> on fields used in queries, sorts, and joins</li>
+                    <li><strong>Use projection</strong> to return only needed fields</li>
+                    <li><strong>Limit results</strong> when possible</li>
+                    <li><strong>Use covered queries</strong> (query + projection entirely from index)</li>
+                    <li><strong>Monitor with explain()</strong> to check query performance</li>
+                    <li><strong>Use aggregation</strong> for complex data processing instead of client-side logic</li>
+                    <li><strong>Avoid large documents</strong> (16MB limit, but aim for smaller)</li>
+                    <li><strong>Batch operations</strong> with insertMany, updateMany, bulkWrite</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="collapsible critical open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Schema Design Best Practices</span>
+            </div>
+            <div class="collapsible-content">
+                <ol>
+                    <li><strong>Model for your queries</strong> - design based on access patterns, not normalized forms</li>
+                    <li><strong>Embed frequently accessed data</strong> together</li>
+                    <li><strong>Reference when data is updated independently</strong></li>
+                    <li><strong>Avoid unbounded arrays</strong> (can grow indefinitely)</li>
+                    <li><strong>Use two-way referencing</strong> for many-to-many relationships</li>
+                    <li><strong>Denormalize when reads >> writes</strong></li>
+                    <li><strong>Consider document size</strong> (16MB hard limit)</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Security Best Practices</span>
+            </div>
+            <div class="collapsible-content">
+                <ol>
+                    <li><strong>Enable authentication</strong> (never run without auth in production)</li>
+                    <li><strong>Use role-based access control</strong> (RBAC)</li>
+                    <li><strong>Enable encryption at rest and in transit</strong> (TLS/SSL)</li>
+                    <li><strong>Whitelist IP addresses</strong></li>
+                    <li><strong>Regular backups</strong></li>
+                    <li><strong>Keep MongoDB updated</strong></li>
+                    <li><strong>Validate input</strong> to prevent injection attacks</li>
+                    <li><strong>Use connection string securely</strong> (environment variables, not hardcoded)</li>
+                </ol>
+
+                <h4>Create User with Authentication</h4>
+                <pre><code>use admin
+db.createUser({
+  user: "adminUser",
+  pwd: "securePassword",
+  roles: [ { role: "userAdminAnyDatabase", db: "admin" } ]
+})</code></pre>
+            </div>
+        </div>
+
+        <h2>11. Monitoring & Tools</h2>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> MongoDB Compass (GUI)</span>
+            </div>
+            <div class="collapsible-content">
+                <p>Official GUI for MongoDB - download from <code>mongodb.com/products/compass</code></p>
+                <ul>
+                    <li>Visual query builder</li>
+                    <li>Schema visualization</li>
+                    <li>Performance metrics</li>
+                    <li>Index management</li>
+                    <li>Aggregation pipeline builder</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Monitoring Commands</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>// Database statistics
+db.stats()
+
+// Collection statistics
+db.users.stats()
+
+// Current operations
+db.currentOp()
+
+// Server status
+db.serverStatus()
+
+// Profile slow queries (>100ms)
+db.setProfilingLevel(1, { slowms: 100 })
+db.system.profile.find().limit(10).sort({ ts: -1 })</code></pre>
+            </div>
+        </div>
+
+        <h2>12. Common Patterns & Use Cases</h2>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> E-commerce Product Catalog</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>{
+  "_id": ObjectId("..."),
+  "sku": "PROD-123",
+  "name": "Wireless Headphones",
+  "description": "Premium wireless headphones",
+  "price": 199.99,
+  "category": ["Electronics", "Audio"],
+  "tags": ["wireless", "bluetooth", "noise-cancelling"],
+  "inventory": {
+    "warehouse": "NYC",
+    "quantity": 150,
+    "reserved": 12
+  },
+  "reviews": [
+    {
+      "userId": ObjectId("..."),
+      "rating": 5,
+      "comment": "Excellent!",
+      "date": ISODate("2025-01-10")
+    }
+  ],
+  "specifications": {
+    "battery": "30 hours",
+    "weight": "250g",
+    "color": "Black"
+  },
+  "averageRating": 4.7,
+  "totalReviews": 234,
+  "createdAt": ISODate("2024-06-15"),
+  "updatedAt": ISODate("2025-01-15")
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Social Media User Profile</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>{
+  "_id": ObjectId("..."),
+  "username": "johndoe",
+  "email": "john@example.com",
+  "profile": {
+    "name": "John Doe",
+    "bio": "Software developer",
+    "avatar": "https://cdn.example.com/avatars/john.jpg",
+    "location": "San Francisco"
+  },
+  "followers": [ObjectId("..."), ObjectId("...")],  // If < 100
+  "followerCount": 1250,  // For larger counts
+  "following": [ObjectId("..."), ObjectId("...")],
+  "followingCount": 450,
+  "posts": [  // Recent posts only
+    {
+      "postId": ObjectId("..."),
+      "content": "Hello world!",
+      "likes": 45,
+      "createdAt": ISODate("2025-01-15")
+    }
+  ],
+  "settings": {
+    "privacy": "public",
+    "notifications": true
+  },
+  "createdAt": ISODate("2023-05-20"),
+  "lastActive": ISODate("2025-01-15T14:30:00Z")
+}</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Blog with Comments</span>
+            </div>
+            <div class="collapsible-content">
+                <pre><code>{
+  "_id": ObjectId("..."),
+  "title": "Getting Started with MongoDB",
+  "slug": "getting-started-mongodb",
+  "author": {
+    "userId": ObjectId("..."),
+    "name": "Jane Smith"
+  },
+  "content": "Full blog post content...",
+  "excerpt": "Learn MongoDB basics in this guide",
+  "tags": ["mongodb", "database", "tutorial"],
+  "published": true,
+  "publishedAt": ISODate("2025-01-10"),
+  "comments": [
+    {
+      "userId": ObjectId("..."),
+      "username": "reader1",
+      "text": "Great article!",
+      "createdAt": ISODate("2025-01-11"),
+      "likes": 5
+    }
+  ],
+  "views": 1523,
+  "likes": 89,
+  "createdAt": ISODate("2025-01-09"),
+  "updatedAt": ISODate("2025-01-15")
+}</code></pre>
+            </div>
+        </div>
+
+        <h2>13. Quick Reference Commands</h2>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Essential Commands Cheat Sheet</span>
+            </div>
+            <div class="collapsible-content">
+                <table>
+                    <tr>
+                        <th>Operation</th>
+                        <th>Command</th>
+                    </tr>
+                    <tr>
+                        <td>Show databases</td>
+                        <td><code>show dbs</code></td>
+                    </tr>
+                    <tr>
+                        <td>Use/create database</td>
+                        <td><code>use dbName</code></td>
+                    </tr>
+                    <tr>
+                        <td>Show collections</td>
+                        <td><code>show collections</code></td>
+                    </tr>
+                    <tr>
+                        <td>Insert one</td>
+                        <td><code>db.collection.insertOne({...})</code></td>
+                    </tr>
+                    <tr>
+                        <td>Insert many</td>
+                        <td><code>db.collection.insertMany([{...}, {...}])</code></td>
+                    </tr>
+                    <tr>
+                        <td>Find all</td>
+                        <td><code>db.collection.find()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Find one</td>
+                        <td><code>db.collection.findOne({filter})</code></td>
+                    </tr>
+                    <tr>
+                        <td>Update one</td>
+                        <td><code>db.collection.updateOne({filter}, {$set: {...}})</code></td>
+                    </tr>
+                    <tr>
+                        <td>Update many</td>
+                        <td><code>db.collection.updateMany({filter}, {$set: {...}})</code></td>
+                    </tr>
+                    <tr>
+                        <td>Delete one</td>
+                        <td><code>db.collection.deleteOne({filter})</code></td>
+                    </tr>
+                    <tr>
+                        <td>Delete many</td>
+                        <td><code>db.collection.deleteMany({filter})</code></td>
+                    </tr>
+                    <tr>
+                        <td>Count documents</td>
+                        <td><code>db.collection.countDocuments({filter})</code></td>
+                    </tr>
+                    <tr>
+                        <td>Create index</td>
+                        <td><code>db.collection.createIndex({field: 1})</code></td>
+                    </tr>
+                    <tr>
+                        <td>Drop collection</td>
+                        <td><code>db.collection.drop()</code></td>
+                    </tr>
+                    <tr>
+                        <td>Drop database</td>
+                        <td><code>db.dropDatabase()</code></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <h2>14. Next Steps</h2>
+
+        <div class="collapsible open">
+            <div class="collapsible-header">
+                <span><span class="arrow">▶</span> Learning Path</span>
+            </div>
+            <div class="collapsible-content">
+                <ol>
+                    <li>✅ <strong>Complete this guide</strong> - Understand core concepts</li>
+                    <li>🔨 <strong>Build a project</strong> - Start with CRUD app (blog, todo list, etc.)</li>
+                    <li>📚 <strong>Learn aggregation deeply</strong> - Most powerful feature</li>
+                    <li>⚡ <strong>Study indexing strategies</strong> - Critical for performance</li>
+                    <li>🏗️ <strong>Master schema design</strong> - Read MongoDB data modeling patterns</li>
+                    <li>🔐 <strong>Implement authentication</strong> - Security essentials</li>
+                    <li>📊 <strong>Explore MongoDB Atlas</strong> - Cloud features, monitoring</li>
+                    <li>🚀 <strong>Learn replication & sharding</strong> - Scaling MongoDB</li>
+                </ol>
+
+                <h4>Official Resources</h4>
+                <ul>
+                    <li><strong>MongoDB University</strong>: <code>university.mongodb.com</code> (Free courses)</li>
+                    <li><strong>Documentation</strong>: <code>mongodb.com/docs</code></li>
+                    <li><strong>Community Forums</strong>: <code>mongodb.com/community/forums</code></li>
+                    <li><strong>MongoDB Blog</strong>: <code>mongodb.com/blog</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <button class="expand-all" onclick="toggleAll()">Expand/Collapse All</button>
+    </div>
+
+    <script>
+        // Make collapsibles work
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', function() {
+                this.parentElement.classList.toggle('open');
+            });
+        });
+
+        // Expand/collapse all
+        let allExpanded = false;
+        function toggleAll() {
+            allExpanded = !allExpanded;
+            document.querySelectorAll('.collapsible').forEach(collapsible => {
+                if (allExpanded) {
+                    collapsible.classList.add('open');
+                } else {
+                    collapsible.classList.remove('open');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
