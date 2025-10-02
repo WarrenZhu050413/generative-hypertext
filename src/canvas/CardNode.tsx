@@ -426,7 +426,13 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
   }
 
   return (
-    <div style={styles.card} onDoubleClick={handleDoubleClick}>
+    <div
+      style={{
+        ...styles.card,
+        ...(card.collapsed ? styles.cardCollapsed : {}),
+      }}
+      onDoubleClick={handleDoubleClick}
+    >
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerLeft}>
@@ -564,10 +570,13 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
         </div>
       </div>
 
-      {/* Title */}
-      {!card.collapsed && (
-        <div style={styles.title}>{truncateText(card.metadata.title, 80)}</div>
-      )}
+      {/* Title - Always shown, but styled differently when collapsed */}
+      <div style={{
+        ...styles.title,
+        ...(card.collapsed ? styles.titleCollapsed : {}),
+      }}>
+        {truncateText(card.metadata.title, 80)}
+      </div>
 
       {/* Content - Only shown when not collapsed */}
       {!card.collapsed && (
@@ -724,6 +733,12 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     fontFamily: 'system-ui, -apple-system, sans-serif',
   },
+  cardCollapsed: {
+    height: 'auto',
+    minHeight: '56px',
+    padding: '12px 16px',
+    gap: '0',
+  },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -767,6 +782,11 @@ const styles: Record<string, React.CSSProperties> = {
     display: '-webkit-box',
     WebkitLineClamp: 2,
     WebkitBoxOrient: 'vertical',
+  },
+  titleCollapsed: {
+    fontSize: '13px',
+    WebkitLineClamp: 1,
+    marginTop: '4px',
   },
   content: {
     flex: 1,
