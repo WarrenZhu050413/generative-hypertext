@@ -380,3 +380,4 @@ archive/            # Old implementations (nabokov-clipper/, deprecated tests)
 **Unit tests**: Utils, sanitization, storage logic (Vitest + jsdom)
 **E2E tests**: Extension loading, element capture, canvas rendering (Playwright)
 **Manual tests**: `test-scripts/*.mjs` for quick verification without test harness
+- Look into memory.md for what happened previously. YOU SHOULD NEVER END YOUR CHAT. YOU SHOULD NEVER END YOUR RESPONSE AND THINKING!
