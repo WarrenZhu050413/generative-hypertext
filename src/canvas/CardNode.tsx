@@ -17,6 +17,8 @@ import { stashCard } from '@/sidepanel/stashService';
 import { FillInModal } from '@/components/FillInModal';
 import { getConnectionCount } from '@/services/connectionContextService';
 import type { FillInStrategy } from '@/types/card';
+import { useButtons } from './useButtons';
+import { ButtonSettings } from '@/components/ButtonSettings';
 
 interface CardNodeProps {
   data: {
@@ -37,6 +39,7 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
   const [showFillInModal, setShowFillInModal] = useState(false);
   const [connectionCount, setConnectionCount] = useState(0);
   const [allCards, setAllCards] = useState<Card[]>([]);
+  const [showButtonSettings, setShowButtonSettings] = useState(false);
   const contentEditRef = useRef<HTMLTextAreaElement>(null);
   const titleEditRef = useRef<HTMLInputElement>(null);
   const generationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -55,6 +58,9 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
       }
     },
   });
+
+  // Load buttons (default + custom)
+  const { enabledButtons } = useButtons();
 
   // Load connection count for Fill-In feature
   useEffect(() => {
@@ -639,6 +645,17 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
               )}
             </div>
           )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowButtonSettings(true);
+            }}
+            style={styles.settingsButton}
+            title="Configure custom buttons"
+            data-testid="button-settings-btn"
+          >
+            ⚙️
+          </button>
           {connectionCount > 0 && (
             <button
               onClick={handleOpenFillIn}
@@ -767,7 +784,7 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
           {/* Action Buttons (shown on all card types with content) */}
           {card.cardType !== 'image' && card.content && (
             <div style={styles.actionButtons}>
-              {DEFAULT_BUTTONS.filter(btn => btn.enabled).map(button => (
+              {enabledButtons.map(button => (
                 <button
                   key={button.id}
                   onClick={(e) => {
@@ -818,6 +835,17 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
           allCards={allCards}
           onClose={() => setShowFillInModal(false)}
           onAccept={handleFillInAccept}
+        />
+      )}
+
+      {/* Button Settings Modal */}
+      {showButtonSettings && (
+        <ButtonSettings
+          onClose={() => {
+            setShowButtonSettings(false);
+            // Dispatch event to refresh buttons
+            window.dispatchEvent(new CustomEvent('nabokov:buttons-updated'));
+          }}
         />
       )}
 
@@ -984,6 +1012,20 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0',
     border: 'none',
     background: 'rgba(139, 0, 0, 0.1)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '12px',
+    transition: 'all 0.2s ease',
+  },
+  settingsButton: {
+    width: '20px',
+    height: '20px',
+    padding: '0',
+    border: 'none',
+    background: 'rgba(139, 115, 85, 0.15)',
     borderRadius: '4px',
     cursor: 'pointer',
     display: 'flex',
