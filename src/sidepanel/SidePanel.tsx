@@ -1,59 +1,37 @@
 /** @jsxImportSource @emotion/react */
 import { css } from '@emotion/react';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import DOMPurify from 'isomorphic-dompurify';
 import type { Card } from '@/types/card';
-import { getStashedCards, restoreCard, deleteCardPermanently } from './stashService';
+import { useCards } from '@/shared/hooks/useCards';
+import { useCardOperations } from '@/shared/hooks/useCardOperations';
+import { useImageUpload } from '@/shared/hooks/useImageUpload';
+import { ImageUploadZone, FilePickerButton } from '@/shared/components/ImageUpload';
 
 export const SidePanel: React.FC = () => {
-  const [stashedCards, setStashedCards] = useState<Card[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Use shared hooks
+  const { cards: allCards, isLoading, refreshCards } = useCards(true); // Include stashed
+  const { restoreCard, deleteCard } = useCardOperations(refreshCards);
+  const { handleImageUpload, isUploading } = useImageUpload(
+    (card) => {
+      console.log('[SidePanel] Image uploaded:', card.id);
+      refreshCards();
+    },
+    { stashImmediately: true } // Images uploaded in side panel go to stash
+  );
+
+  // Filter to only stashed cards
+  const stashedCards = useMemo(
+    () => allCards.filter(card => card.stashed),
+    [allCards]
+  );
+
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-
-  // Load stashed cards
-  useEffect(() => {
-    loadStashedCards();
-
-    // Listen for local events (same page)
-    const handleStashUpdate = () => {
-      loadStashedCards();
-    };
-    window.addEventListener('nabokov:stash-updated', handleStashUpdate);
-
-    // Listen for runtime messages (cross-context)
-    const handleRuntimeMessage = (message: any) => {
-      if (message.type === 'CARD_STASHED' || message.type === 'STASH_UPDATED') {
-        console.log('[SidePanel] Received stash update via runtime message');
-        loadStashedCards();
-      }
-    };
-    chrome.runtime.onMessage.addListener(handleRuntimeMessage);
-
-    return () => {
-      window.removeEventListener('nabokov:stash-updated', handleStashUpdate);
-      chrome.runtime.onMessage.removeListener(handleRuntimeMessage);
-    };
-  }, []);
-
-  const loadStashedCards = async () => {
-    try {
-      setIsLoading(true);
-      const cards = await getStashedCards();
-      setStashedCards(cards);
-    } catch (error) {
-      console.error('[SidePanel] Error loading stashed cards:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleRestore = async (card: Card) => {
     try {
       await restoreCard(card.id);
-      await loadStashedCards();
-
-      // Show success message
       console.log('[SidePanel] Card restored:', card.metadata.title);
     } catch (error) {
       console.error('[SidePanel] Error restoring card:', error);
@@ -67,13 +45,30 @@ export const SidePanel: React.FC = () => {
     }
 
     try {
-      await deleteCardPermanently(card.id);
-      await loadStashedCards();
-
+      await deleteCard(card.id);
       console.log('[SidePanel] Card deleted:', card.metadata.title);
     } catch (error) {
       console.error('[SidePanel] Error deleting card:', error);
       alert('Failed to delete card');
+    }
+  };
+
+  const handleImageDrop = async (file: File) => {
+    try {
+      await handleImageUpload(file);
+    } catch (error) {
+      console.error('[SidePanel] Image upload failed:', error);
+      alert('Failed to upload image');
+    }
+  };
+
+  const handleFilesSelected = async (files: File[]) => {
+    for (const file of files) {
+      try {
+        await handleImageUpload(file);
+      } catch (error) {
+        console.error('[SidePanel] Image upload failed:', file.name, error);
+      }
     }
   };
 
@@ -126,27 +121,39 @@ export const SidePanel: React.FC = () => {
   };
 
   return (
-    <div css={containerStyles}>
-      {/* Header */}
-      <div css={headerStyles}>
-        <h1 css={titleStyles}>📦 Stashed Cards</h1>
-        <button onClick={handleOpenCanvas} css={openCanvasButtonStyles} title="Open Canvas">
-          🗺️ Canvas
-        </button>
-      </div>
+    <ImageUploadZone onImageUpload={handleImageDrop}>
+      <div css={containerStyles}>
+        {/* Header */}
+        <div css={headerStyles}>
+          <h1 css={titleStyles}>📦 Stashed Cards</h1>
+          <button onClick={handleOpenCanvas} css={openCanvasButtonStyles} title="Open Canvas">
+            🗺️ Canvas
+          </button>
+        </div>
 
-      {/* Search Bar */}
-      <div css={searchBarStyles}>
-        <input
-          type="text"
-          placeholder="Search stashed cards..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          css={searchInputStyles}
-        />
-      </div>
+        {/* Upload Button */}
+        <div css={uploadSectionStyles}>
+          <FilePickerButton
+            onFilesSelected={handleFilesSelected}
+            multiple
+            label="📁 Upload Images"
+            disabled={isUploading}
+          />
+          {isUploading && <span css={uploadingTextStyles}>Uploading...</span>}
+        </div>
 
-      {/* Card List */}
+        {/* Search Bar */}
+        <div css={searchBarStyles}>
+          <input
+            type="text"
+            placeholder="Search stashed cards..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            css={searchInputStyles}
+          />
+        </div>
+
+        {/* Card List */}
       <div css={cardListStyles}>
         {isLoading ? (
           <div css={loadingStyles}>Loading...</div>
@@ -247,6 +254,7 @@ export const SidePanel: React.FC = () => {
         </div>
       )}
     </div>
+    </ImageUploadZone>
   );
 };
 
@@ -290,6 +298,21 @@ const openCanvasButtonStyles = css`
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(212, 175, 55, 0.3);
   }
+`;
+
+const uploadSectionStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(76, 175, 80, 0.05);
+  border-bottom: 1px solid rgba(76, 175, 80, 0.2);
+`;
+
+const uploadingTextStyles = css`
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
 `;
 
 const searchBarStyles = css`

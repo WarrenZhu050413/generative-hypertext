@@ -470,3 +470,4 @@ archive/            # Old implementations (nabokov-clipper/, deprecated tests)
 
 **Manual tests**: `test-scripts/*.mjs` for quick verification without test harness
 - Use Node.js to run: `node test-scripts/test-canvas-direct.mjs`
+- Update the local CLAUDE.md after new feature changes

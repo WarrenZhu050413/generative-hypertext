@@ -37,14 +37,14 @@
         "default": "Ctrl+E",
         "mac": "Command+E"
       },
-      "description": "Activate element selector"
+      "description": "Activate element selector (Canvas mode)"
     },
     "activate-selector-stash": {
       "suggested_key": {
         "default": "Ctrl+Shift+E",
         "mac": "Command+Shift+E"
       },
-      "description": "Activate element selector (stash immediately)"
+      "description": "Activate element selector (Stash mode)"
     }
   },
   "web_accessible_resources": [

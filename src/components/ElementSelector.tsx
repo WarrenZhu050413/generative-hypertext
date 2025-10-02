@@ -328,19 +328,27 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
         />
       )}
 
+      {/* Mode indicator banner */}
+      {!showFloatingChat && (
+        <div css={modeIndicatorStyles(stashImmediately)}>
+          <div css={modeIconStyles}>
+            {stashImmediately ? '📥' : '🎨'}
+          </div>
+          <div css={modeTitleStyles}>
+            {stashImmediately ? 'STASH MODE' : 'CANVAS MODE'}
+          </div>
+          <div css={modeDescStyles}>
+            {stashImmediately
+              ? 'Cards will be saved to Side Panel'
+              : 'Cards will appear on Canvas'}
+          </div>
+        </div>
+      )}
+
       {/* Instructions overlay */}
       {!showFloatingChat && (
         <div css={instructionsStyles}>
           <p>Hover over elements to inspect • Click to capture • Press ESC to cancel</p>
-          <label css={checkboxLabelStyles}>
-            <input
-              type="checkbox"
-              checked={stashImmediately}
-              onChange={(e) => setStashImmediately(e.target.checked)}
-              css={checkboxInputStyles}
-            />
-            <span css={checkboxTextStyles}>📥 Stash immediately (skip canvas)</span>
-          </label>
         </div>
       )}
     </div>
@@ -556,33 +564,59 @@ const instructionsStyles = css`
   }
 `;
 
-const checkboxLabelStyles = css`
+const modeIndicatorStyles = (isStashMode: boolean) => css`
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: ${
+    isStashMode
+      ? 'linear-gradient(135deg, #2C5F7E 0%, #1E3A5F 100%)'
+      : `linear-gradient(135deg, ${CHINESE_AESTHETIC_COLORS.cinnabar} 0%, #8B0000 100%)`
+  };
+  color: ${CHINESE_AESTHETIC_COLORS.rice};
+  padding: 16px 32px;
+  border-radius: 16px;
+  font-size: 16px;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.5),
+    0 0 0 3px ${isStashMode ? '#5DADE2' : CHINESE_AESTHETIC_COLORS.gold};
+  z-index: 999999;
+  pointer-events: auto;
+  border: 2px solid ${isStashMode ? '#5DADE2' : CHINESE_AESTHETIC_COLORS.gold};
   display: flex;
   align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 12px;
-  transition: all 0.2s ease;
-  background: rgba(255, 255, 255, 0.1);
+  gap: 16px;
+  animation: slideDown 0.3s ease-out;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.15);
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
   }
 `;
 
-const checkboxInputStyles = css`
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
-  accent-color: ${CHINESE_AESTHETIC_COLORS.gold};
+const modeIconStyles = css`
+  font-size: 32px;
+  line-height: 1;
 `;
 
-const checkboxTextStyles = css`
+const modeTitleStyles = css`
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+`;
+
+const modeDescStyles = css`
   font-size: 13px;
+  opacity: 0.9;
   font-weight: 500;
-  color: ${CHINESE_AESTHETIC_COLORS.rice};
-  user-select: none;
 `;
 
 const loadingOverlayStyles = css`
