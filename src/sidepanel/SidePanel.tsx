@@ -2,6 +2,8 @@
 import { css } from '@emotion/react';
 import React, { useState, useMemo } from 'react';
 import DOMPurify from 'isomorphic-dompurify';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Card } from '@/types/card';
 import { useCards } from '@/shared/hooks/useCards';
 import { useCardOperations } from '@/shared/hooks/useCardOperations';
@@ -112,12 +114,20 @@ export const SidePanel: React.FC = () => {
     });
   };
 
-  const getContentPreview = (content: string | undefined) => {
-    if (!content) return '';
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = content;
-    const text = tempDiv.textContent || tempDiv.innerText || '';
-    return text.length > 100 ? text.substring(0, 100) + '...' : text;
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
+  const getCardTypeBadge = (cardType?: string) => {
+    const type = cardType || 'clipped';
+    const badges = {
+      image: { label: 'Image', emoji: '📷' },
+      note: { label: 'Note', emoji: '📝' },
+      generated: { label: 'Generated', emoji: '✨' },
+      clipped: { label: 'Clipped', emoji: '🌐' },
+    };
+    return badges[type as keyof typeof badges] || badges.clipped;
   };
 
   return (
@@ -176,8 +186,12 @@ export const SidePanel: React.FC = () => {
         ) : (
           filteredCards.map((card) => {
             const isExpanded = expandedCards.has(card.id);
-            const sanitizedContent = card.content
-              ? DOMPurify.sanitize(card.content, {
+            const badge = getCardTypeBadge(card.cardType);
+
+            // Sanitize content
+            const contentToDisplay = card.beautifiedContent || card.content;
+            const sanitizedContent = contentToDisplay
+              ? DOMPurify.sanitize(contentToDisplay, {
                   ALLOWED_TAGS: [
                     'p', 'br', 'strong', 'em', 'u', 'a', 'span', 'div',
                     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -191,56 +205,93 @@ export const SidePanel: React.FC = () => {
 
             return (
               <div key={card.id} css={cardItemStyles}>
-                {/* Card Header */}
-                <div css={cardHeaderStyles}>
-                  {card.metadata.favicon && <span css={faviconStyles}>{card.metadata.favicon}</span>}
-                  <span css={domainStyles}>{card.metadata.domain}</span>
-                  <span css={dateStyles}>{formatDate(card.createdAt)}</span>
+                {/* Compact Header - Single line */}
+                <div css={compactHeaderStyles}>
+                  <div css={headerInfoStyles}>
+                    {card.metadata.favicon && <span css={faviconStyles}>{card.metadata.favicon}</span>}
+                    <span css={domainStyles}>{card.metadata.domain}</span>
+                    <span css={separatorStyles}>•</span>
+                    <span css={dateStyles}>{formatDate(card.createdAt)}</span>
+                  </div>
+                  <div css={actionButtonsStyles}>
+                    <button onClick={() => handleRestore(card)} css={iconButtonStyles} title="Restore to canvas">
+                      ↩️
+                    </button>
+                    <button onClick={() => handleDelete(card)} css={iconButtonStyles} title="Delete permanently">
+                      🗑️
+                    </button>
+                  </div>
                 </div>
 
-                {/* Card Title */}
-                <div css={cardTitleStyles}>{card.metadata.title}</div>
+                {/* Compact Title with tags inline */}
+                <div css={compactTitleRowStyles}>
+                  <span css={compactTitleStyles} title={card.metadata.title}>
+                    {truncateText(card.metadata.title, 60)}
+                  </span>
+                  {card.tags && card.tags.length > 0 && (
+                    <div css={inlineTagsStyles}>
+                      {card.tags.slice(0, 3).map((tag, i) => (
+                        <span key={i} css={compactTagStyles}>{tag}</span>
+                      ))}
+                      {card.tags.length > 3 && <span css={compactTagStyles}>+{card.tags.length - 3}</span>}
+                    </div>
+                  )}
+                </div>
 
-                {/* Content Preview or Full Content */}
-                {card.content && (
-                  <div>
-                    {isExpanded ? (
-                      <div css={contentExpandedStyles} dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
-                    ) : (
-                      <div css={contentPreviewStyles}>{getContentPreview(card.content)}</div>
-                    )}
-                    {card.content.length > 100 && (
-                      <button
-                        onClick={() => toggleCardExpansion(card.id)}
-                        css={expandButtonStyles}
+                {/* CRITICAL: Image Display for Image Cards */}
+                {card.cardType === 'image' && card.imageData ? (
+                  <div css={imageContainerStyles}>
+                    <img
+                      src={card.imageData}
+                      alt={card.metadata.title}
+                      css={imageStyles}
+                    />
+                  </div>
+                ) : (
+                  /* Content Display for Non-Image Cards */
+                  card.content && (
+                    <>
+                      <div
+                        css={isExpanded ? contentExpandedStyles : contentCollapsedStyles}
                       >
-                        {isExpanded ? '▲ Show less' : '▼ Show more'}
-                      </button>
-                    )}
-                  </div>
-                )}
+                        {/* Render markdown if beautified, otherwise show HTML */}
+                        {card.beautifiedContent ? (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              h1: ({node, ...props}) => <h2 css={markdownH1} {...props} />,
+                              h2: ({node, ...props}) => <h3 css={markdownH2} {...props} />,
+                              h3: ({node, ...props}) => <h4 css={markdownH3} {...props} />,
+                              p: ({node, ...props}) => <p css={markdownP} {...props} />,
+                              ul: ({node, ...props}) => <ul css={markdownUl} {...props} />,
+                              ol: ({node, ...props}) => <ol css={markdownOl} {...props} />,
+                              li: ({node, ...props}) => <li css={markdownLi} {...props} />,
+                              strong: ({node, ...props}) => <strong css={markdownStrong} {...props} />,
+                              code: ({node, ...props}) => <code css={markdownCode} {...props} />,
+                            }}
+                          >
+                            {card.beautifiedContent}
+                          </ReactMarkdown>
+                        ) : (
+                          <div
+                            css={contentHTMLStyles}
+                            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+                          />
+                        )}
+                      </div>
 
-                {/* Card Tags */}
-                {card.tags && card.tags.length > 0 && (
-                  <div css={tagsStyles}>
-                    {card.tags.slice(0, 3).map((tag, i) => (
-                      <span key={i} css={tagStyles}>
-                        {tag}
-                      </span>
-                    ))}
-                    {card.tags.length > 3 && <span css={tagStyles}>+{card.tags.length - 3}</span>}
-                  </div>
+                      {/* Expand/Collapse Button */}
+                      {sanitizedContent.length > 200 && (
+                        <button
+                          onClick={() => toggleCardExpansion(card.id)}
+                          css={expandButtonStyles}
+                        >
+                          {isExpanded ? '▲' : '▼'}
+                        </button>
+                      )}
+                    </>
+                  )
                 )}
-
-                {/* Actions */}
-                <div css={actionsStyles}>
-                  <button onClick={() => handleRestore(card)} css={restoreButtonStyles}>
-                    ↩️ Restore
-                  </button>
-                  <button onClick={() => handleDelete(card)} css={deleteButtonStyles}>
-                    🗑️ Delete
-                  </button>
-                </div>
               </div>
             );
           })
@@ -402,110 +453,229 @@ const clearSearchButtonStyles = css`
   }
 `;
 
+// CRITICAL: Compact Card Styles - Maximize content space
 const cardItemStyles = css`
-  background: white;
-  border: 1px solid rgba(184, 156, 130, 0.2);
+  background: linear-gradient(135deg, rgba(250, 247, 242, 0.98) 0%, rgba(242, 235, 225, 0.98) 100%);
   border-radius: 8px;
-  padding: 12px;
+  box-shadow:
+    0 1px 4px rgba(92, 77, 66, 0.08),
+    0 4px 12px rgba(92, 77, 66, 0.1);
+  border: 1px solid rgba(184, 156, 130, 0.2);
   margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
   transition: all 0.2s ease;
+  overflow: hidden;
 
   &:hover {
-    box-shadow: 0 2px 8px rgba(92, 77, 66, 0.1);
-    border-color: rgba(212, 175, 55, 0.3);
+    box-shadow:
+      0 2px 6px rgba(92, 77, 66, 0.12),
+      0 6px 16px rgba(92, 77, 66, 0.14);
+    border-color: rgba(212, 175, 55, 0.4);
   }
 `;
 
-const cardHeaderStyles = css`
+// Compact header - everything on one line
+const compactHeaderStyles = css`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid rgba(184, 156, 130, 0.1);
+`;
+
+const headerInfoStyles = css`
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-  font-size: 11px;
-  color: #8b7355;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  font-size: 9px;
+  color: #A89684;
 `;
 
 const faviconStyles = css`
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   flex-shrink: 0;
+  font-size: 12px;
 `;
 
 const domainStyles = css`
-  flex: 1;
+  font-size: 9px;
+  color: #8B7355;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 500;
+`;
+
+const separatorStyles = css`
+  color: #D4AF37;
+  font-size: 8px;
+  margin: 0 2px;
 `;
 
 const dateStyles = css`
-  color: #a89684;
-  font-size: 10px;
+  font-size: 9px;
+  color: #A89684;
+  white-space: nowrap;
 `;
 
-const cardTitleStyles = css`
-  font-size: 13px;
+// Action buttons in header (icon-only)
+const actionButtonsStyles = css`
+  display: flex;
+  gap: 4px;
+`;
+
+const iconButtonStyles = css`
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.7;
+  transition: all 0.15s ease;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  &:first-of-type:hover {
+    filter: drop-shadow(0 0 3px rgba(46, 125, 50, 0.6));
+  }
+
+  &:last-of-type:hover {
+    filter: drop-shadow(0 0 3px rgba(139, 0, 0, 0.6));
+  }
+`;
+
+// Compact title row with inline tags
+const compactTitleRowStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  min-height: 20px;
+  border-bottom: 1px solid rgba(184, 156, 130, 0.08);
+`;
+
+const compactTitleStyles = css`
+  font-size: 11px;
   font-weight: 600;
-  color: #3e3226;
-  margin-bottom: 8px;
-  line-height: 1.4;
+  color: #3E3226;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 `;
 
-const contentPreviewStyles = css`
-  font-size: 12px;
-  color: #5c4d42;
-  line-height: 1.5;
-  margin-bottom: 6px;
-  padding: 8px;
+// Inline tags (smaller, fewer shown)
+const inlineTagsStyles = css`
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+`;
+
+const compactTagStyles = css`
+  font-size: 8px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: rgba(212, 175, 55, 0.12);
+  color: #8B7355;
+  font-weight: 500;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  white-space: nowrap;
+`;
+
+// CRITICAL: Image Display Styles (more compact)
+const imageContainerStyles = css`
+  width: 100%;
+  max-height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   background: rgba(0, 0, 0, 0.02);
+  padding: 8px;
+  margin: 0 6px 6px 6px;
+  border-radius: 6px;
+`;
+
+const imageStyles = css`
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
   border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+`;
+
+// Content Styles (maximize space, minimal padding)
+const contentCollapsedStyles = css`
+  max-height: 150px;
+  overflow: hidden;
+  padding: 8px;
+  font-size: 11px;
+  color: #5C4D42;
+  line-height: 1.5;
   border-left: 2px solid rgba(212, 175, 55, 0.3);
+  background: rgba(0, 0, 0, 0.015);
+  margin: 0 6px;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: linear-gradient(transparent, rgba(242, 235, 225, 0.95));
+  }
 `;
 
 const contentExpandedStyles = css`
-  font-size: 12px;
-  color: #5c4d42;
-  line-height: 1.5;
-  margin-bottom: 6px;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 4px;
-  border-left: 2px solid rgba(212, 175, 55, 0.5);
-  max-height: 400px;
+  max-height: 500px;
   overflow-y: auto;
+  padding: 8px;
+  font-size: 11px;
+  color: #5C4D42;
+  line-height: 1.5;
+  border-left: 2px solid rgba(212, 175, 55, 0.5);
+  background: rgba(0, 0, 0, 0.015);
+  margin: 0 6px;
 
-  /* Scrollbar styling */
   &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
+    width: 4px;
   }
 
   &::-webkit-scrollbar-thumb {
     background: rgba(139, 0, 0, 0.2);
-    border-radius: 3px;
+    border-radius: 2px;
   }
 
   &::-webkit-scrollbar-thumb:hover {
     background: rgba(139, 0, 0, 0.4);
   }
+`;
 
-  /* Preserve formatting from HTML content */
+const contentHTMLStyles = css`
+  font-size: 12px;
+  color: #5C4D42;
+  line-height: 1.6;
+  word-break: break-word;
+
   p {
     margin: 0 0 8px 0;
   }
 
   h1, h2, h3, h4, h5, h6 {
     margin: 12px 0 6px 0;
-    color: #3e3226;
+    color: #3E3226;
   }
 
   ul, ol {
@@ -514,89 +684,81 @@ const contentExpandedStyles = css`
   }
 
   a {
-    color: #d4af37;
+    color: #D4AF37;
     text-decoration: underline;
   }
 `;
 
 const expandButtonStyles = css`
-  font-size: 11px;
-  padding: 4px 8px;
+  width: calc(100% - 12px);
+  margin: 4px 6px;
+  padding: 3px;
   background: transparent;
-  border: 1px solid rgba(184, 156, 130, 0.3);
-  border-radius: 4px;
-  color: #8b7355;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-bottom: 8px;
-  width: 100%;
-  font-weight: 500;
-
-  &:hover {
-    background: rgba(212, 175, 55, 0.1);
-    border-color: rgba(212, 175, 55, 0.5);
-  }
-`;
-
-const tagsStyles = css`
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-`;
-
-const tagStyles = css`
-  font-size: 10px;
-  padding: 2px 6px;
+  border: 1px solid rgba(184, 156, 130, 0.2);
   border-radius: 3px;
-  background: rgba(212, 175, 55, 0.15);
-  color: #8b7355;
-  font-weight: 500;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-`;
-
-const actionsStyles = css`
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(184, 156, 130, 0.15);
-`;
-
-const restoreButtonStyles = css`
-  flex: 1;
-  padding: 6px 8px;
-  background: linear-gradient(135deg, #2e7d32, #4caf50);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
+  color: #8B7355;
+  font-size: 16px;
+  font-weight: 400;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  line-height: 1;
 
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(46, 125, 50, 0.3);
+    background: rgba(212, 175, 55, 0.08);
+    border-color: rgba(212, 175, 55, 0.4);
   }
 `;
 
-const deleteButtonStyles = css`
-  flex: 1;
-  padding: 6px 8px;
-  background: rgba(139, 0, 0, 0.1);
-  color: #8b0000;
-  border: 1px solid rgba(139, 0, 0, 0.3);
-  border-radius: 4px;
+// Markdown Styles (for ReactMarkdown) - more compact
+const markdownH1 = css`
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  color: #8B0000;
+  margin: 8px 0 4px 0;
+`;
 
-  &:hover {
-    background: rgba(139, 0, 0, 0.2);
-    transform: translateY(-1px);
-  }
+const markdownH2 = css`
+  font-size: 11px;
+  font-weight: 600;
+  color: #8B7355;
+  margin: 6px 0 3px 0;
+`;
+
+const markdownH3 = css`
+  font-size: 11px;
+  font-weight: 600;
+  color: #5C4D42;
+  margin: 4px 0 2px 0;
+`;
+
+const markdownP = css`
+  margin: 4px 0;
+`;
+
+const markdownUl = css`
+  margin: 4px 0 4px 16px;
+`;
+
+const markdownOl = css`
+  margin: 4px 0 4px 16px;
+`;
+
+const markdownLi = css`
+  margin: 2px 0;
+`;
+
+const markdownStrong = css`
+  color: #8B0000;
+  font-weight: 600;
+`;
+
+const markdownCode = css`
+  background: rgba(245, 245, 220, 0.5);
+  border: 1px solid rgba(184, 156, 130, 0.2);
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-family: Monaco, Menlo, monospace;
 `;
 
 const footerStyles = css`

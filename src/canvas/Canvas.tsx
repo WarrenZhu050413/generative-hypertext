@@ -30,6 +30,7 @@ import type { WindowState } from '@/types/window';
 import type { Card } from '@/types/card';
 import { saveCard, generateId } from '@/utils/storage';
 import { createImageCards } from '@/utils/imageUpload';
+import { FilePickerButton } from '@/shared/components/ImageUpload';
 
 // Register custom node types
 const nodeTypes = {
@@ -365,18 +366,15 @@ function CanvasInner() {
       return;
     }
 
-    try {
-      showFeedback(`Uploading ${imageFiles.length} image${imageFiles.length > 1 ? 's' : ''}...`);
+    await handleImageFiles(imageFiles, { x: e.clientX - 200, y: e.clientY - 150 });
+  };
 
-      // Get drop position relative to canvas
-      // Use the position where the drop occurred
-      const position = {
-        x: e.clientX - 200, // Offset to center the card at drop point
-        y: e.clientY - 150,
-      };
+  const handleImageFiles = async (files: File[], position: { x: number; y: number }) => {
+    try {
+      showFeedback(`Uploading ${files.length} image${files.length > 1 ? 's' : ''}...`);
 
       // Create image cards
-      const createdCards = await createImageCards(imageFiles, position);
+      const createdCards = await createImageCards(files, position);
 
       // Dispatch event to refresh cards
       window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
@@ -386,6 +384,23 @@ function CanvasInner() {
       console.error('[Canvas] Error uploading images:', error);
       showFeedback('Failed to upload images');
     }
+  };
+
+  const handleFilesSelected = async (files: File[]) => {
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length === 0) {
+      showFeedback('No image files selected');
+      return;
+    }
+
+    // Default position for file picker uploads (center of viewport)
+    const position = {
+      x: window.innerWidth / 2 - 160,
+      y: window.innerHeight / 2 - 120,
+    };
+
+    await handleImageFiles(imageFiles, position);
   };
 
   if (isLoading) {
@@ -486,6 +501,7 @@ function CanvasInner() {
         onCreateNote={handleCreateNote}
         onToggleConnectionMode={handleToggleConnectionMode}
         onOpenSidePanel={handleOpenSidePanel}
+        onUploadImages={handleFilesSelected}
         connectionMode={connectionMode}
       />
 

@@ -94,9 +94,7 @@ export function FillInModal({ card, allCards, onClose, onAccept }: FillInModalPr
       }
 
       // Get source card IDs from connected cards directly
-      const connectedCards = await import('../services/connectionContextService').then(m =>
-        m.getConnectedCards(card.id, allCards, 'both')
-      );
+      const connectedCards = await getConnectedCards(card.id, allCards, 'both');
       setSourceCardIds(connectedCards.map(c => c.id));
     } catch (err: any) {
       if (err.name !== 'AbortError') {

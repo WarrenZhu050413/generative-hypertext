@@ -20,6 +20,7 @@ import { ElementSelector } from '../components/ElementSelector';
 import { FloatingChat } from '../components/FloatingChat';
 import { InlineChatWindow } from '../components/InlineChatWindow';
 import { capturePageContext } from '../services/pageContextCapture';
+import { captureElementContext } from '../services/elementContextCapture';
 import { Card } from '../types';
 import { saveCard, generateId } from '../utils/storage';
 
@@ -71,6 +72,12 @@ let inlineChatState: InlineChatState = {
   containerElement: null,
   cleanup: null,
 };
+
+/**
+ * Last right-clicked element (for context menu)
+ */
+let lastRightClickedElement: HTMLElement | null = null;
+let lastRightClickPosition: { x: number; y: number } = { x: 0, y: 0 };
 
 // ============================================================================
 // Shadow DOM Setup
@@ -459,6 +466,148 @@ function closeInlineChat(): void {
   }
 }
 
+/**
+ * Opens element-contextual chat for the last right-clicked element
+ */
+function openElementChat(): void {
+  if (!lastRightClickedElement) {
+    console.warn('[content] No element selected for chat');
+    return;
+  }
+
+  // Close existing chat if open
+  if (inlineChatState.isOpen) {
+    closeInlineChat();
+  }
+
+  console.log('[content] Opening element chat...', lastRightClickedElement);
+
+  try {
+    // Capture element context
+    const elementContext = captureElementContext(lastRightClickedElement);
+    console.log('[content] Element context captured:', elementContext.element.tagName);
+
+    // Create container
+    const container = document.createElement('div');
+    container.id = 'nabokov-element-chat-root';
+    container.setAttribute('data-nabokov-element-chat', 'true');
+
+    container.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2147483646;
+      pointer-events: none;
+    `;
+
+    document.body.appendChild(container);
+    inlineChatState.containerElement = container;
+
+    // Create shadow root
+    const { shadowRoot, styleCache } = createShadowRoot(container, {
+      injectBaseStyles: true,
+    });
+
+    // Add visual highlight to target element
+    const originalOutline = lastRightClickedElement.style.outline;
+    const originalOutlineOffset = lastRightClickedElement.style.outlineOffset;
+    lastRightClickedElement.style.outline = '2px solid #8B0000';
+    lastRightClickedElement.style.outlineOffset = '2px';
+
+    // Handle save to canvas
+    const handleSaveToCanvas = async (messages: Array<{ role: 'user' | 'assistant'; content: string }>) => {
+      console.log('[content] Saving element conversation to canvas...');
+
+      try {
+        const conversationHTML = messages.map((msg, i) => {
+          const role = msg.role === 'user' ? 'You' : 'Assistant';
+          return `<div style="margin: 12px 0;">
+            <strong style="color: ${msg.role === 'user' ? '#8B0000' : '#FFD700'};">${role}:</strong>
+            <p style="margin: 4px 0 0 0; white-space: pre-wrap;">${msg.content}</p>
+          </div>`;
+        }).join('\n');
+
+        const card: Card = {
+          id: generateId(),
+          content: `<div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+            <h3 style="color: #8B0000; margin-bottom: 12px;">🎯 Chat about ${elementContext.element.tagName}</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 8px;">
+              <strong>Element:</strong> &lt;${elementContext.element.tagName}&gt;${elementContext.element.id ? `#${elementContext.element.id}` : ''}
+            </p>
+            <p style="font-size: 12px; color: #666; margin-bottom: 16px;">
+              <strong>URL:</strong> ${elementContext.url}
+            </p>
+            ${conversationHTML}
+          </div>`,
+          metadata: {
+            url: elementContext.url,
+            title: `Chat: <${elementContext.element.tagName}>`,
+            domain: new URL(elementContext.url).hostname,
+            clipDate: new Date().toISOString(),
+            favicon: '',
+          },
+          starred: false,
+          tags: ['chat', 'element', elementContext.element.tagName],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          cardType: 'note',
+        };
+
+        await saveCard(card);
+        console.log('[content] Element conversation saved to canvas:', card.id);
+
+        window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+        alert('Conversation saved to canvas!');
+      } catch (error) {
+        console.error('[content] Error saving conversation:', error);
+        alert('Error saving conversation. Please try again.');
+      }
+    };
+
+    // Handle close
+    const handleClose = () => {
+      console.log('[content] Element chat closed');
+
+      // Restore original outline
+      if (lastRightClickedElement) {
+        lastRightClickedElement.style.outline = originalOutline;
+        lastRightClickedElement.style.outlineOffset = originalOutlineOffset;
+      }
+
+      closeInlineChat();
+    };
+
+    // Mount InlineChatWindow with element context
+    const cleanup = mountReactInShadow(
+      shadowRoot,
+      <InlineChatWindow
+        onClose={handleClose}
+        initialContext={elementContext}
+        elementPosition={lastRightClickPosition}
+        onSaveToCanvas={handleSaveToCanvas}
+      />,
+      { styleCache }
+    );
+
+    inlineChatState.isOpen = true;
+    inlineChatState.cleanup = cleanup;
+
+    console.log('[content] Element chat opened successfully');
+
+  } catch (error) {
+    console.error('[content] Error opening element chat:', error);
+
+    if (inlineChatState.containerElement) {
+      if (inlineChatState.containerElement.parentNode) {
+        inlineChatState.containerElement.parentNode.removeChild(inlineChatState.containerElement);
+      }
+      inlineChatState.containerElement = null;
+    }
+  }
+}
+
 // ============================================================================
 // Message Handling
 // ============================================================================
@@ -472,7 +621,8 @@ type MessageType =
   | 'GET_STATE'
   | 'PING'
   | 'OPEN_INLINE_CHAT'
-  | 'CLOSE_INLINE_CHAT';
+  | 'CLOSE_INLINE_CHAT'
+  | 'OPEN_ELEMENT_CHAT';
 
 /**
  * Message structure
@@ -516,6 +666,11 @@ function handleMessage(
 
       case 'CLOSE_INLINE_CHAT':
         closeInlineChat();
+        sendResponse({ success: true });
+        break;
+
+      case 'OPEN_ELEMENT_CHAT':
+        openElementChat();
         sendResponse({ success: true });
         break;
 
@@ -593,6 +748,17 @@ function handleKeyboardShortcut(event: KeyboardEvent): void {
 // ============================================================================
 
 /**
+ * Track right-clicked element for context menu
+ */
+function handleContextMenu(event: MouseEvent): void {
+  // Store the element and position
+  lastRightClickedElement = event.target as HTMLElement;
+  lastRightClickPosition = { x: event.clientX, y: event.clientY };
+
+  console.log('[content] Context menu opened on element:', lastRightClickedElement.tagName);
+}
+
+/**
  * Initializes the content script
  *
  * Sets up message listeners and keyboard shortcuts.
@@ -609,6 +775,9 @@ function initialize(): void {
 
   // Add keyboard shortcut listener
   document.addEventListener('keydown', handleKeyboardShortcut, true);
+
+  // Add context menu listener for tracking right-clicked elements
+  document.addEventListener('contextmenu', handleContextMenu, true);
 
   // Send ready message to background
   chrome.runtime.sendMessage({
@@ -640,8 +809,14 @@ function cleanup(): void {
     deactivateSelector();
   }
 
+  // Close inline chat if open
+  if (inlineChatState.isOpen) {
+    closeInlineChat();
+  }
+
   // Remove event listeners
   document.removeEventListener('keydown', handleKeyboardShortcut, true);
+  document.removeEventListener('contextmenu', handleContextMenu, true);
 
   console.log('[content] Content script cleaned up');
 }

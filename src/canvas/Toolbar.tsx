@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } f
 import { useReactFlow } from '@xyflow/react';
 import type { StorageStats } from '@/types/card';
 import type { FilterState } from './useCanvasState';
+import { FilePickerButton } from '@/shared/components/ImageUpload';
 
 interface ToolbarProps {
   stats: StorageStats | null;
@@ -16,6 +17,7 @@ interface ToolbarProps {
   onCreateNote?: () => void;
   onToggleConnectionMode?: () => void;
   onOpenSidePanel?: () => void;
+  onUploadImages?: (files: File[]) => Promise<void>;
   connectionMode?: boolean;
 }
 
@@ -37,6 +39,7 @@ export const Toolbar = forwardRef<ToolbarRef, ToolbarProps>(({
   onCreateNote,
   onToggleConnectionMode,
   onOpenSidePanel,
+  onUploadImages,
   connectionMode,
 }, ref) => {
   const [searchInput, setSearchInput] = useState(filters.searchQuery);
@@ -227,6 +230,28 @@ export const Toolbar = forwardRef<ToolbarRef, ToolbarProps>(({
             </svg>
             <span style={styles.newNoteText}>New Note</span>
           </button>
+
+          {onUploadImages && (
+            <FilePickerButton
+              onFilesSelected={onUploadImages}
+              multiple
+              label="📁 Upload"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 14px',
+                border: '1px solid rgba(76, 175, 80, 0.4)',
+                borderRadius: '8px',
+                background: 'rgba(76, 175, 80, 0.1)',
+                color: '#2E7D32',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontWeight: 600,
+                fontSize: '14px',
+              }}
+            />
+          )}
 
           <button
             onClick={onToggleConnectionMode}
@@ -839,5 +864,8 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     transition: 'all 0.2s',
     position: 'relative',
+  },
+  uploadButtonWrapper: {
+    display: 'inline-flex',
   },
 };

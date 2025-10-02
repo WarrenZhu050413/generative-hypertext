@@ -3,7 +3,9 @@ import { css } from '@emotion/react';
 import React, { useState, useRef, useEffect } from 'react';
 import Draggable from 'react-draggable';
 import type { PageContext } from '@/services/pageContextCapture';
-import { formatPageContextAsPrompt } from '@/services/pageContextCapture';
+import type { ElementContext } from '@/services/elementContextCapture';
+import { formatPageContextAsPrompt, capturePageContext } from '@/services/pageContextCapture';
+import { formatElementContextAsPrompt } from '@/services/elementContextCapture';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -12,17 +14,26 @@ interface Message {
 
 export interface InlineChatWindowProps {
   onClose: () => void;
-  initialContext: PageContext;
+  initialContext: PageContext | ElementContext;
+  elementPosition?: { x: number; y: number }; // For positioning near element
   onSaveToCanvas?: (messages: Message[]) => Promise<void>;
 }
 
 /**
+ * Type guard to check if context is ElementContext
+ */
+function isElementContext(context: PageContext | ElementContext): context is ElementContext {
+  return 'element' in context;
+}
+
+/**
  * Inline Chat Window
- * Floating draggable window for chatting with web pages
+ * Floating draggable window for chatting with web pages or specific elements
  */
 export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
   onClose,
   initialContext,
+  elementPosition,
   onSaveToCanvas
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -32,6 +43,12 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nodeRef = useRef(null); // Required for Draggable
+
+  // Determine context type
+  const isElement = isElementContext(initialContext);
+  const contextTitle = isElement
+    ? `<${initialContext.element.tagName}>${initialContext.element.id ? `#${initialContext.element.id}` : ''}`
+    : initialContext.title;
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -72,7 +89,11 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
     try {
       // Call API (using dynamic import to avoid bundling issues)
       const { chatWithPage } = await import('@/services/claudeAPIService');
-      const systemPrompt = formatPageContextAsPrompt(initialContext);
+
+      // Format context based on type
+      const systemPrompt = isElement
+        ? formatElementContextAsPrompt(initialContext)
+        : formatPageContextAsPrompt(initialContext);
 
       let assistantContent = '';
       const stream = await chatWithPage(
@@ -113,8 +134,7 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
     }
   };
 
-  const handleRecapture = async () => {
-    const { capturePageContext } = await import('@/services/pageContextCapture');
+  const handleRecapture = () => {
     const newContext = capturePageContext();
     console.log('[InlineChatWindow] Recaptured page context:', newContext.title);
     // For now, just log. In the future, we could update the context
@@ -127,19 +147,28 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
     }
   };
 
+  // Calculate initial position
+  const defaultPosition = elementPosition
+    ? {
+        // Position near element, but ensure it fits on screen
+        x: Math.min(elementPosition.x + 20, window.innerWidth - 450),
+        y: Math.max(20, Math.min(elementPosition.y - 100, window.innerHeight - 600))
+      }
+    : { x: window.innerWidth - 450, y: 50 };
+
   return (
     <Draggable
       nodeRef={nodeRef}
       handle=".drag-handle"
       bounds="parent"
-      defaultPosition={{ x: window.innerWidth - 450, y: 50 }}
+      defaultPosition={defaultPosition}
     >
       <div ref={nodeRef} css={containerStyles}>
         {/* Header */}
         <div css={headerStyles} className="drag-handle">
           <div css={headerTitleStyles}>
-            <span css={iconStyles}>💬</span>
-            <span>Chat with Page</span>
+            <span css={iconStyles}>{isElement ? '🎯' : '💬'}</span>
+            <span>{isElement ? 'Chat with Element' : 'Chat with Page'}</span>
           </div>
           <div css={headerActionsStyles}>
             <button
@@ -173,14 +202,24 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
         <div css={messagesContainerStyles}>
           {messages.length === 0 && (
             <div css={emptyStateStyles}>
-              <div css={emptyIconStyles}>💬</div>
-              <div css={emptyTitleStyles}>Chat with this page</div>
+              <div css={emptyIconStyles}>{isElement ? '🎯' : '💬'}</div>
+              <div css={emptyTitleStyles}>
+                {isElement ? 'Chat about this element' : 'Chat with this page'}
+              </div>
               <div css={emptyDescStyles}>
-                Ask questions, request summaries, or discuss the content on this page.
+                {isElement
+                  ? 'Ask questions about this element, its purpose, or how it works.'
+                  : 'Ask questions, request summaries, or discuss the content on this page.'}
               </div>
               <div css={emptyHintStyles}>
-                <strong>Page:</strong> {initialContext.title}
+                <strong>{isElement ? 'Element' : 'Page'}:</strong> {contextTitle}
               </div>
+              {isElement && initialContext.element.text && (
+                <div css={emptyHintStyles} style={{ marginTop: '8px' }}>
+                  <strong>Text:</strong> {initialContext.element.text.substring(0, 100)}
+                  {initialContext.element.text.length > 100 ? '...' : ''}
+                </div>
+              )}
             </div>
           )}
 
@@ -264,6 +303,7 @@ const containerStyles = css`
   display: flex;
   flex-direction: column;
   z-index: 999999;
+  pointer-events: auto; /* Override parent's pointer-events: none */
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
 `;
 

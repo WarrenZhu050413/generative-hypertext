@@ -11,7 +11,7 @@ Successfully completed a comprehensive architectural refactor that eliminates ~4
 **Keyboard Shortcuts:**
 - `Cmd+E` / `Ctrl+E` - Activate element selector (Canvas mode)
 - `Cmd+Shift+E` / `Ctrl+Shift+E` - Activate element selector (Stash mode)
-- `Ctrl+Shift+C` - Toggle inline chat with page
+- `Alt+Shift+C` - Toggle inline chat with page (updated from Ctrl+Shift+C)
 
 **Mode Indicators:**
 - Replaced checkbox with prominent banner at top of screen
@@ -45,12 +45,18 @@ Created `src/shared/` directory with reusable code:
 - ✅ **File Picker Button** - Manual image selection with "📁 Upload Images" button
 - ✅ **Real-time Sync** - Updates instantly via runtime messages (no reload needed)
 - ✅ **Shared Hooks** - Uses same card management as Canvas
+- ✅ **ReactMarkdown Integration** - Beautiful markdown rendering for beautified content
+- ✅ **Card Type Badges** - Color-coded badges (Image 📷, Note 📝, Generated ✨, Clipped 🌐)
+- ✅ **Image Display** - Dedicated image viewer for image cards with max-height constraints
 
 **Implementation:**
 - Wrapped entire panel in `<ImageUploadZone>` component
 - Added `<FilePickerButton>` in upload section
 - Uses `useImageUpload` hook with `stashImmediately: true` option
 - All uploaded images automatically go to stash
+- ReactMarkdown with `remark-gfm` plugin for GitHub Flavored Markdown
+- Custom markdown component styles matching Canvas aesthetic
+- Card type detection with emoji and color-coded background gradients
 
 ### 4. Cross-Context Synchronization
 
@@ -149,11 +155,35 @@ Side Panel:
 
 ## 📝 Files Modified
 
-- `src/manifest.json` - Updated keyboard shortcuts
+- `src/manifest.json` - Updated keyboard shortcuts (Alt+Shift+C for inline chat)
 - `src/components/ElementSelector.tsx` - Added mode indicators, removed checkbox
-- `src/sidepanel/SidePanel.tsx` - Added image upload, uses shared hooks
+- `src/sidepanel/SidePanel.tsx` - Added image upload, uses shared hooks, ReactMarkdown, card badges
 - `src/canvas/useCanvasState.ts` - Uses shared filtering (TODO: can be further refactored)
 - `CLAUDE.md` - Documented new architecture
+- `src/components/FillInModal.tsx` - Fixed dynamic import (static import now)
+- `src/components/InlineChatWindow.tsx` - Fixed dynamic import (static import now)
+
+## 🆕 Recent Updates (Post-Refactor)
+
+**Visual Enhancements (Side Panel):**
+- Added ReactMarkdown integration with `remark-gfm` for beautified content rendering
+- Implemented card type badges with color-coded gradients:
+  - 📷 Image: Green gradient
+  - 📝 Note: Gold gradient
+  - ✨ Generated: Gold/yellow gradient
+  - 🌐 Clipped: Red/crimson gradient
+- Added dedicated image display for image cards with max-height: 300px
+- Improved markdown styling (h1-h3, paragraphs, lists, code blocks) matching Canvas aesthetic
+- Enhanced card headers with favicon, domain, badge, and timestamp
+
+**Bug Fixes:**
+- Fixed dynamic import warnings for `connectionContextService` and `pageContextCapture`
+- Converted all dynamic imports to static imports for better bundling
+- Build now completes without Vite warnings
+
+**Configuration Updates:**
+- Changed inline chat keyboard shortcut from `Ctrl+Shift+C` to `Alt+Shift+C` (manifest.json)
+- Reduced keybinding conflicts with browser/system shortcuts
 
 ## 🧪 Testing
 

@@ -3,11 +3,17 @@
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Nabokov Web Clipper installed');
 
-  // Create context menu
+  // Create context menus
   chrome.contextMenus.create({
     id: 'clip-to-canvas',
     title: 'Clip to Canvas',
     contexts: ['selection', 'image', 'link', 'page']
+  });
+
+  chrome.contextMenus.create({
+    id: 'chat-with-element',
+    title: '💬 Chat about this',
+    contexts: ['all']
   });
 });
 
@@ -71,6 +77,19 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         srcUrl: info.srcUrl,
         pageUrl: info.pageUrl
       }
+    });
+  } else if (info.menuItemId === 'chat-with-element' && tab?.id) {
+    // Open element-contextual chat
+    console.log('[background] Opening element chat from context menu');
+    chrome.tabs.sendMessage(tab.id, {
+      type: 'OPEN_ELEMENT_CHAT',
+      data: {
+        selectionText: info.selectionText,
+        linkUrl: info.linkUrl,
+        srcUrl: info.srcUrl
+      }
+    }).catch(err => {
+      console.error('[background] Failed to send element chat message:', err);
     });
   }
 });

@@ -233,8 +233,12 @@ Mode indicators replaced the old checkbox approach with prominent banners at the
 - Custom React Flow node type
 - **Critical**: Always check `card.tags && card.tags.length` (tags may be undefined on old cards)
 - Displays sanitized content preview, metadata, tags
+- **Image cards**: Displays `card.imageData` inline with proper aspect ratio preservation
+- **ReactMarkdown**: Renders beautified content with custom component styling
 - Supports inline editing (double-click content to edit)
-- Chinese aesthetic styling
+- Chinese aesthetic styling (gradient backgrounds, multi-layer shadows)
+- Resizable with NodeResizer (min: 200x150px)
+- Collapsible to save canvas space
 
 **ChatModal** (`src/canvas/ChatModal.tsx`)
 
@@ -306,8 +310,15 @@ Mode indicators replaced the old checkbox approach with prominent banners at the
 **Side Panel Stash System**
 
 - **stashService** (`src/sidepanel/stashService.ts`): Manages stashed cards
-- **SidePanel** (`src/sidepanel/SidePanel.tsx`): UI for viewing/managing stashed cards
-- **NEW Features**:
+- **SidePanel** (`src/sidepanel/SidePanel.tsx`): Compact UI for viewing/managing stashed cards
+- **Canvas-like Card Design**:
+  - Cards match CardNode styling with gradient backgrounds and box-shadows
+  - **Inline image display** for image cards (max-height 250px, object-fit: contain)
+  - **ReactMarkdown rendering** for beautified content
+  - **Card type badges** (📷 Image, 📝 Note, ✨ Generated, 🌐 Clipped)
+  - **Compact layout** with header, title, tags inline, and action buttons
+  - Expand/collapse for long content (collapsed: 150px, expanded: 500px)
+- **Features**:
   - **Image Upload**: Drag & drop or file picker for uploading images directly to stash
   - **Shared Hooks**: Uses `useCards`, `useCardOperations`, `useImageUpload` from `src/shared/`
   - **Real-time Sync**: Updates instantly via runtime messages (no reload needed)
@@ -529,6 +540,11 @@ archive/            # Old implementations (nabokov-clipper/, deprecated tests)
   - Real API via `claudeAPIService` when API key configured
   - Falls back to mock responses in development mode
   - Always check `apiConfigService.hasAPIKey()` before API calls
+- Visual consistency:
+  - Side Panel cards should match CardNode styling (gradients, shadows, borders)
+  - Use ReactMarkdown for beautified content rendering
+  - Image cards should render `card.imageData` inline with `object-fit: contain`
+  - Card type badges provide visual indicators for different card types
 
 ## Testing Strategy
 
