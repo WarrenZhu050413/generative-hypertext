@@ -18,8 +18,10 @@ import React from 'react';
 import { createShadowRoot, mountReactInShadow, CHINESE_AESTHETIC_STYLES } from '../utils/shadowDOM';
 import { ElementSelector } from '../components/ElementSelector';
 import { FloatingChat } from '../components/FloatingChat';
+import { InlineChatWindow } from '../components/InlineChatWindow';
+import { capturePageContext } from '../services/pageContextCapture';
 import { Card } from '../types';
-import { saveCard } from '../utils/storage';
+import { saveCard, generateId } from '../utils/storage';
 
 // ============================================================================
 // State Management
@@ -51,6 +53,21 @@ let state: ContentScriptState = {
   selectedElement: null,
   capturedCard: null,
   showFloatingChat: false,
+  containerElement: null,
+  cleanup: null,
+};
+
+/**
+ * Inline chat state (separate from element selector)
+ */
+interface InlineChatState {
+  isOpen: boolean;
+  containerElement: HTMLElement | null;
+  cleanup: (() => void) | null;
+}
+
+let inlineChatState: InlineChatState = {
+  isOpen: false,
   containerElement: null,
   cleanup: null,
 };
@@ -265,6 +282,184 @@ function deactivateSelector(): void {
 }
 
 // ============================================================================
+// Inline Chat Functions
+// ============================================================================
+
+/**
+ * Opens the inline chat window
+ */
+function openInlineChat(): void {
+  // Toggle if already open
+  if (inlineChatState.isOpen) {
+    console.log('[content] Inline chat already open, toggling closed');
+    closeInlineChat();
+    return;
+  }
+
+  console.log('[content] Opening inline chat...');
+
+  try {
+    // Capture page context
+    const pageContext = capturePageContext();
+    console.log('[content] Page context captured:', pageContext.title);
+
+    // Create container
+    const container = document.createElement('div');
+    container.id = 'nabokov-inline-chat-root';
+    container.setAttribute('data-nabokov-chat', 'true');
+
+    // Position for fixed elements (inline chat uses its own positioning)
+    container.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2147483646;
+      pointer-events: none;
+    `;
+
+    document.body.appendChild(container);
+    inlineChatState.containerElement = container;
+
+    // Create shadow root
+    const { shadowRoot, styleCache } = createShadowRoot(container, {
+      injectBaseStyles: true,
+    });
+
+    // Handle save to canvas
+    const handleSaveToCanvas = async (messages: Array<{ role: 'user' | 'assistant'; content: string }>) => {
+      console.log('[content] Saving conversation to canvas...');
+
+      try {
+        // Format conversation as HTML
+        const conversationHTML = messages.map((msg, i) => {
+          const role = msg.role === 'user' ? 'You' : 'Assistant';
+          return `<div style="margin: 12px 0;">
+            <strong style="color: ${msg.role === 'user' ? '#8B0000' : '#FFD700'};">${role}:</strong>
+            <p style="margin: 4px 0 0 0; white-space: pre-wrap;">${msg.content}</p>
+          </div>`;
+        }).join('\n');
+
+        const card: Card = {
+          id: generateId(),
+          content: `<div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
+            <h3 style="color: #8B0000; margin-bottom: 12px;">💬 Chat with ${pageContext.title}</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 16px;">
+              <strong>URL:</strong> ${pageContext.url}
+            </p>
+            ${conversationHTML}
+          </div>`,
+          metadata: {
+            url: pageContext.url,
+            title: `Chat: ${pageContext.title}`,
+            domain: new URL(pageContext.url).hostname,
+            clipDate: new Date().toISOString(),
+            favicon: '',
+          },
+          starred: false,
+          tags: ['chat', 'conversation'],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          cardType: 'note',
+        };
+
+        await saveCard(card);
+        console.log('[content] Conversation saved to canvas:', card.id);
+
+        // Dispatch event to notify canvas
+        window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+
+        // Show success message (if you have a toast system)
+        alert('Conversation saved to canvas!');
+      } catch (error) {
+        console.error('[content] Error saving conversation:', error);
+        alert('Error saving conversation. Please try again.');
+      }
+    };
+
+    // Handle close
+    const handleClose = () => {
+      console.log('[content] Inline chat closed');
+      closeInlineChat();
+    };
+
+    // Mount InlineChatWindow
+    const cleanup = mountReactInShadow(
+      shadowRoot,
+      <InlineChatWindow
+        onClose={handleClose}
+        initialContext={pageContext}
+        onSaveToCanvas={handleSaveToCanvas}
+      />,
+      { styleCache }
+    );
+
+    // Update state
+    inlineChatState.isOpen = true;
+    inlineChatState.cleanup = cleanup;
+
+    console.log('[content] Inline chat opened successfully');
+
+  } catch (error) {
+    console.error('[content] Error opening inline chat:', error);
+
+    // Cleanup on error
+    if (inlineChatState.containerElement) {
+      if (inlineChatState.containerElement.parentNode) {
+        inlineChatState.containerElement.parentNode.removeChild(inlineChatState.containerElement);
+      }
+      inlineChatState.containerElement = null;
+    }
+  }
+}
+
+/**
+ * Closes the inline chat window
+ */
+function closeInlineChat(): void {
+  if (!inlineChatState.isOpen) {
+    console.warn('[content] Inline chat not open');
+    return;
+  }
+
+  console.log('[content] Closing inline chat...');
+
+  try {
+    // Unmount React component
+    if (inlineChatState.cleanup) {
+      inlineChatState.cleanup();
+      inlineChatState.cleanup = null;
+    }
+
+    // Remove container
+    if (inlineChatState.containerElement && inlineChatState.containerElement.parentNode) {
+      inlineChatState.containerElement.parentNode.removeChild(inlineChatState.containerElement);
+      inlineChatState.containerElement = null;
+    }
+
+    // Reset state
+    inlineChatState = {
+      isOpen: false,
+      containerElement: null,
+      cleanup: null,
+    };
+
+    console.log('[content] Inline chat closed successfully');
+
+  } catch (error) {
+    console.error('[content] Error closing inline chat:', error);
+
+    // Force cleanup
+    inlineChatState = {
+      isOpen: false,
+      containerElement: null,
+      cleanup: null,
+    };
+  }
+}
+
+// ============================================================================
 // Message Handling
 // ============================================================================
 
@@ -275,7 +470,9 @@ type MessageType =
   | 'ACTIVATE_SELECTOR'
   | 'DEACTIVATE_SELECTOR'
   | 'GET_STATE'
-  | 'PING';
+  | 'PING'
+  | 'OPEN_INLINE_CHAT'
+  | 'CLOSE_INLINE_CHAT';
 
 /**
  * Message structure
@@ -312,6 +509,16 @@ function handleMessage(
         sendResponse({ success: true });
         break;
 
+      case 'OPEN_INLINE_CHAT':
+        openInlineChat();
+        sendResponse({ success: true });
+        break;
+
+      case 'CLOSE_INLINE_CHAT':
+        closeInlineChat();
+        sendResponse({ success: true });
+        break;
+
       case 'GET_STATE':
         sendResponse({
           success: true,
@@ -319,6 +526,7 @@ function handleMessage(
             isActive: state.isActive,
             hasCapture: state.capturedCard !== null,
             showingChat: state.showFloatingChat,
+            inlineChatOpen: inlineChatState.isOpen,
           },
         });
         break;

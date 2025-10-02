@@ -49,14 +49,18 @@ node test-scripts/test-canvas-direct.mjs
 
 1. **Background Service Worker** (`src/background/index.ts`)
    - Manifest V3 service worker
-   - Handles keyboard commands (`Cmd+Shift+E`)
+   - Handles keyboard commands:
+     - `Cmd+E` (Canvas mode)
+     - `Cmd+Shift+E` (Stash mode)
+     - `Ctrl+Shift+C` (Inline chat)
    - Context menu registration
    - Opens canvas on toolbar icon click
 
 2. **Content Script** (`src/content/index.tsx`)
    - Injected into all pages (`<all_urls>`)
-   - Listens for `ACTIVATE_SELECTOR` messages
+   - Listens for `ACTIVATE_SELECTOR` and `OPEN_INLINE_CHAT` messages
    - Mounts `ElementSelector` component into Shadow DOM
+   - Mounts `InlineChatWindow` for page conversations
    - Shadow DOM isolation prevents CSS conflicts
 
 3. **Canvas Page** (`src/canvas/index.html`)
@@ -67,8 +71,11 @@ node test-scripts/test-canvas-direct.mjs
 4. **Side Panel** (`src/sidepanel/index.html`)
    - Chrome Side Panel UI for stashed cards
    - Accessed via `chrome.sidePanel.open()`
-   - Allows restoring or permanently deleting stashed cards
-   - Search and filter functionality
+   - Features:
+     - Image upload (drag & drop + file picker)
+     - Restore or permanently delete stashed cards
+     - Search and filter functionality
+     - Uses shared hooks and components
 
 ### Data Flow
 

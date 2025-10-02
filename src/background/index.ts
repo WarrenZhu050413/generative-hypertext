@@ -37,6 +37,17 @@ chrome.commands.onCommand.addListener((command) => {
         });
       }
     });
+  } else if (command === 'toggle-inline-chat') {
+    // Toggle inline chat with page
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          type: 'OPEN_INLINE_CHAT'
+        }).catch(err => {
+          console.error('Failed to send message to content script:', err);
+        });
+      }
+    });
   }
 });
 

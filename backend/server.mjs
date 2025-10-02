@@ -142,6 +142,95 @@ app.post('/api/message', async (req, res) => {
 });
 
 /**
+ * Streaming message endpoint (for inline chat)
+ *
+ * POST /api/stream
+ * Body: {
+ *   messages: [{ role: 'user' | 'assistant', content: string }],
+ *   options?: {
+ *     system?: string,
+ *     maxTokens?: number,
+ *     temperature?: number,
+ *     model?: string
+ *   }
+ * }
+ * Response: Server-Sent Events (SSE) stream
+ */
+app.post('/api/stream', async (req, res) => {
+  try {
+    console.log('[Backend] Received /api/stream request');
+
+    const { messages, options = {} } = req.body;
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({
+        error: 'Invalid request: messages array is required'
+      });
+    }
+
+    // Set headers for SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Build prompt from messages
+    const conversationText = messages
+      .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n\n');
+
+    const systemPrompt = options.system || '';
+    const fullPrompt = systemPrompt
+      ? `${systemPrompt}\n\n${conversationText}`
+      : conversationText;
+
+    console.log('[Backend] Creating streaming Agent SDK query...');
+
+    // Create Agent SDK query
+    const agentQuery = query({
+      prompt: fullPrompt,
+      options: {
+        permissionMode: 'bypassPermissions',
+        settingSources: [],
+        allowedTools: [],
+      }
+    });
+
+    // Stream responses
+    for await (const message of agentQuery) {
+      if (message.type === 'assistant') {
+        // Extract text from assistant message
+        const textBlocks = message.message.content.filter(
+          block => block.type === 'text'
+        );
+        for (const block of textBlocks) {
+          // Send SSE event
+          res.write(`data: ${JSON.stringify({ delta: { text: block.text } })}\n\n`);
+        }
+      }
+
+      if (message.type === 'result') {
+        if (message.subtype === 'success') {
+          console.log('[Backend] ✓ Streaming complete');
+          res.write('data: [DONE]\n\n');
+          res.end();
+        } else if (message.subtype === 'error') {
+          console.error('[Backend] ✗ Streaming error:', message.error);
+          res.write(`data: ${JSON.stringify({ error: message.error })}\n\n`);
+          res.end();
+        }
+        break;
+      }
+    }
+
+  } catch (error) {
+    console.error('[Backend] Error processing stream:', error);
+    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+    res.end();
+  }
+});
+
+/**
  * Start server
  */
 app.listen(PORT, () => {

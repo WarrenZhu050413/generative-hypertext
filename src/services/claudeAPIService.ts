@@ -268,6 +268,146 @@ export class ClaudeAPIService {
   }
 
   /**
+   * Send a message with streaming response
+   * Returns an async generator that yields text chunks
+   */
+  async *sendMessageStreaming(
+    messages: ClaudeMessage[],
+    options?: {
+      model?: string;
+      maxTokens?: number;
+      temperature?: number;
+      system?: string;
+    }
+  ): AsyncGenerator<string, void, unknown> {
+    // STEP 1: Try local backend first
+    try {
+      console.log('[ClaudeAPI] Trying streaming via local backend...');
+      const backendResponse = await fetch(`${this.BACKEND_URL}/api/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages,
+          options: {
+            system: options?.system,
+            maxTokens: options?.maxTokens || this.DEFAULT_MAX_TOKENS,
+            temperature: options?.temperature,
+            model: options?.model || this.DEFAULT_MODEL,
+          },
+        }),
+      });
+
+      if (backendResponse.ok && backendResponse.body) {
+        console.log('[ClaudeAPI] ✓ Streaming via backend (subscription auth)');
+        const reader = backendResponse.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n').filter(line => line.trim());
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') continue;
+
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.delta?.text) {
+                  yield parsed.delta.text;
+                }
+              } catch (e) {
+                console.warn('[ClaudeAPI] Failed to parse SSE data:', data);
+              }
+            }
+          }
+        }
+        return;
+      }
+
+      console.log('[ClaudeAPI] Backend streaming unavailable, trying direct API...');
+    } catch (backendError) {
+      console.log('[ClaudeAPI] Backend not running, trying direct API...');
+    }
+
+    // STEP 2: Try direct API with streaming
+    const apiKey = await apiConfigService.getAPIKey();
+
+    const request = {
+      model: options?.model || this.DEFAULT_MODEL,
+      messages,
+      max_tokens: options?.maxTokens || this.DEFAULT_MAX_TOKENS,
+      temperature: options?.temperature ?? 1.0,
+      stream: true,
+      ...(options?.system ? { system: options.system } : {}),
+    };
+
+    console.log('[ClaudeAPI] Trying direct API streaming:', {
+      model: request.model,
+      messageCount: messages.length,
+      hasSystem: !!request.system,
+      hasAPIKey: !!apiKey,
+    });
+
+    const response = await fetch(this.API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey ? { 'x-api-key': apiKey } : {}),
+        'anthropic-version': this.API_VERSION,
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('[ClaudeAPI] Direct API streaming error:', errorData);
+      throw new Error(
+        `Claude API error: ${response.status} ${response.statusText}${
+          errorData.error?.message ? ` - ${errorData.error.message}` : ''
+        }`
+      );
+    }
+
+    if (!response.body) {
+      throw new Error('Response body is null');
+    }
+
+    console.log('[ClaudeAPI] ✓ Direct API streaming started');
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n').filter(line => line.trim());
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+              yield parsed.delta.text;
+            }
+          } catch (e) {
+            console.warn('[ClaudeAPI] Failed to parse SSE data:', data);
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Check if API is configured and accessible
    */
   async testConnection(): Promise<boolean> {
@@ -293,3 +433,23 @@ export class ClaudeAPIService {
 
 // Singleton instance
 export const claudeAPIService = new ClaudeAPIService();
+
+/**
+ * Chat with a web page using streaming API
+ * Convenience function for inline chat feature
+ */
+export async function* chatWithPage(
+  systemPrompt: string,
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>
+): AsyncGenerator<string, void, unknown> {
+  const claudeMessages: ClaudeMessage[] = messages.map(m => ({
+    role: m.role,
+    content: m.content
+  }));
+
+  yield* claudeAPIService.sendMessageStreaming(claudeMessages, {
+    system: systemPrompt,
+    maxTokens: 4096,
+    temperature: 0.7
+  });
+}
