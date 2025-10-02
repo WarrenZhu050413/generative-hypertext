@@ -23,6 +23,19 @@ import { useButtons } from './useButtons';
 import { ButtonSettings } from '@/components/ButtonSettings';
 import { OverflowMenu } from '@/components/OverflowMenu';
 
+// Add CSS animation for skeleton pulsing
+if (typeof document !== 'undefined' && !document.getElementById('skeleton-animation')) {
+  const style = document.createElement('style');
+  style.id = 'skeleton-animation';
+  style.textContent = `
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 interface CardNodeProps {
   data: {
     card: Card;
@@ -691,7 +704,10 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
             /* Content with Markdown rendering - Maximum space! */
             <div
               className="card-content-scrollable"
-              style={styles.content}
+              style={{
+                ...styles.content,
+                ...(card.isGenerating ? styles.contentGenerating : {}),
+              }}
               onWheel={(e) => {
                 // Prevent scroll from bubbling to canvas (which would zoom)
                 const target = e.currentTarget;
@@ -705,32 +721,47 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
                 }
               }}
             >
-              {/* Render markdown if beautified, otherwise show HTML or text */}
-              {card.beautifiedContent ? (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    h1: ({node, ...props}) => <h2 style={styles.markdownH1} {...props} />,
-                    h2: ({node, ...props}) => <h3 style={styles.markdownH2} {...props} />,
-                    h3: ({node, ...props}) => <h4 style={styles.markdownH3} {...props} />,
-                    p: ({node, ...props}) => <p style={styles.markdownP} {...props} />,
-                    ul: ({node, ...props}) => <ul style={styles.markdownUl} {...props} />,
-                    ol: ({node, ...props}) => <ol style={styles.markdownOl} {...props} />,
-                    li: ({node, ...props}) => <li style={styles.markdownLi} {...props} />,
-                    table: ({node, ...props}) => <table style={styles.markdownTable} {...props} />,
-                    th: ({node, ...props}) => <th style={styles.markdownTh} {...props} />,
-                    td: ({node, ...props}) => <td style={styles.markdownTd} {...props} />,
-                    strong: ({node, ...props}) => <strong style={styles.markdownStrong} {...props} />,
-                    code: ({node, ...props}) => <code style={styles.markdownCode} {...props} />,
-                  }}
-                >
-                  {card.beautifiedContent}
-                </ReactMarkdown>
+              {/* Show skeleton UI when generating */}
+              {card.isGenerating ? (
+                <div style={styles.skeletonContainer}>
+                  <div style={styles.skeletonLine} />
+                  <div style={styles.skeletonLine} />
+                  <div style={{...styles.skeletonLine, width: '60%'}} />
+                  <div style={{...styles.skeletonLine, width: '80%', marginTop: '16px'}} />
+                  <div style={styles.skeletonLine} />
+                  <div style={{...styles.skeletonLine, width: '70%'}} />
+                  <div style={styles.skeletonText}>✨ Generating content...</div>
+                </div>
               ) : (
-                <div
-                  style={styles.contentHTML}
-                  dangerouslySetInnerHTML={{ __html: sanitizedContent }}
-                />
+                <>
+                  {/* Render markdown if beautified, otherwise show HTML or text */}
+                  {card.beautifiedContent ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        h1: ({node, ...props}) => <h2 style={styles.markdownH1} {...props} />,
+                        h2: ({node, ...props}) => <h3 style={styles.markdownH2} {...props} />,
+                        h3: ({node, ...props}) => <h4 style={styles.markdownH3} {...props} />,
+                        p: ({node, ...props}) => <p style={styles.markdownP} {...props} />,
+                        ul: ({node, ...props}) => <ul style={styles.markdownUl} {...props} />,
+                        ol: ({node, ...props}) => <ol style={styles.markdownOl} {...props} />,
+                        li: ({node, ...props}) => <li style={styles.markdownLi} {...props} />,
+                        table: ({node, ...props}) => <table style={styles.markdownTable} {...props} />,
+                        th: ({node, ...props}) => <th style={styles.markdownTh} {...props} />,
+                        td: ({node, ...props}) => <td style={styles.markdownTd} {...props} />,
+                        strong: ({node, ...props}) => <strong style={styles.markdownStrong} {...props} />,
+                        code: ({node, ...props}) => <code style={styles.markdownCode} {...props} />,
+                      }}
+                    >
+                      {card.beautifiedContent}
+                    </ReactMarkdown>
+                  ) : (
+                    <div
+                      style={styles.contentHTML}
+                      dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+                    />
+                  )}
+                </>
               )}
             </div>
           )}
@@ -1315,4 +1346,28 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '12px',
     fontFamily: 'Monaco, Menlo, monospace',
   },
+  // Skeleton loading styles
+  contentGenerating: {
+    pointerEvents: 'none',
+    opacity: 0.7,
+  },
+  skeletonContainer: {
+    padding: '12px 0',
+    animation: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+  } as React.CSSProperties,
+  skeletonLine: {
+    height: '14px',
+    backgroundColor: 'rgba(184, 156, 130, 0.2)',
+    borderRadius: '4px',
+    marginBottom: '10px',
+    width: '100%',
+  },
+  skeletonText: {
+    textAlign: 'center',
+    fontSize: '12px',
+    color: '#D4AF37',
+    fontStyle: 'italic',
+    marginTop: '20px',
+    animation: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+  } as React.CSSProperties,
 };

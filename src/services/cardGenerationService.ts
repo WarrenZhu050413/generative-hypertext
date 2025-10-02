@@ -41,6 +41,60 @@ export class CardGenerationService {
       );
     }
 
+    // Calculate position for new card (to the right of source)
+    const position = this.calculatePosition(sourceCard);
+    const cardId = generateId();
+    const now = Date.now();
+
+    // Create skeleton card immediately
+    const skeletonCard: Card = {
+      id: cardId,
+      content: '<p class="skeleton-placeholder">Generating content...</p>',
+      cardType: 'generated',
+      parentCardId: sourceCard.id,
+      metadata: {
+        title: `${button.label}: ${sourceCard.metadata.title}`,
+        domain: 'ai-generated',
+        favicon: button.icon,
+        url: '',
+        timestamp: now,
+      },
+      position,
+      size: { width: 400, height: 300 },
+      starred: false,
+      tags: ['ai-generated', button.label.toLowerCase()],
+      createdAt: now,
+      updatedAt: now,
+      isGenerating: true, // Mark as generating for skeleton UI
+      generationContext: {
+        sourceMessageId: generateId(),
+        userPrompt: prompt,
+        timestamp: now,
+      },
+    };
+
+    // Save skeleton card and show it immediately
+    console.log('[cardGenerationService] Creating skeleton card:', cardId);
+    await saveCard(skeletonCard);
+
+    // Create connection immediately
+    const connectionId = generateId();
+    await addConnection({
+      id: connectionId,
+      source: sourceCard.id,
+      target: cardId,
+      type: button.connectionType,
+      label: customContext ? `${button.label}: ${customContext}` : button.label,
+      metadata: {
+        createdAt: now,
+        createdBy: 'user',
+      },
+    });
+
+    // Dispatch event to refresh canvas and show skeleton
+    window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+    console.log('[cardGenerationService] Skeleton card displayed');
+
     // Generate content from LLM
     console.log('[cardGenerationService] Calling Claude API...');
     let responseContent = '';
@@ -58,6 +112,12 @@ export class CardGenerationService {
     } catch (apiError) {
       console.error('[cardGenerationService] ✗ Claude API failed:', apiError);
 
+      // Update skeleton card with error message
+      skeletonCard.content = '<p style="color: #e53e3e;">⚠️ Generation failed. Click to retry.</p>';
+      skeletonCard.isGenerating = false;
+      await saveCard(skeletonCard);
+      window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+
       // Re-throw with user-friendly message
       const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown error';
       throw new Error(
@@ -67,7 +127,7 @@ export class CardGenerationService {
 
     console.log('[cardGenerationService] Response length:', responseContent.length);
 
-    // Create conversation manually (no need for chatService)
+    // Create conversation
     const conversation = [
       {
         id: generateId(),
@@ -83,58 +143,24 @@ export class CardGenerationService {
       }
     ];
 
-    // Calculate position for new card (to the right of source)
-    const position = this.calculatePosition(sourceCard);
-
-    // Create new card
-    const newCard: Card = {
-      id: generateId(),
+    // Update card with final content
+    const finalCard: Card = {
+      ...skeletonCard,
       content: this.formatAsHTML(responseContent),
-      cardType: 'generated',
-      parentCardId: sourceCard.id,
-      metadata: {
-        title: `${button.label}: ${sourceCard.metadata.title}`,
-        domain: 'ai-generated',
-        favicon: button.icon,
-        url: '',
-        timestamp: Date.now(),
-      },
-      position,
-      size: { width: 400, height: 300 },
-      starred: false,
-      tags: ['ai-generated', button.label.toLowerCase()],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
       conversation,
-      generationContext: {
-        sourceMessageId: conversation[0]?.id || generateId(),
-        userPrompt: prompt,
-        timestamp: Date.now(),
-      },
+      isGenerating: false, // Clear generating flag
+      updatedAt: Date.now(),
     };
 
-    // Save card
-    console.log('[cardGenerationService] Saving new card:', newCard.id);
-    await saveCard(newCard);
-    console.log('[cardGenerationService] Card saved successfully');
+    // Save final card
+    console.log('[cardGenerationService] Updating with final content');
+    await saveCard(finalCard);
 
-    // Create connection
-    console.log('[cardGenerationService] Creating connection from', sourceCard.id, 'to', newCard.id);
-    await addConnection({
-      id: generateId(),
-      source: sourceCard.id,
-      target: newCard.id,
-      type: button.connectionType,
-      label: customContext ? `${button.label}: ${customContext}` : button.label,
-      metadata: {
-        createdAt: Date.now(),
-        createdBy: 'user',
-      },
-    });
-    console.log('[cardGenerationService] Connection created successfully');
+    // Dispatch event to refresh canvas with final content
+    window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+    console.log('[cardGenerationService] Generation complete');
 
-    console.log('[cardGenerationService] Generation complete, returning new card');
-    return newCard;
+    return finalCard;
   }
 
   /**

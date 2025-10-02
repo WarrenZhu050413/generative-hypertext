@@ -112,6 +112,7 @@ export interface Card {
   // UI state
   collapsed?: boolean; // Whether card is collapsed to minimal height
   stashed?: boolean; // Whether card is stashed (hidden from canvas)
+  isGenerating?: boolean; // Whether card is currently being generated (skeleton state)
   // AI Beautification fields
   originalHTML?: string; // Original HTML before beautification
   beautifiedContent?: string; // LLM-beautified HTML content
