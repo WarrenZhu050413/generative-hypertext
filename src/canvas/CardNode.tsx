@@ -652,8 +652,8 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
             </div>
           )}
 
-          {/* Action Buttons (only for non-image and non-generated cards) */}
-          {card.cardType !== 'image' && card.cardType !== 'generated' && (
+          {/* Action Buttons (shown on all card types with content) */}
+          {card.cardType !== 'image' && card.content && (
             <div style={styles.actionButtons}>
               {DEFAULT_BUTTONS.filter(btn => btn.enabled).map(button => (
                 <button
