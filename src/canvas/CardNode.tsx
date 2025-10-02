@@ -766,21 +766,19 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
             </div>
           )}
 
-          {/* Compact Footer with merged Continue Chat + Action Buttons */}
-          {card.cardType !== 'image' && card.content && (
+          {/* Compact Footer with Chat + Action Buttons */}
+          {card.cardType !== 'image' && card.content && !card.isGenerating && (
             <div style={styles.footer}>
               <div style={styles.footerLeft}>
-                {/* Continue Chat for generated cards */}
-                {card.cardType === 'generated' && (
-                  <button
-                    onClick={handleOpenWindow}
-                    style={styles.continueChatButton}
-                    title="Continue chatting with this card"
-                    data-testid="continue-chat-btn"
-                  >
-                    💬 Continue
-                  </button>
-                )}
+                {/* Chat Button - Now native feature for ALL cards */}
+                <button
+                  onClick={handleOpenWindow}
+                  style={styles.chatButton}
+                  title={card.cardType === 'generated' ? 'Continue chatting with this card' : 'Chat about this card'}
+                  data-testid="chat-btn"
+                >
+                  💬 Chat
+                </button>
               </div>
               <div style={styles.footerRight}>
                 {/* Action Buttons - Show first 3 */}
@@ -1197,7 +1195,7 @@ const styles: Record<string, React.CSSProperties> = {
     objectFit: 'contain',
     borderRadius: '8px',
   },
-  continueChatButton: {
+  chatButton: {
     padding: '4px 10px',
     background: 'linear-gradient(135deg, #D4AF37, #FFD700)',
     color: '#3E3226',
