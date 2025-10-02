@@ -1,7 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { css } from '@emotion/react';
 import React, { useState, useRef, useEffect } from 'react';
-import Draggable from 'react-draggable';
+import { Rnd } from 'react-rnd';
 import type { PageContext } from '@/services/pageContextCapture';
 import type { ElementContext } from '@/services/elementContextCapture';
 import { formatPageContextAsPrompt, capturePageContext } from '@/services/pageContextCapture';
@@ -40,9 +40,10 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+  const [collapsed, setCollapsed] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: 420, height: 550 });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const nodeRef = useRef(null); // Required for Draggable
 
   // Determine context type
   const isElement = isElementContext(initialContext);
@@ -157,13 +158,39 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
     : { x: window.innerWidth - 450, y: 50 };
 
   return (
-    <Draggable
-      nodeRef={nodeRef}
-      handle=".drag-handle"
+    <Rnd
+      default={{
+        x: defaultPosition.x,
+        y: defaultPosition.y,
+        width: windowSize.width,
+        height: windowSize.height
+      }}
+      size={{
+        width: windowSize.width,
+        height: collapsed ? 40 : windowSize.height
+      }}
+      onResizeStop={(_e, _dir, ref, _delta, position) => {
+        setWindowSize({
+          width: parseInt(ref.style.width),
+          height: parseInt(ref.style.height)
+        });
+      }}
+      minWidth={300}
+      minHeight={200}
       bounds="parent"
-      defaultPosition={defaultPosition}
+      dragHandleClassName="drag-handle"
+      enableResizing={!collapsed && {
+        bottom: true,
+        bottomRight: true,
+        bottomLeft: true,
+        right: true,
+        left: true,
+        top: false,
+        topRight: false,
+        topLeft: false
+      }}
     >
-      <div ref={nodeRef} css={containerStyles}>
+      <div css={containerStyles(collapsed, windowSize.width, windowSize.height)}>
         {/* Header */}
         <div css={headerStyles} className="drag-handle">
           <div css={headerTitleStyles}>
@@ -190,6 +217,13 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
             )}
             <button
               css={headerButtonStyles}
+              onClick={() => setCollapsed(!collapsed)}
+              title={collapsed ? "Expand" : "Collapse to header"}
+            >
+              {collapsed ? '▼' : '▲'}
+            </button>
+            <button
+              css={headerButtonStyles}
               onClick={onClose}
               title="Close chat"
             >
@@ -199,6 +233,7 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
         </div>
 
         {/* Messages */}
+        {!collapsed && (
         <div css={messagesContainerStyles}>
           {messages.length === 0 && (
             <div css={emptyStateStyles}>
@@ -262,8 +297,10 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
 
           <div ref={messagesEndRef} />
         </div>
+        )}
 
         {/* Input */}
+        {!collapsed && (
         <div css={inputContainerStyles}>
           <textarea
             ref={inputRef}
@@ -283,8 +320,9 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
             {isStreaming ? '⏸' : '➤'}
           </button>
         </div>
+        )}
       </div>
-    </Draggable>
+    </Rnd>
   );
 };
 
@@ -292,10 +330,9 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
 // Styles
 // ============================================================================
 
-const containerStyles = css`
-  position: fixed;
-  width: 420px;
-  height: 550px;
+const containerStyles = (collapsed: boolean, width: number, height: number) => css`
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 215, 0, 0.02));
   border: 2px solid #8B0000;
   border-radius: 8px;
@@ -305,6 +342,7 @@ const containerStyles = css`
   z-index: 999999;
   pointer-events: auto; /* Override parent's pointer-events: none */
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  transition: height 0.3s ease;
 `;
 
 const headerStyles = css`

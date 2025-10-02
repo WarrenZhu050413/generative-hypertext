@@ -57,6 +57,7 @@ export class WindowManager {
       position: this.calculateCascadePosition(),
       size: { width: 600, height: 500 },
       minimized: false,
+      collapsed: false,
       zIndex: ++this.maxZIndex,
       chatInput: '',
       conversationMessages: card.conversation || [],
@@ -98,6 +99,42 @@ export class WindowManager {
     if (window) {
       window.minimized = false;
       this.bringToFront(cardId);
+      this.notifyListeners();
+      this.debouncedSave();
+    }
+  }
+
+  /**
+   * Collapse a window (show header only)
+   */
+  collapseWindow(cardId: string): void {
+    const window = this.windows.get(cardId);
+    if (window) {
+      window.collapsed = true;
+      this.notifyListeners();
+      this.debouncedSave();
+    }
+  }
+
+  /**
+   * Expand a window (show full content)
+   */
+  expandWindow(cardId: string): void {
+    const window = this.windows.get(cardId);
+    if (window) {
+      window.collapsed = false;
+      this.notifyListeners();
+      this.debouncedSave();
+    }
+  }
+
+  /**
+   * Toggle collapse state
+   */
+  toggleCollapse(cardId: string): void {
+    const window = this.windows.get(cardId);
+    if (window) {
+      window.collapsed = !window.collapsed;
       this.notifyListeners();
       this.debouncedSave();
     }
@@ -254,6 +291,7 @@ export class WindowManager {
       position: w.position,
       size: w.size,
       minimized: w.minimized,
+      collapsed: w.collapsed,
       chatInput: w.chatInput,
       scrollPosition: w.scrollPosition
     }));

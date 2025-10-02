@@ -1,7 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { css } from '@emotion/react';
 import React, { useRef, useState, useEffect } from 'react';
-import Draggable from 'react-draggable';
+import { Rnd } from 'react-rnd';
 import type { Card } from '@/types/card';
 import type { WindowState } from '@/types/window';
 import { FloatingWindowChat } from './FloatingWindowChat';
@@ -87,7 +87,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   };
 
   // Handle save conversation as card
-  const handleSaveConversation = async () => {
+  const handleSaveConversation = async (destination: 'canvas' | 'stash' = 'canvas') => {
     const messages = windowState.conversationMessages;
     if (!messages || messages.length === 0) {
       alert('No conversation to save');
@@ -117,6 +117,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
         content: conversationHTML,
         cardType: 'generated',
         parentCardId: card.id,
+        stashed: destination === 'stash', // Set stashed flag based on destination
         metadata: {
           url: '',
           title: `Chat: ${card.metadata.title}`,
@@ -154,7 +155,13 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
         },
       });
 
-      alert('Conversation saved as card!');
+      if (destination === 'canvas') {
+        alert('Conversation saved to canvas!');
+      } else {
+        alert('Conversation saved to stash!');
+        // Dispatch stash update event
+        window.dispatchEvent(new CustomEvent('nabokov:stash-updated'));
+      }
 
       // Optionally reload canvas to show new card
       // window.location.reload();
@@ -183,6 +190,11 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
     windowManager.minimizeWindow(card.id);
   };
 
+  // Handle collapse/expand
+  const handleToggleCollapse = () => {
+    windowManager.toggleCollapse(card.id);
+  };
+
   // Handle bring to front
   const handleMouseDown = () => {
     windowManager.bringToFront(card.id);
@@ -193,15 +205,47 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
     windowManager.updatePosition(card.id, data.x, data.y);
   };
 
+  // Handle resize stop
+  const handleResizeStop = (
+    _e: any,
+    _dir: any,
+    ref: HTMLElement,
+    _delta: any,
+    position: { x: number; y: number }
+  ) => {
+    const newWidth = parseInt(ref.style.width);
+    const newHeight = parseInt(ref.style.height);
+    windowManager.updateSize(card.id, newWidth, newHeight);
+    windowManager.updatePosition(card.id, position.x, position.y);
+  };
+
   return (
-    <Draggable
-      handle=".window-header"
-      position={windowState.position}
-      onStop={handleDragStop}
+    <Rnd
+      position={{ x: windowState.position.x, y: windowState.position.y }}
+      size={{
+        width: windowState.size.width,
+        height: windowState.collapsed ? 40 : windowState.size.height
+      }}
+      onDragStop={(_e, data) => handleDragStop(_e, data)}
+      onResizeStop={handleResizeStop}
+      minWidth={300}
+      minHeight={200}
       bounds="parent"
+      dragHandleClassName="window-header"
+      enableResizing={!windowState.collapsed && {
+        bottom: true,
+        bottomRight: true,
+        bottomLeft: true,
+        right: true,
+        left: true,
+        top: false,
+        topRight: false,
+        topLeft: false
+      }}
+      disableDragging={false}
     >
       <div
-        css={windowStyles(windowState.minimized, windowState.zIndex)}
+        css={windowStyles(windowState.minimized, windowState.collapsed, windowState.zIndex, windowState.size.width, windowState.size.height)}
         onMouseDown={handleMouseDown}
       >
         <div className="window-header" css={headerStyles}>
@@ -217,12 +261,27 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
           </div>
           <div css={controlsStyles}>
             <button
-              onClick={handleSaveConversation}
+              onClick={() => handleSaveConversation('canvas')}
               css={saveConversationButtonStyles}
-              title="Save conversation as card"
+              title="Save conversation to canvas"
               disabled={!windowState.conversationMessages || windowState.conversationMessages.length === 0}
             >
-              💾
+              🎨
+            </button>
+            <button
+              onClick={() => handleSaveConversation('stash')}
+              css={saveConversationButtonStyles}
+              title="Save conversation to stash"
+              disabled={!windowState.conversationMessages || windowState.conversationMessages.length === 0}
+            >
+              📥
+            </button>
+            <button
+              onClick={handleToggleCollapse}
+              css={controlButtonStyles}
+              title={windowState.collapsed ? "Expand" : "Collapse to header"}
+            >
+              {windowState.collapsed ? '▼' : '▲'}
             </button>
             <button
               onClick={handleMinimize}
@@ -241,51 +300,54 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
           </div>
         </div>
 
-        <div
-          ref={contentRef}
-          css={contentStyles}
-          onScroll={handleScroll}
-        >
-          <div
-            dangerouslySetInnerHTML={{ __html: card.content || '<p>No content</p>' }}
-          />
+        {!windowState.collapsed && (
+          <>
+            <div
+              ref={contentRef}
+              css={contentStyles}
+              onScroll={handleScroll}
+            >
+              <div
+                dangerouslySetInnerHTML={{ __html: card.content || '<p>No content</p>' }}
+              />
 
-          {card.metadata.url && (
-            <div css={metadataStyles}>
-              <a
-                href={card.metadata.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                css={linkStyles}
-              >
-                View original →
-              </a>
+              {card.metadata.url && (
+                <div css={metadataStyles}>
+                  <a
+                    href={card.metadata.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    css={linkStyles}
+                  >
+                    View original →
+                  </a>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        <FloatingWindowChat
-          cardId={card.id}
-          cardContent={card.content || ''}
-          messages={windowState.conversationMessages}
-          currentInput={windowState.chatInput}
-          isStreaming={windowState.isStreaming}
-          autoSaveOnClose={autoSaveOnClose}
-          onSendMessage={handleSendMessage}
-          onInputChange={handleInputChange}
-          onStopStreaming={handleStopStreaming}
-          onClearChat={handleClearChat}
-          onSaveConversation={handleSaveConversation}
-          onToggleAutoSave={handleToggleAutoSave}
-        />
+            <FloatingWindowChat
+              cardId={card.id}
+              cardContent={card.content || ''}
+              messages={windowState.conversationMessages}
+              currentInput={windowState.chatInput}
+              isStreaming={windowState.isStreaming}
+              autoSaveOnClose={autoSaveOnClose}
+              onSendMessage={handleSendMessage}
+              onInputChange={handleInputChange}
+              onStopStreaming={handleStopStreaming}
+              onClearChat={handleClearChat}
+              onSaveConversation={handleSaveConversation}
+              onToggleAutoSave={handleToggleAutoSave}
+            />
+          </>
+        )}
       </div>
-    </Draggable>
+    </Rnd>
   );
 };
 
 // Styles
-const windowStyles = (minimized: boolean, zIndex: number) => css`
-  position: absolute;
+const windowStyles = (minimized: boolean, collapsed: boolean, zIndex: number, width: number, height: number) => css`
   display: ${minimized ? 'none' : 'flex'};
   flex-direction: column;
   background: white;
@@ -294,9 +356,10 @@ const windowStyles = (minimized: boolean, zIndex: number) => css`
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   z-index: ${zIndex};
-  width: 600px;
-  height: 500px;
+  width: 100%;
+  height: 100%;
   pointer-events: auto;
+  transition: height 0.3s ease;
 
   &:hover {
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);

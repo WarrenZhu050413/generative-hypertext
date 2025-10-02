@@ -63,6 +63,7 @@ describe('API Error Handling', () => {
         prompt: 'Test prompt',
         icon: '🔘',
         connectionType: 'generated-from' as const,
+        enabled: true,
       };
 
       await expect(
@@ -109,6 +110,7 @@ describe('API Error Handling', () => {
         prompt: 'Test {{content}}',
         icon: '🔘',
         connectionType: 'generated-from' as const,
+        enabled: true,
       };
 
       await expect(
@@ -127,10 +129,13 @@ describe('API Error Handling', () => {
       const mockRequest = {
         selection: {
           text: 'test text',
+          range: {} as Range,
+          startOffset: 0,
+          endOffset: 9,
           contextBefore: 'before',
           contextAfter: 'after',
-          fullText: 'before test text after',
-          boundingRect: { top: 0, left: 0, width: 100, height: 20 },
+          cardId: 'parent-card',
+          containerElement: document.createElement('div'),
         },
         parentCard: {
           id: 'parent-card',
@@ -176,10 +181,13 @@ describe('API Error Handling', () => {
       const mockRequest = {
         selection: {
           text: 'test text',
+          range: {} as Range,
+          startOffset: 0,
+          endOffset: 9,
           contextBefore: 'before',
           contextAfter: 'after',
-          fullText: 'before test text after',
-          boundingRect: { top: 0, left: 0, width: 100, height: 20 },
+          cardId: 'parent-card',
+          containerElement: document.createElement('div'),
         },
         parentCard: {
           id: 'parent-card',
@@ -400,6 +408,7 @@ describe('API Error Handling', () => {
         prompt: 'Test prompt',
         icon: '🔘',
         connectionType: 'generated-from' as const,
+        enabled: true,
       };
 
       try {

@@ -29,6 +29,7 @@ export interface WindowState {
   position: WindowPosition;
   size: WindowSize;
   minimized: boolean;
+  collapsed: boolean;           // Whether window is collapsed to header only
   zIndex: number;
 
   // Chat-specific state
@@ -47,6 +48,7 @@ export interface SerializedWindowState {
   position: WindowPosition;
   size: WindowSize;
   minimized: boolean;
+  collapsed: boolean;
   chatInput: string;
   scrollPosition: number;
 }

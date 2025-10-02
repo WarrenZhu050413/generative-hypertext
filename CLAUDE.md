@@ -49,10 +49,10 @@ node test-scripts/test-canvas-direct.mjs
 
 1. **Background Service Worker** (`src/background/index.ts`)
    - Manifest V3 service worker
-   - Handles keyboard commands:
-     - `Cmd+E` (Canvas mode)
-     - `Cmd+Shift+E` (Stash mode)
-     - `Ctrl+Shift+C` (Inline chat)
+   - Handles keyboard commands (Mac):
+     - `Command+Shift+E` (Stash mode)
+     - `Control+Shift+E` (Canvas mode)
+     - `Control+Shift+C` (Inline chat)
    - Context menu registration
    - Opens canvas on toolbar icon click
 
@@ -190,17 +190,17 @@ function broadcastCardUpdate(type: string, cardId: string) {
 
 This ensures Canvas and Side Panel stay synchronized in real-time without page reloads.
 
-**Keyboard Shortcuts & Mode Indicators:**
+**Keyboard Shortcuts & Mode Indicators (Mac):**
 
-- **Cmd+E** / **Ctrl+E**: Activate element selector (Canvas mode)
-  - Mode indicator: 🎨 **CANVAS MODE** (red/gold gradient)
-  - Cards saved directly to canvas
-
-- **Cmd+Shift+E** / **Ctrl+Shift+E**: Activate element selector (Stash mode)
+- **Command+Shift+E**: Activate element selector (Stash mode)
   - Mode indicator: 📥 **STASH MODE** (blue gradient)
   - Cards saved to Side Panel stash
 
-- **Ctrl+Shift+C**: Toggle inline chat with page
+- **Control+Shift+E**: Activate element selector (Canvas mode)
+  - Mode indicator: 🎨 **CANVAS MODE** (red/gold gradient)
+  - Cards saved directly to canvas
+
+- **Control+Shift+C**: Toggle inline chat with page
   - Opens chat window for page conversations
   - Can save conversation to canvas as note card
 
@@ -249,10 +249,32 @@ Mode indicators replaced the old checkbox approach with prominent banners at the
 
 **FloatingWindow** (`src/components/FloatingWindow.tsx`)
 
-- Draggable, resizable windows for card interactions
-- Used for chat interface (`FloatingWindowChat`)
-- Auto-saves conversation on close (optional)
-- Supports persistence across sessions
+- **Draggable & Resizable**: Uses `react-rnd` for drag + resize (min: 300×200px)
+- **Collapsible**: Collapse to header-only (40px) or expand to full size
+- **Z-index Management**: Click window brings it to front
+- **State Persistence**: Position, size, collapsed state saved to storage
+- **Chat Integration**: Embedded chat with `FloatingWindowChat` component
+- **Save Options**: Save conversations to Canvas (🎨) or Stash (📥)
+- **Window Controls**:
+  - Collapse/Expand (▲/▼)
+  - Minimize (−) - hides completely
+  - Close (×) - removes window
+- **Managed by WindowManager**: Centralized state, cascade positioning, debounced saves
+
+**InlineChatWindow** (`src/components/InlineChatWindow.tsx`)
+
+- **Content Script Window**: Floating chat window in web pages (not Canvas)
+- **Draggable & Resizable**: Uses `react-rnd` for drag + resize (min: 300×200px)
+- **Collapsible**: Collapse to header-only or expand to full size
+- **Context Types**: Supports both page context and element-specific context
+- **Save to Canvas**: Can save conversation as note card to Canvas
+- **Window Controls**:
+  - Refresh context (📋) - recapture page state
+  - Save to Canvas (📌) - create note card from conversation
+  - Collapse/Expand (▲/▼)
+  - Close (✕)
+- **Keyboard**: ESC to close, Enter to send, Shift+Enter for newline
+- **Positioning**: Auto-positions near element (if element chat) or screen edge
 
 **Toast** (`src/components/Toast.tsx`)
 
@@ -527,6 +549,286 @@ test-scripts/       # Manual Playwright tests (bypass chrome://extensions)
 tests/              # Vitest unit tests, Playwright E2E
 docs/               # Documentation
 archive/            # Old implementations (nabokov-clipper/, deprecated tests)
+```
+
+## Testing Plan & Regression Prevention
+
+**CRITICAL**: Run these tests after EVERY feature implementation or significant change to prevent regressions.
+
+### Pre-Commit Checklist
+
+**Always run before committing**:
+```bash
+# 1. Type check (MUST pass)
+npm run type-check
+
+# 2. Build verification (MUST complete with zero warnings)
+npm run build
+
+# 3. Unit tests (all MUST pass)
+npm test
+
+# 4. E2E tests for affected features
+npm run test:e2e:headed  # Run relevant spec files
+```
+
+### Testing Strategy by Feature Type
+
+#### **1. UI Component Changes**
+
+When modifying UI components (Toolbar, Canvas, SidePanel, etc.):
+
+**Unit Tests**:
+- Test component renders without errors
+- Test props are correctly typed
+- Test event handlers are called
+- Test conditional rendering logic
+
+**E2E Tests**:
+- Test component appears in DOM
+- Test button clicks trigger correct actions
+- Test styling is applied correctly
+- Test responsive behavior
+
+**Example**: After adding FilePickerButton to Canvas
+```bash
+# Unit test (if applicable)
+npm test src/shared/components/ImageUpload
+
+# E2E test
+npm run test:e2e:headed tests/e2e/phase-1-2-refinements.spec.ts
+```
+
+#### **2. Shared Service Changes**
+
+When modifying shared services (cardService, filterService, imageService):
+
+**Unit Tests** (REQUIRED):
+- Test all CRUD operations
+- Test error handling
+- Test event broadcasting
+- Test edge cases (empty arrays, undefined values)
+- Test cross-context synchronization
+
+**E2E Tests**:
+- Test service integration in Canvas
+- Test service integration in Side Panel
+- Test data persistence
+- Test real-time updates
+
+**Example**: After modifying cardService.ts
+```bash
+# Unit tests (MUST pass)
+npm test tests/unit/shared/services/cardService.test.ts
+
+# E2E tests
+npm run test:e2e:headed tests/e2e/element-capture.spec.ts
+```
+
+#### **3. Storage/State Changes**
+
+When modifying storage logic, hooks, or state management:
+
+**Unit Tests**:
+- Test data persistence
+- Test data retrieval
+- Test storage limits
+- Test concurrent access
+
+**E2E Tests**:
+- Test cards persist across page reloads
+- Test filters persist (if applicable)
+- Test no data loss
+- Test cross-context updates
+
+**Verification**:
+```bash
+# Build and test storage
+npm run build
+npm run test:e2e:headed tests/e2e/element-capture.spec.ts
+
+# Manual verification
+# 1. Open Canvas
+# 2. Create card
+# 3. Refresh page
+# 4. Verify card still exists
+```
+
+#### **4. Build System Changes**
+
+When modifying Vite config, TypeScript config, or dependencies:
+
+**Checks**:
+- Verify clean build (zero warnings)
+- Verify all imports resolve
+- Verify extension loads in Chrome
+- Verify no dynamic import warnings
+
+**Commands**:
+```bash
+# Full build verification
+npm run build 2>&1 | grep -i "warning\|error"
+# Should output nothing if clean
+
+# Type check
+npm run type-check
+# Should complete with zero errors
+
+# Extension reload test
+# 1. npm run build
+# 2. Go to chrome://extensions
+# 3. Click reload on extension
+# 4. Open Canvas - should load without errors
+```
+
+### Test Coverage Requirements
+
+**Shared Services**: 100% coverage (REQUIRED)
+- cardService.ts ✅ 24 tests
+- filterService.ts ✅ 37 tests
+- imageService.ts ✅ 21 tests
+
+**Shared Hooks**: 80%+ coverage (target)
+- useCards.ts
+- useFilters.ts
+- useCardOperations.ts
+- useImageUpload.ts
+
+**Components**: Critical paths covered
+- FilterBar ✅ (via integration tests)
+- FilePickerButton ✅ (via integration tests)
+- ImageUploadZone ✅ (via integration tests)
+
+### E2E Test Organization
+
+**Current Test Files**:
+```
+tests/e2e/
+├── element-capture.spec.ts       # Element selector and capture
+├── image-upload.spec.ts          # Drag-drop image upload
+├── phase-1-2-refinements.spec.ts # FilePickerButton, sync, etc.
+├── keyboard-shortcuts.spec.ts    # Keyboard shortcuts (Cmd+Shift+E, Ctrl+Shift+E, Ctrl+Shift+C)
+├── context-input.spec.ts         # Context input modal
+├── floating-windows.spec.ts      # Floating chat windows
+├── card-scrolling.spec.ts        # Canvas navigation
+├── loading-states.spec.ts        # Loading and feedback
+└── extension-load.spec.ts        # Extension initialization
+```
+
+**When to Add New Test Files**:
+- New major feature (e.g., "agent-subscriptions.spec.ts")
+- New user workflow (e.g., "fill-in-feature.spec.ts")
+- Complex interaction (e.g., "connection-editing.spec.ts")
+
+**Keyboard Shortcuts Testing**:
+- Tests in `keyboard-shortcuts.spec.ts` send messages directly to content script
+- Cannot trigger actual Chrome keyboard shortcuts via Playwright
+- Simulates shortcut behavior by calling `chrome.tabs.sendMessage()` from background worker
+- Tests verify content script message handlers work correctly
+- Covers: Stash mode (Cmd+Shift+E), Canvas mode (Ctrl+Shift+E), Inline chat (Ctrl+Shift+C)
+
+### Regression Prevention Workflow
+
+**After implementing ANY feature**:
+
+1. **Write unit tests first** (if modifying services/hooks)
+   ```bash
+   # Create test file
+   touch tests/unit/shared/services/myService.test.ts
+
+   # Write tests covering all functionality
+   # Run tests
+   npm test tests/unit/shared/services/myService.test.ts
+   ```
+
+2. **Write E2E tests** (if adding UI or user-facing features)
+   ```bash
+   # Add tests to existing spec or create new one
+   # Run tests
+   npm run test:e2e:headed tests/e2e/my-feature.spec.ts
+   ```
+
+3. **Run full test suite**
+   ```bash
+   npm run type-check
+   npm run build
+   npm test
+   npm run test:e2e
+   ```
+
+4. **Manual verification** (checklist)
+   - [ ] Extension loads in Chrome without errors
+   - [ ] Feature works as expected
+   - [ ] No console errors in Canvas
+   - [ ] No console warnings in Canvas
+   - [ ] Existing features still work (spot check)
+   - [ ] Cross-context sync works (if applicable)
+
+5. **Document in commit message**
+   ```
+   feat: Add FilePickerButton to Canvas toolbar
+
+   - Added file picker upload alongside drag-drop
+   - Used shared FilePickerButton component
+   - Feature parity with Side Panel achieved
+
+   Tests:
+   - Added 15 E2E tests in phase-1-2-refinements.spec.ts
+   - All tests passing
+   - Zero build warnings
+   - Zero TypeScript errors
+   ```
+
+### Quick Test Commands
+
+```bash
+# Fast verification (< 1 minute)
+npm run type-check && npm run build
+
+# Medium verification (< 5 minutes)
+npm run type-check && npm run build && npm test
+
+# Full verification (< 10 minutes)
+npm run type-check && npm run build && npm test && npm run test:e2e
+
+# Specific feature test
+npm run test:e2e:headed tests/e2e/phase-1-2-refinements.spec.ts
+
+# Watch mode for development
+npm run test:watch
+```
+
+### Known Testing Limitations
+
+**Playwright + Chrome Extensions**:
+- ❌ Cannot run headless (extensions need headed mode)
+- ❌ Cannot test actual file uploads (security restriction)
+- ❌ Cannot simulate drag-drop events reliably
+- ✅ Can test UI presence and state
+- ✅ Can test storage operations
+- ✅ Can test cross-context messaging
+
+**Workarounds**:
+- UI presence tests instead of interaction tests
+- Storage verification instead of upload simulation
+- Manual testing checklist for complex interactions
+
+### CI/CD Integration (Future)
+
+**Recommended GitHub Actions workflow**:
+```yaml
+name: Test Suite
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm install
+      - run: npm run type-check
+      - run: npm run build
+      - run: npm test
+      # E2E tests would need Xvfb for headed mode
 ```
 
 ## Code Style Notes
