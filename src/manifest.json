@@ -27,6 +27,9 @@
   "action": {
     "default_title": "Open Nabokov Canvas"
   },
+  "side_panel": {
+    "default_path": "src/sidepanel/index.html"
+  },
   "commands": {
     "activate-selector": {
       "suggested_key": {
@@ -41,7 +44,10 @@
       "resources": [
         "src/canvas/index.html",
         "src/canvas/*.js",
-        "src/canvas/*.css"
+        "src/canvas/*.css",
+        "src/sidepanel/index.html",
+        "src/sidepanel/*.js",
+        "src/sidepanel/*.css"
       ],
       "matches": ["<all_urls>"]
     }

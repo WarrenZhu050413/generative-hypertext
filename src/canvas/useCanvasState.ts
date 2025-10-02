@@ -96,12 +96,15 @@ export function useCanvasState(): UseCanvasStateReturn {
       const canvasState: CanvasState | undefined = result[STORAGE_KEY];
       const savedFilters: FilterState | undefined = result[FILTERS_KEY];
 
+      // Filter out stashed cards (they're hidden from canvas)
+      const visibleCards = loadedCards.filter((card) => !card.stashed);
+
       console.log('[Canvas] Loaded cards count:', loadedCards.length);
-      console.log('[Canvas] Loaded cards:', loadedCards);
+      console.log('[Canvas] Visible cards count (excluding stashed):', visibleCards.length);
       console.log('[Canvas] Canvas state:', canvasState);
       console.log('[Canvas] Saved filters:', savedFilters);
 
-      setCards(loadedCards);
+      setCards(visibleCards);
 
       // Restore saved filters
       if (savedFilters) {

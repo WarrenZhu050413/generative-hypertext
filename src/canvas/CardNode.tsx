@@ -13,6 +13,7 @@ import type { CardButton } from '@/types/button';
 import type { BeautificationMode } from '@/types/card';
 import { useLLMHyperlinks } from './useLLMHyperlinks';
 import { GenerateChildModal } from '@/components/GenerateChildModal';
+import { stashCard } from '@/sidepanel/stashService';
 
 interface CardNodeProps {
   data: {
@@ -110,6 +111,20 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
       window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
     } catch (error) {
       console.error('[CardNode] Error toggling collapse:', error);
+    }
+  };
+
+  const handleStash = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent node drag
+
+    try {
+      await stashCard(card.id);
+      setToast({ message: 'Card stashed to Side Panel', type: 'success' });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      console.error('[CardNode] Error stashing card:', error);
+      setToast({ message: 'Failed to stash card', type: 'error' });
+      setTimeout(() => setToast(null), 5000);
     }
   };
 
@@ -523,6 +538,14 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
             </div>
           )}
           <button
+            onClick={handleStash}
+            style={styles.stashButton}
+            title="Stash to Side Panel"
+            data-testid="stash-btn"
+          >
+            📥
+          </button>
+          <button
             onClick={handleToggleCollapse}
             style={styles.collapseButton}
             title={card.collapsed ? 'Expand card' : 'Collapse card'}
@@ -838,6 +861,20 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0',
     border: 'none',
     background: 'rgba(139, 0, 0, 0.1)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '12px',
+    transition: 'all 0.2s ease',
+  },
+  stashButton: {
+    width: '20px',
+    height: '20px',
+    padding: '0',
+    border: 'none',
+    background: 'rgba(139, 115, 85, 0.15)',
     borderRadius: '4px',
     cursor: 'pointer',
     display: 'flex',
