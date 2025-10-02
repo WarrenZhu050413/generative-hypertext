@@ -206,11 +206,13 @@ describe('Native Chat Feature', () => {
         parentCardId: 'parent-1',
         conversation: [
           {
+            id: 'msg-1',
             role: 'user',
             content: 'Previous message',
             timestamp: Date.now(),
           },
           {
+            id: 'msg-2',
             role: 'assistant',
             content: 'Previous response',
             timestamp: Date.now(),

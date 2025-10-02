@@ -71,43 +71,6 @@ export const OverflowMenu: React.FC<OverflowMenuProps> = ({
       onClick={(e) => e.stopPropagation()}
       data-testid="overflow-menu"
     >
-      {/* Beautify - only for non-image cards with content */}
-      {card.cardType !== 'image' && card.content && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onBeautify();
-            onClose();
-          }}
-          style={styles.menuItem}
-          data-testid="overflow-beautify"
-        >
-          <span style={styles.menuIcon}>✨</span>
-          <span style={styles.menuText}>Beautify Content</span>
-          {card.beautifiedContent && (
-            <span style={styles.menuBadge}>✓</span>
-          )}
-        </button>
-      )}
-
-      {/* Fill-In - only if connections exist */}
-      {connectionCount > 0 && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onFillIn();
-            onClose();
-          }}
-          style={styles.menuItem}
-          data-testid="overflow-fill-in"
-        >
-          <span style={styles.menuIcon}>🔗</span>
-          <span style={styles.menuText}>
-            Fill-In ({connectionCount} connection{connectionCount !== 1 ? 's' : ''})
-          </span>
-        </button>
-      )}
-
       {/* Open Window */}
       <button
         onClick={(e) => {
@@ -121,38 +84,6 @@ export const OverflowMenu: React.FC<OverflowMenuProps> = ({
         <span style={styles.menuIcon}>🗖</span>
         <span style={styles.menuText}>Open as Window</span>
       </button>
-
-      <div style={styles.divider} />
-
-      {/* Stash */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onStash();
-          onClose();
-        }}
-        style={styles.menuItem}
-        data-testid="overflow-stash"
-      >
-        <span style={styles.menuIcon}>📥</span>
-        <span style={styles.menuText}>Stash to Side Panel</span>
-      </button>
-
-      {/* Toggle Star */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleStar();
-          onClose();
-        }}
-        style={styles.menuItem}
-        data-testid="overflow-toggle-star"
-      >
-        <span style={styles.menuIcon}>{card.starred ? '⭐' : '☆'}</span>
-        <span style={styles.menuText}>{card.starred ? 'Unstar' : 'Star'}</span>
-      </button>
-
-      <div style={styles.divider} />
 
       {/* Button Settings */}
       <button

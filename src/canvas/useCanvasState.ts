@@ -130,8 +130,8 @@ export function useCanvasState(): UseCanvasStateReturn {
       setEdges(flowEdges);
       console.log('[Canvas] Created React Flow edges count:', flowEdges.length);
 
-      // Convert cards to React Flow nodes
-      const flowNodes = loadedCards.map((card, index) =>
+      // Convert cards to React Flow nodes (only visible cards, not stashed)
+      const flowNodes = visibleCards.map((card, index) =>
         cardToNode(card, index, canvasState)
       );
 

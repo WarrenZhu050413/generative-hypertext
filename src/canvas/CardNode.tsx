@@ -625,7 +625,7 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
         />
       )}
 
-      {/* Header - Simplified with only collapse + overflow menu */}
+      {/* Header - Clean with only collapse button */}
       <div style={styles.header}>
         <div style={styles.headerLeft}>
           {card.metadata.favicon && (
@@ -648,17 +648,6 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
             data-testid="collapse-btn"
           >
             {card.collapsed ? '▼' : '▲'}
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowOverflowMenu(!showOverflowMenu);
-            }}
-            style={styles.overflowButton}
-            title="More options"
-            data-testid="overflow-btn"
-          >
-            ⋯
           </button>
         </div>
       </div>
@@ -766,36 +755,97 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
             </div>
           )}
 
-          {/* Compact Footer with Chat + Action Buttons */}
+          {/* Enhanced Footer with visible action buttons */}
           {card.cardType !== 'image' && card.content && !card.isGenerating && (
             <div style={styles.footer}>
               <div style={styles.footerLeft}>
-                {/* Chat Button - Now native feature for ALL cards */}
+                {/* Chat Button */}
                 <button
                   onClick={handleOpenWindow}
                   style={styles.chatButton}
                   title={card.cardType === 'generated' ? 'Continue chatting with this card' : 'Chat about this card'}
                   data-testid="chat-btn"
                 >
-                  💬 Chat
+                  💬
+                </button>
+
+                {/* Star Button */}
+                <button
+                  onClick={handleToggleStar}
+                  style={{...styles.iconButton, ...(card.starred ? styles.iconButtonActive : {})}}
+                  title={card.starred ? 'Unstar' : 'Star'}
+                  data-testid="star-btn"
+                >
+                  {card.starred ? '⭐' : '☆'}
                 </button>
               </div>
+
+              <div style={styles.footerCenter}>
+                {/* Beautify Button */}
+                <button
+                  onClick={() => {
+                    setShowBeautifyMenu(true);
+                    handleBeautify('organize-content');
+                  }}
+                  style={{...styles.iconButton, ...(card.beautifiedContent ? styles.iconButtonActive : {})}}
+                  title="Beautify Content"
+                  data-testid="beautify-btn"
+                >
+                  ✨
+                </button>
+
+                {/* Fill-In Button - only if connections exist */}
+                {connectionCount > 0 && (
+                  <button
+                    onClick={handleOpenFillIn}
+                    style={styles.iconButton}
+                    title={`Fill-In (${connectionCount} connection${connectionCount !== 1 ? 's' : ''})`}
+                    data-testid="fill-in-btn"
+                  >
+                    🔗
+                  </button>
+                )}
+
+                {/* Stash Button */}
+                <button
+                  onClick={handleStash}
+                  style={styles.iconButton}
+                  title="Stash to Side Panel"
+                  data-testid="stash-btn"
+                >
+                  📥
+                </button>
+              </div>
+
               <div style={styles.footerRight}>
-                {/* Action Buttons - Show first 3 */}
-                {enabledButtons.slice(0, 3).map(button => (
+                {/* Custom Action Buttons - Show first 2 */}
+                {enabledButtons.slice(0, 2).map(button => (
                   <button
                     key={button.id}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleButtonClick(button);
                     }}
-                    style={styles.actionButton}
+                    style={styles.iconButton}
                     title={button.label}
                     data-testid={`action-btn-${button.id}`}
                   >
                     {button.icon}
                   </button>
                 ))}
+
+                {/* Minimal Overflow Menu - only for rare actions */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowOverflowMenu(!showOverflowMenu);
+                  }}
+                  style={styles.iconButton}
+                  title="More options"
+                  data-testid="overflow-btn-footer"
+                >
+                  ⋯
+                </button>
               </div>
             </div>
           )}
@@ -985,9 +1035,35 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '6px',
   },
+  footerCenter: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    flex: 1,
+    justifyContent: 'center',
+  },
   footerRight: {
     display: 'flex',
     gap: '4px',
+    alignItems: 'center',
+  },
+  iconButton: {
+    width: '24px',
+    height: '24px',
+    padding: '0',
+    border: 'none',
+    background: 'rgba(184, 156, 130, 0.15)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '13px',
+    transition: 'all 0.2s ease',
+  },
+  iconButtonActive: {
+    background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.3), rgba(255, 215, 0, 0.3))',
+    boxShadow: '0 0 0 1px rgba(212, 175, 55, 0.5)',
   },
   openWindowButton: {
     width: '20px',
