@@ -222,17 +222,45 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
 
         console.log('[ElementSelector] Capture successful!', {
           cardId,
+          stashed: card.stashed,
+          stashMode: stashImmediately
         });
 
+        // Check if auto-beautification is enabled
+        try {
+          const { settingsService } = await import('@/services/settingsService');
+          const autoBeautify = await settingsService.getAutoBeautify();
+
+          if (autoBeautify && card.content && !card.stashed) {
+            console.log('[ElementSelector] Auto-beautification enabled, beautifying card...');
+            const { beautificationService } = await import('@/services/beautificationService');
+            const mode = await settingsService.getAutoBeautifyMode();
+
+            // Beautify in background (non-blocking)
+            beautificationService.beautifyCard(cardId, mode).catch(error => {
+              console.warn('[ElementSelector] Auto-beautification failed (non-critical):', error);
+            });
+          }
+        } catch (error) {
+          console.warn('[ElementSelector] Failed to check auto-beautify setting:', error);
+        }
+
         // Broadcast to all extension contexts via chrome.runtime
-        chrome.runtime.sendMessage({
-          type: 'CARD_STASHED',
-          cardId: card.id,
-          stashed: card.stashed
-        });
+        try {
+          await chrome.runtime.sendMessage({
+            type: 'CARD_STASHED',
+            cardId: card.id,
+            stashed: card.stashed
+          });
+          console.log('[ElementSelector] Broadcast message sent successfully');
+        } catch (broadcastError) {
+          // Non-critical error - card is already saved locally
+          console.warn('[ElementSelector] Failed to broadcast update (non-critical):', broadcastError);
+        }
 
         // Also keep local event for same-page updates
         window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+        console.log('[ElementSelector] Local event dispatched');
 
         // 8. Show floating chat at element position
         setCapturedCard(card);
@@ -257,7 +285,7 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
         setIsCapturing(false);
       }
     },
-    [onCapture]
+    [onCapture, onClose, stashImmediately]
   );
 
   /**

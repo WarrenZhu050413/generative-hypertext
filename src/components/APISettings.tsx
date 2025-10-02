@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiConfigService } from '@/services/apiConfig';
 import { claudeAPIService } from '@/services/claudeAPIService';
+import { settingsService } from '@/services/settingsService';
 
 interface APISettingsProps {
   onClose: () => void;
@@ -18,10 +19,21 @@ export const APISettings: React.FC<APISettingsProps> = ({ onClose }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [autoBeautify, setAutoBeautify] = useState(false);
 
   useEffect(() => {
     loadAPIKey();
+    loadSettings();
   }, []);
+
+  const loadSettings = async () => {
+    try {
+      const settings = await settingsService.getSettings();
+      setAutoBeautify(settings.autoBeautify);
+    } catch (error) {
+      console.error('[APISettings] Error loading settings:', error);
+    }
+  };
 
   const loadAPIKey = async () => {
     try {
@@ -103,6 +115,21 @@ export const APISettings: React.FC<APISettingsProps> = ({ onClose }) => {
     } catch (error) {
       console.error('[APISettings] Error clearing API key:', error);
       setMessage({ type: 'error', text: 'Failed to clear API key' });
+    }
+  };
+
+  const handleAutoBeautifyToggle = async () => {
+    try {
+      const newValue = !autoBeautify;
+      await settingsService.setAutoBeautify(newValue);
+      setAutoBeautify(newValue);
+      setMessage({
+        type: 'success',
+        text: `Auto-beautification ${newValue ? 'enabled' : 'disabled'}`,
+      });
+    } catch (error) {
+      console.error('[APISettings] Error toggling auto-beautify:', error);
+      setMessage({ type: 'error', text: 'Failed to update setting' });
     }
   };
 
@@ -194,12 +221,39 @@ export const APISettings: React.FC<APISettingsProps> = ({ onClose }) => {
                 )}
               </div>
 
+              <div style={styles.divider} />
+
+              <div style={styles.section}>
+                <label style={styles.label}>Auto-Beautification</label>
+                <div style={styles.toggleRow}>
+                  <button
+                    onClick={handleAutoBeautifyToggle}
+                    style={{
+                      ...styles.toggle,
+                      ...(autoBeautify ? styles.toggleOn : styles.toggleOff),
+                    }}
+                  >
+                    <div style={{
+                      ...styles.toggleKnob,
+                      ...(autoBeautify ? styles.toggleKnobOn : styles.toggleKnobOff),
+                    }} />
+                  </button>
+                  <span style={styles.toggleLabel}>
+                    {autoBeautify ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+                <div style={styles.hint}>
+                  When enabled, cards are automatically beautified after capture using AI.
+                </div>
+              </div>
+
               <div style={styles.info}>
                 <strong>Features enabled with API key:</strong>
                 <ul style={styles.featureList}>
                   <li>🎨 AI Beautification (Recreate Design mode with vision)</li>
                   <li>📋 AI Beautification (Organize Content mode)</li>
                   <li>💬 Enhanced chat with Claude Sonnet 4</li>
+                  <li>✨ Auto-beautification on card capture</li>
                 </ul>
               </div>
             </>
@@ -382,6 +436,54 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 0,
     paddingLeft: '20px',
     lineHeight: '1.8',
+  },
+  divider: {
+    height: '1px',
+    background: 'rgba(184, 156, 130, 0.2)',
+    margin: '24px 0',
+  },
+  toggleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '8px',
+  },
+  toggle: {
+    width: '48px',
+    height: '26px',
+    borderRadius: '13px',
+    border: 'none',
+    cursor: 'pointer',
+    position: 'relative',
+    transition: 'all 0.3s ease',
+    padding: 0,
+  },
+  toggleOn: {
+    background: 'linear-gradient(135deg, #D4AF37, #FFD700)',
+  },
+  toggleOff: {
+    background: 'rgba(184, 156, 130, 0.2)',
+  },
+  toggleKnob: {
+    width: '20px',
+    height: '20px',
+    borderRadius: '50%',
+    background: 'white',
+    position: 'absolute',
+    top: '3px',
+    transition: 'all 0.3s ease',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+  },
+  toggleKnobOn: {
+    left: '25px',
+  },
+  toggleKnobOff: {
+    left: '3px',
+  },
+  toggleLabel: {
+    fontSize: '14px',
+    color: '#5C4D42',
+    fontWeight: 500,
   },
   footer: {
     padding: '12px 24px',
