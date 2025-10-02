@@ -15,6 +15,7 @@ interface ToolbarProps {
   onAPISettingsClick?: () => void;
   onCreateNote?: () => void;
   onToggleConnectionMode?: () => void;
+  onOpenSidePanel?: () => void;
   connectionMode?: boolean;
 }
 
@@ -35,6 +36,7 @@ export const Toolbar = forwardRef<ToolbarRef, ToolbarProps>(({
   onAPISettingsClick,
   onCreateNote,
   onToggleConnectionMode,
+  onOpenSidePanel,
   connectionMode,
 }, ref) => {
   const [searchInput, setSearchInput] = useState(filters.searchQuery);
@@ -339,6 +341,13 @@ export const Toolbar = forwardRef<ToolbarRef, ToolbarProps>(({
               </div>
             </div>
           )}
+          <button style={styles.sidePanelButton} title="Open Stashed Cards (Side Panel)" onClick={onOpenSidePanel}>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+              <path d="M2 7H18" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M8 7V18" stroke="currentColor" strokeWidth="1.5"/>
+            </svg>
+          </button>
           <button style={styles.button} title="Settings" onClick={onSettingsClick}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path
@@ -817,5 +826,18 @@ const styles: Record<string, React.CSSProperties> = {
   },
   connectionButtonText: {
     color: 'inherit',
+  },
+  sidePanelButton: {
+    padding: '8px',
+    border: '1px solid rgba(139, 115, 85, 0.3)',
+    borderRadius: '8px',
+    background: 'rgba(139, 115, 85, 0.1)',
+    color: '#8B7355',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
+    position: 'relative',
   },
 };

@@ -209,6 +209,35 @@ function CanvasInner() {
     setShowAPISettings(true);
   };
 
+  const handleOpenSidePanel = async () => {
+    try {
+      console.log('[Canvas] Opening side panel...');
+
+      // Check if sidePanel API is available
+      if (!chrome.sidePanel) {
+        throw new Error('Side Panel API not available');
+      }
+
+      // Get current window ID
+      const currentWindow = await chrome.windows.getCurrent();
+      console.log('[Canvas] Current window:', currentWindow);
+
+      if (!currentWindow.id) {
+        throw new Error('No window ID available');
+      }
+
+      console.log('[Canvas] Opening side panel for window:', currentWindow.id);
+      await chrome.sidePanel.open({ windowId: currentWindow.id });
+
+      console.log('[Canvas] Side panel opened successfully');
+      showFeedback('Side panel opened');
+    } catch (error) {
+      console.error('[Canvas] Error opening side panel:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      showFeedback(`Failed to open side panel: ${errorMessage}`);
+    }
+  };
+
   const handleCreateNote = async () => {
     try {
       // Get current viewport center position
@@ -456,6 +485,7 @@ function CanvasInner() {
         onAPISettingsClick={handleOpenAPISettings}
         onCreateNote={handleCreateNote}
         onToggleConnectionMode={handleToggleConnectionMode}
+        onOpenSidePanel={handleOpenSidePanel}
         connectionMode={connectionMode}
       />
 

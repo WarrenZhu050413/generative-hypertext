@@ -57,9 +57,7 @@ export class ClaudeAPIService {
     }
   ): Promise<string> {
     const apiKey = await apiConfigService.getAPIKey();
-    if (!apiKey) {
-      throw new Error('Claude API key not configured. Please set your API key in settings.');
-    }
+    // apiKey may be null - that's okay, SDK might use other auth methods
 
     const request: ClaudeAPIRequest = {
       model: options?.model || this.DEFAULT_MODEL,
@@ -76,6 +74,7 @@ export class ClaudeAPIService {
       model: request.model,
       messageCount: messages.length,
       hasSystem: !!request.system,
+      hasAPIKey: !!apiKey,
     });
 
     try {
@@ -83,7 +82,7 @@ export class ClaudeAPIService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
+          ...(apiKey ? { 'x-api-key': apiKey } : {}),
           'anthropic-version': this.API_VERSION,
         },
         body: JSON.stringify(request),
@@ -134,9 +133,7 @@ export class ClaudeAPIService {
     }
   ): Promise<string> {
     const apiKey = await apiConfigService.getAPIKey();
-    if (!apiKey) {
-      throw new Error('Claude API key not configured. Please set your API key in settings.');
-    }
+    // apiKey may be null - that's okay, SDK might use other auth methods
 
     // Use vision-capable model
     const model = 'claude-sonnet-4-20250514'; // Sonnet 4 supports vision
@@ -182,6 +179,7 @@ export class ClaudeAPIService {
       model: request.model,
       messageCount: enhancedMessages.length,
       hasScreenshot: true,
+      hasAPIKey: !!apiKey,
     });
 
     try {
@@ -189,7 +187,7 @@ export class ClaudeAPIService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
+          ...(apiKey ? { 'x-api-key': apiKey } : {}),
           'anthropic-version': this.API_VERSION,
         },
         body: JSON.stringify(request),

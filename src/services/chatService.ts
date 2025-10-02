@@ -5,6 +5,7 @@
 import type { Message } from '@/types/card';
 import { generateId } from '@/utils/storage';
 import { mockContentGenerator } from './mockContentGenerator';
+import { claudeAPIService } from './claudeAPIService';
 import { getCardById, saveCard } from '@/utils/storage';
 
 /**
@@ -67,15 +68,46 @@ export class ChatService implements IChatService {
     this.abortControllers.set(cardId, controller);
 
     try {
-      const stream = mockContentGenerator.generate(
-        userMessage,
-        cardContent,
-        controller.signal
-      );
+      // TRY REAL API FIRST
+      console.log('[ChatService] Trying Claude API...');
+      const prompt = `Context: ${cardContent}\n\nUser: ${userMessage}`;
 
-      for await (const chunk of stream) {
-        assistantMsg.content += chunk;
-        yield chunk;
+      try {
+        const response = await claudeAPIService.sendMessage([
+          { role: 'user', content: prompt }
+        ], {
+          system: 'You are a helpful assistant analyzing web content.',
+          maxTokens: 2048
+        });
+
+        console.log('[ChatService] ✓ Claude API success');
+
+        // Simulate streaming by yielding chunks
+        const chunkSize = 10;
+        for (let i = 0; i < response.length; i += chunkSize) {
+          if (controller.signal.aborted) break;
+          const chunk = response.slice(i, i + chunkSize);
+          assistantMsg.content += chunk;
+          yield chunk;
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
+
+      } catch (apiError) {
+        // API FAILED - show error and fall back to mock
+        console.error('[ChatService] ✗ Claude API failed:', apiError);
+        console.warn('[ChatService] Falling back to mock');
+
+        // Fall back to mock
+        const stream = mockContentGenerator.generate(
+          userMessage,
+          cardContent,
+          controller.signal
+        );
+
+        for await (const chunk of stream) {
+          assistantMsg.content += chunk;
+          yield chunk;
+        }
       }
 
       assistantMsg.streaming = false;

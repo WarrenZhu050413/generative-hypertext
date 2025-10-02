@@ -6,6 +6,7 @@
 import type { Card } from '@/types/card';
 import type { TextSelection } from '@/utils/textSelection';
 import { mockContentGenerator } from './mockContentGenerator';
+import { claudeAPIService } from './claudeAPIService';
 
 export type GenerationType = 'explanation' | 'definition' | 'deep-dive' | 'examples';
 
@@ -104,14 +105,51 @@ export async function* generateChildCard(
   const prompt = buildPrompt(request);
   let fullResponse = '';
 
+  // TRY REAL API FIRST
+  console.log('[childCardGenerator] Trying Claude API...');
+
   try {
-    // Use mock generator for now (will use real Claude API when configured)
+    // Try real Claude API
+    fullResponse = await claudeAPIService.sendMessage([
+      { role: 'user', content: prompt }
+    ], {
+      system: 'You are a helpful assistant generating informative content cards from selected text.',
+      maxTokens: 2048
+    });
+
+    console.log('[childCardGenerator] ✓ Claude API success');
+
+    // Simulate streaming by yielding chunks
+    const chunkSize = 10;
+    for (let i = 0; i < fullResponse.length; i += chunkSize) {
+      if (request.signal?.aborted) {
+        throw new Error('Generation cancelled');
+      }
+      const chunk = fullResponse.slice(i, i + chunkSize);
+      yield chunk;
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+
+    // Parse final response
+    const result = parseResponse(fullResponse);
+    return result;
+
+  } catch (error) {
+    if (request.signal?.aborted) {
+      throw new Error('Generation cancelled');
+    }
+
+    // API FAILED - fall back to mock
+    console.error('[childCardGenerator] ✗ Claude API failed:', error);
+    console.warn('[childCardGenerator] Falling back to mock');
+
     const stream = mockContentGenerator.generate(
       prompt,
       request.parentCard.content || '',
       request.signal
     );
 
+    fullResponse = '';
     for await (const chunk of stream) {
       fullResponse += chunk;
       yield chunk;
@@ -120,11 +158,6 @@ export async function* generateChildCard(
     // Parse final response
     const result = parseResponse(fullResponse);
     return result;
-  } catch (error) {
-    if (request.signal?.aborted) {
-      throw new Error('Generation cancelled');
-    }
-    throw error;
   }
 }
 

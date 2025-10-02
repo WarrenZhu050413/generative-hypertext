@@ -108,47 +108,34 @@ export async function* fillInFromConnections(
   console.log('[fillInService] System prompt:', systemPrompt);
   console.log('[fillInService] User prompt:', userPrompt);
 
-  // Check if we have Claude API configured
-  const hasAPIKey = await apiConfigService.hasAPIKey();
+  // TRY REAL API FIRST
+  console.log('[fillInService] Trying Claude API...');
 
   let fullContent = '';
 
-  if (hasAPIKey) {
-    try {
-      // Use real Claude API (non-streaming for now)
-      console.log('[fillInService] Using real Claude API');
-
-      fullContent = await claudeAPIService.sendMessage(
-        [
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
+  try {
+    // Use real Claude API (non-streaming for now)
+    fullContent = await claudeAPIService.sendMessage(
+      [
         {
-          system: systemPrompt,
-        }
-      );
-
-      // Yield the full content at once
-      yield fullContent;
-    } catch (error) {
-      console.error('[fillInService] Claude API error, falling back to mock:', error);
-      // Fallback to mock on error
-      const mockStream = mockContentGenerator.generate(
-        userPrompt,
-        connectedContext,
-        signal
-      );
-      fullContent = '';
-      for await (const chunk of mockStream) {
-        fullContent += chunk;
-        yield chunk;
+          role: 'user',
+          content: userPrompt,
+        },
+      ],
+      {
+        system: systemPrompt,
       }
-    }
-  } else {
-    // Use mock content generator
-    console.log('[fillInService] Using mock content generator (no API key)');
+    );
+
+    console.log('[fillInService] ✓ Claude API success');
+
+    // Yield the full content at once
+    yield fullContent;
+
+  } catch (error) {
+    // API FAILED - fall back to mock
+    console.error('[fillInService] ✗ Claude API failed:', error);
+    console.warn('[fillInService] Falling back to mock');
 
     const mockStream = mockContentGenerator.generate(
       userPrompt,
@@ -156,6 +143,7 @@ export async function* fillInFromConnections(
       signal
     );
 
+    fullContent = '';
     for await (const chunk of mockStream) {
       fullContent += chunk;
       yield chunk;

@@ -7,7 +7,8 @@ import type { Card } from '@/types/card';
 import type { CardButton } from '@/types/button';
 import { generateId, saveCard } from '@/utils/storage';
 import { addConnection } from '@/utils/connectionStorage';
-import { chatService } from './chatService';
+import { claudeAPIService } from './claudeAPIService';
+import { mockContentGenerator } from './mockContentGenerator';
 
 export class CardGenerationService {
   /**
@@ -33,29 +34,54 @@ export class CardGenerationService {
 
     console.log('[cardGenerationService] Built prompt:', prompt.substring(0, 100) + '...');
 
-    // Generate conversation ID for this generation
-    const generationId = generateId();
-    console.log('[cardGenerationService] Generation ID:', generationId);
-
-    // Create temporary messages array to get response
-    const messages: any[] = [];
-
-    // Stream response from LLM
-    console.log('[cardGenerationService] Calling chatService.sendMessage...');
-    const stream = chatService.sendMessage(generationId, prompt, sourceCard.content || '');
-
+    // Generate content from LLM
+    console.log('[cardGenerationService] Trying Claude API...');
     let responseContent = '';
-    for await (const chunk of stream) {
-      responseContent += chunk;
+
+    try {
+      // TRY REAL API FIRST
+      responseContent = await claudeAPIService.sendMessage([
+        { role: 'user', content: prompt }
+      ], {
+        system: 'You are a helpful assistant generating new content based on existing cards.',
+        maxTokens: 3072
+      });
+
+      console.log('[cardGenerationService] ✓ Claude API success');
+
+    } catch (apiError) {
+      // API FAILED - fall back to mock
+      console.error('[cardGenerationService] ✗ Claude API failed:', apiError);
+      console.warn('[cardGenerationService] Falling back to mock');
+
+      const stream = mockContentGenerator.generate(
+        prompt,
+        sourceCard.content || '',
+        new AbortController().signal
+      );
+
+      for await (const chunk of stream) {
+        responseContent += chunk;
+      }
     }
-    console.log('[cardGenerationService] LLM response length:', responseContent.length);
 
-    // Get the conversation to extract messages
-    const conversation = chatService.getConversation(generationId);
-    console.log('[cardGenerationService] Conversation messages:', conversation.length);
+    console.log('[cardGenerationService] Response length:', responseContent.length);
 
-    // Clear the temporary conversation
-    await chatService.clearConversation(generationId);
+    // Create conversation manually (no need for chatService)
+    const conversation = [
+      {
+        id: generateId(),
+        role: 'user' as const,
+        content: prompt,
+        timestamp: Date.now()
+      },
+      {
+        id: generateId(),
+        role: 'assistant' as const,
+        content: responseContent,
+        timestamp: Date.now()
+      }
+    ];
 
     // Calculate position for new card (to the right of source)
     const position = this.calculatePosition(sourceCard);
@@ -81,7 +107,7 @@ export class CardGenerationService {
       updatedAt: Date.now(),
       conversation,
       generationContext: {
-        sourceMessageId: conversation[0]?.id || generationId,
+        sourceMessageId: conversation[0]?.id || generateId(),
         userPrompt: prompt,
         timestamp: Date.now(),
       },

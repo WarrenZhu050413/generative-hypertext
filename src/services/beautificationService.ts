@@ -278,15 +278,8 @@ export class BeautificationService implements IBeautificationService {
     console.log('[BeautificationService] Mode:', mode);
     console.log('[BeautificationService] Has screenshot:', !!screenshotId);
 
-    // Check if API key is configured
-    const hasAPIKey = await apiConfigService.hasAPIKey();
-
-    if (!hasAPIKey) {
-      console.warn('[BeautificationService] No API key configured, using mock response');
-      // Fallback to mock response
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      return MOCK_BEAUTIFIED_CONTENT[mode];
-    }
+    // TRY REAL API FIRST (with or without explicit API key)
+    console.log('[BeautificationService] Trying Claude API...');
 
     try {
       const systemPrompt = PROMPT_TEMPLATES[mode];
@@ -342,14 +335,13 @@ export class BeautificationService implements IBeautificationService {
         });
       }
 
-      console.log('[BeautificationService] Beautification complete via Claude API');
+      console.log('[BeautificationService] ✓ Claude API success');
       return beautifiedHTML;
 
     } catch (error) {
-      console.error('[BeautificationService] Error calling Claude API:', error);
-
-      // Fallback to mock response on error
-      console.warn('[BeautificationService] Falling back to mock response due to API error');
+      // API FAILED - fall back to mock
+      console.error('[BeautificationService] ✗ Claude API failed:', error);
+      console.warn('[BeautificationService] Falling back to mock response');
       await new Promise(resolve => setTimeout(resolve, 1500));
       return MOCK_BEAUTIFIED_CONTENT[mode];
     }
