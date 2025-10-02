@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { css } from '@emotion/react';
 import React, { useState, useEffect } from 'react';
+import DOMPurify from 'isomorphic-dompurify';
 import type { Card } from '@/types/card';
 import { getStashedCards, restoreCard, deleteCardPermanently } from './stashService';
 
@@ -8,6 +9,7 @@ export const SidePanel: React.FC = () => {
   const [stashedCards, setStashedCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   // Load stashed cards
   useEffect(() => {
@@ -91,6 +93,26 @@ export const SidePanel: React.FC = () => {
     });
   };
 
+  const toggleCardExpansion = (cardId: string) => {
+    setExpandedCards((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(cardId)) {
+        newSet.delete(cardId);
+      } else {
+        newSet.add(cardId);
+      }
+      return newSet;
+    });
+  };
+
+  const getContentPreview = (content: string | undefined) => {
+    if (!content) return '';
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    const text = tempDiv.textContent || tempDiv.innerText || '';
+    return text.length > 100 ? text.substring(0, 100) + '...' : text;
+  };
+
   return (
     <div css={containerStyles}>
       {/* Header */}
@@ -133,41 +155,76 @@ export const SidePanel: React.FC = () => {
             )}
           </div>
         ) : (
-          filteredCards.map((card) => (
-            <div key={card.id} css={cardItemStyles}>
-              {/* Card Header */}
-              <div css={cardHeaderStyles}>
-                {card.metadata.favicon && <span css={faviconStyles}>{card.metadata.favicon}</span>}
-                <span css={domainStyles}>{card.metadata.domain}</span>
-                <span css={dateStyles}>{formatDate(card.createdAt)}</span>
-              </div>
+          filteredCards.map((card) => {
+            const isExpanded = expandedCards.has(card.id);
+            const sanitizedContent = card.content
+              ? DOMPurify.sanitize(card.content, {
+                  ALLOWED_TAGS: [
+                    'p', 'br', 'strong', 'em', 'u', 'a', 'span', 'div',
+                    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+                    'ul', 'ol', 'li',
+                    'article', 'section', 'header', 'footer', 'nav', 'aside',
+                    'blockquote', 'pre', 'code'
+                  ],
+                  ALLOWED_ATTR: ['href', 'target', 'rel', 'style', 'class', 'id'],
+                })
+              : '';
 
-              {/* Card Title */}
-              <div css={cardTitleStyles}>{card.metadata.title}</div>
-
-              {/* Card Tags */}
-              {card.tags && card.tags.length > 0 && (
-                <div css={tagsStyles}>
-                  {card.tags.slice(0, 3).map((tag, i) => (
-                    <span key={i} css={tagStyles}>
-                      {tag}
-                    </span>
-                  ))}
-                  {card.tags.length > 3 && <span css={tagStyles}>+{card.tags.length - 3}</span>}
+            return (
+              <div key={card.id} css={cardItemStyles}>
+                {/* Card Header */}
+                <div css={cardHeaderStyles}>
+                  {card.metadata.favicon && <span css={faviconStyles}>{card.metadata.favicon}</span>}
+                  <span css={domainStyles}>{card.metadata.domain}</span>
+                  <span css={dateStyles}>{formatDate(card.createdAt)}</span>
                 </div>
-              )}
 
-              {/* Actions */}
-              <div css={actionsStyles}>
-                <button onClick={() => handleRestore(card)} css={restoreButtonStyles}>
-                  ↩️ Restore
-                </button>
-                <button onClick={() => handleDelete(card)} css={deleteButtonStyles}>
-                  🗑️ Delete
-                </button>
+                {/* Card Title */}
+                <div css={cardTitleStyles}>{card.metadata.title}</div>
+
+                {/* Content Preview or Full Content */}
+                {card.content && (
+                  <div>
+                    {isExpanded ? (
+                      <div css={contentExpandedStyles} dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
+                    ) : (
+                      <div css={contentPreviewStyles}>{getContentPreview(card.content)}</div>
+                    )}
+                    {card.content.length > 100 && (
+                      <button
+                        onClick={() => toggleCardExpansion(card.id)}
+                        css={expandButtonStyles}
+                      >
+                        {isExpanded ? '▲ Show less' : '▼ Show more'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Card Tags */}
+                {card.tags && card.tags.length > 0 && (
+                  <div css={tagsStyles}>
+                    {card.tags.slice(0, 3).map((tag, i) => (
+                      <span key={i} css={tagStyles}>
+                        {tag}
+                      </span>
+                    ))}
+                    {card.tags.length > 3 && <span css={tagStyles}>+{card.tags.length - 3}</span>}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div css={actionsStyles}>
+                  <button onClick={() => handleRestore(card)} css={restoreButtonStyles}>
+                    ↩️ Restore
+                  </button>
+                  <button onClick={() => handleDelete(card)} css={deleteButtonStyles}>
+                    🗑️ Delete
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

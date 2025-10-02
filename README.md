@@ -2,32 +2,48 @@
 
 A Chrome extension for clipping web content and organizing it in a visual canvas.
 
+## Quick Links
+
+- **📚 [Documentation](./docs/README.md)** - Complete documentation index
+- **🚀 [Quick Start](./docs/QUICK_START.md)** - Get started in 5 minutes
+- **🏗️ [Architecture](./docs/architecture/DESIGN.md)** - System design and technical details
+- **🧪 [Testing Guide](./docs/testing/MANUAL_TEST_GUIDE.md)** - Manual testing procedures
+- **📋 [Project Status](./docs/project/PROJECT_STATUS.md)** - Current status and roadmap
+
 ## Project Structure
 
 ```
 NabokovsWeb/
-├── src/                # Source code
-│   ├── components/     # React components
-│   ├── utils/          # Utility functions
-│   ├── types/          # TypeScript type definitions
-│   ├── background/     # Extension background scripts
-│   ├── content/        # Content scripts
-│   ├── canvas/         # Canvas application
-│   └── manifest.json   # Chrome extension manifest
-├── public/             # Static assets (icons, etc.)
-├── tests/              # Unit and E2E tests
-│   ├── unit/          # Unit tests
-│   ├── e2e/           # End-to-end tests
-│   ├── fixtures/      # Test fixtures
-│   └── utils/         # Test utilities
-├── scripts/            # Build and utility scripts
-├── docs/               # Documentation
-│   ├── screenshots/   # Screenshots for documentation
-│   └── *.md          # Various documentation files
-├── test-scripts/       # Manual testing scripts and HTML test pages
-├── archive/            # Deprecated/old code
-├── dist/              # Build output (gitignored)
-└── coverage/          # Test coverage reports (gitignored)
+├── src/                      # Source code
+│   ├── background/           # Service worker (Manifest V3)
+│   ├── content/              # Content scripts for element selection
+│   ├── canvas/               # Canvas React app (React Flow)
+│   ├── sidepanel/            # Chrome Side Panel for stashed cards
+│   ├── components/           # Shared React components
+│   ├── services/             # API services (Claude, card generation, etc.)
+│   ├── utils/                # Utility functions (storage, sanitization, etc.)
+│   ├── types/                # TypeScript type definitions
+│   ├── config/               # Configuration (default buttons, etc.)
+│   └── manifest.json         # Chrome extension manifest
+├── docs/                     # Documentation (organized by category)
+│   ├── architecture/         # System design and technical architecture
+│   ├── implementation/       # Development guides and feature docs
+│   ├── research/             # User research and competitive analysis
+│   ├── testing/              # Test guides and reports
+│   └── project/              # Project status, roadmaps, and TODOs
+├── test-scripts/             # Manual Playwright test scripts
+│   ├── tests/                # Test scripts (.mjs)
+│   └── debug/                # Debug assets (.html, .png)
+├── tests/                    # Automated tests (Vitest + Playwright)
+│   ├── unit/                 # Unit tests
+│   ├── e2e/                  # End-to-end tests
+│   ├── fixtures/             # Test fixtures
+│   └── utils/                # Test utilities
+├── scripts/                  # Build and utility scripts
+├── public/                   # Static assets (icons, etc.)
+├── archive/                  # Deprecated/old code
+├── dist/                     # Build output (gitignored)
+└── coverage/                 # Test coverage reports (gitignored)
 ```
 
 ## Development
