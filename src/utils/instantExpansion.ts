@@ -78,7 +78,7 @@ async function createParentChildConnection(parentId: string, childId: string): P
     label: 'Generated',
     metadata: {
       createdAt: Date.now(),
-      createdBy: 'llm-hyperlink',
+      createdBy: 'ai',
     },
   });
 }
