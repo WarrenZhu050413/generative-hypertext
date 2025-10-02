@@ -11,6 +11,8 @@ import { beautificationService } from '@/services/beautificationService';
 import { DEFAULT_BUTTONS } from '@/config/defaultButtons';
 import type { CardButton } from '@/types/button';
 import type { BeautificationMode } from '@/types/card';
+import { useLLMHyperlinks } from './useLLMHyperlinks';
+import { GenerateChildModal } from '@/components/GenerateChildModal';
 
 interface CardNodeProps {
   data: {
@@ -35,6 +37,17 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
   if (!card) {
     return null;
   }
+
+  // LLM-Generated Hyperlinks hook
+  const llmHyperlinks = useLLMHyperlinks({
+    card,
+    onToast: (message, type) => {
+      setToast({ message, type });
+      if (type !== 'loading') {
+        setTimeout(() => setToast(null), type === 'error' ? 5000 : 3000);
+      }
+    },
+  });
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString('en-US', {
@@ -412,6 +425,7 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
         ...(card.collapsed ? styles.cardCollapsed : {}),
       }}
       onDoubleClick={handleDoubleClick}
+      data-card-id={card.id}
     >
       {/* Resize Handle - bottom-right corner */}
       {!card.collapsed && (
@@ -643,6 +657,21 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
           buttonIcon={selectedButton.icon}
           onSubmit={handleContextSubmit}
           onCancel={handleContextCancel}
+        />
+      )}
+
+      {/* Generate Child Modal (LLM-Generated Hyperlinks) */}
+      {llmHyperlinks.showGenerateModal && llmHyperlinks.currentSelection && (
+        <GenerateChildModal
+          selectedText={llmHyperlinks.currentSelection.text}
+          generationType={llmHyperlinks.generationType}
+          streamingContent={llmHyperlinks.streamingContent}
+          isGenerating={llmHyperlinks.isGenerating}
+          onTypeChange={llmHyperlinks.setGenerationType}
+          onGenerate={llmHyperlinks.handleGenerate}
+          onRegenerate={llmHyperlinks.handleRegenerate}
+          onAccept={llmHyperlinks.handleAccept}
+          onCancel={llmHyperlinks.handleCancel}
         />
       )}
 
