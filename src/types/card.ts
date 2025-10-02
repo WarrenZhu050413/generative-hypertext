@@ -65,6 +65,22 @@ export interface CardSize {
 export type BeautificationMode = 'recreate-design' | 'organize-content';
 
 /**
+ * Fill-in strategy for connection-based synthesis
+ */
+export type FillInStrategy = 'replace' | 'append' | 'merge';
+
+/**
+ * History entry for fill-in operations
+ */
+export interface FillInHistoryEntry {
+  timestamp: number;
+  sourceCardIds: string[]; // Cards that contributed to this fill-in
+  strategy: FillInStrategy;
+  userPrompt?: string; // Optional guidance from user
+  previousContent?: string; // Snapshot before fill-in (for undo)
+}
+
+/**
  * Main card data structure for the canvas view
  * This is the primary Card type used throughout the application
  */
@@ -102,6 +118,8 @@ export interface Card {
   beautifiedContent?: string; // LLM-beautified HTML content
   beautificationMode?: BeautificationMode; // Which beautification mode was used
   beautificationTimestamp?: number; // When beautification was applied
+  // Fill-in synthesis fields
+  fillInHistory?: FillInHistoryEntry[]; // History of fill-in operations
 }
 
 /**

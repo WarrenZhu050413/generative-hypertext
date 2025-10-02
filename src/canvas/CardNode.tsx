@@ -14,6 +14,9 @@ import type { BeautificationMode } from '@/types/card';
 import { useLLMHyperlinks } from './useLLMHyperlinks';
 import { GenerateChildModal } from '@/components/GenerateChildModal';
 import { stashCard } from '@/sidepanel/stashService';
+import { FillInModal } from '@/components/FillInModal';
+import { getConnectionCount } from '@/services/connectionContextService';
+import type { FillInStrategy } from '@/types/card';
 
 interface CardNodeProps {
   data: {
@@ -31,6 +34,9 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [showBeautifyMenu, setShowBeautifyMenu] = useState(false);
   const [isBeautifying, setIsBeautifying] = useState(false);
+  const [showFillInModal, setShowFillInModal] = useState(false);
+  const [connectionCount, setConnectionCount] = useState(0);
+  const [allCards, setAllCards] = useState<Card[]>([]);
   const contentEditRef = useRef<HTMLTextAreaElement>(null);
   const titleEditRef = useRef<HTMLInputElement>(null);
   const generationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -49,6 +55,42 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
       }
     },
   });
+
+  // Load connection count for Fill-In feature
+  useEffect(() => {
+    async function loadConnectionCount() {
+      try {
+        const count = await getConnectionCount(card.id);
+        setConnectionCount(count);
+      } catch (error) {
+        console.error('[CardNode] Error loading connection count:', error);
+      }
+    }
+    loadConnectionCount();
+
+    // Listen for connection updates
+    const handleConnectionUpdate = () => {
+      loadConnectionCount();
+    };
+    window.addEventListener('nabokov:cards-updated', handleConnectionUpdate);
+    return () => {
+      window.removeEventListener('nabokov:cards-updated', handleConnectionUpdate);
+    };
+  }, [card.id]);
+
+  // Keyboard shortcut: Cmd+Shift+F for Fill-In
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'f') {
+        e.preventDefault();
+        if (connectionCount > 0) {
+          setShowFillInModal(true);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [connectionCount]);
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString('en-US', {
@@ -128,6 +170,66 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
     }
   };
 
+  const handleOpenFillIn = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent node drag
+
+    try {
+      // Load all cards from storage
+      const result = await chrome.storage.local.get('cards');
+      const cards: Card[] = result.cards || [];
+      setAllCards(cards);
+      setShowFillInModal(true);
+    } catch (error) {
+      console.error('[CardNode] Error loading cards for fill-in:', error);
+      setToast({ message: 'Failed to load cards', type: 'error' });
+      setTimeout(() => setToast(null), 5000);
+    }
+  };
+
+  const handleFillInAccept = async (
+    content: string,
+    sourceCardIds: string[],
+    strategy: FillInStrategy,
+    userGuidance?: string
+  ) => {
+    try {
+      // Apply strategy-specific content transformation
+      let finalContent = content;
+      if (strategy === 'append' && card.content) {
+        finalContent = `${card.content}\n\n---\n\n${content}`;
+      } else if (strategy === 'merge' && card.content) {
+        // For merge, the LLM already handled the merging, just use generated content
+        finalContent = content;
+      }
+      // For 'replace', just use the generated content as-is
+
+      // Create fill-in history entry
+      const historyEntry = {
+        timestamp: Date.now(),
+        sourceCardIds,
+        strategy,
+        userPrompt: userGuidance,
+        previousContent: card.content,
+      };
+
+      const updatedCard: Card = {
+        ...card,
+        content: finalContent,
+        fillInHistory: [...(card.fillInHistory || []), historyEntry],
+        updatedAt: Date.now(),
+      };
+
+      await saveCard(updatedCard);
+      window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+
+      setToast({ message: `Card filled in using ${strategy} strategy`, type: 'success' });
+      setTimeout(() => setToast(null), 3000);
+    } catch (error) {
+      console.error('[CardNode] Error accepting fill-in:', error);
+      setToast({ message: 'Failed to save filled-in content', type: 'error' });
+      setTimeout(() => setToast(null), 5000);
+    }
+  };
 
   const handleBeautify = async (mode: BeautificationMode) => {
     try {
@@ -537,6 +639,17 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
               )}
             </div>
           )}
+          {connectionCount > 0 && (
+            <button
+              onClick={handleOpenFillIn}
+              style={styles.fillInButton}
+              title={`Fill in from ${connectionCount} connected card${connectionCount !== 1 ? 's' : ''}`}
+              data-testid="fill-in-btn"
+            >
+              🔗
+              <span style={styles.connectionBadge}>{connectionCount}</span>
+            </button>
+          )}
           <button
             onClick={handleStash}
             style={styles.stashButton}
@@ -695,6 +808,16 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
           onRegenerate={llmHyperlinks.handleRegenerate}
           onAccept={llmHyperlinks.handleAccept}
           onCancel={llmHyperlinks.handleCancel}
+        />
+      )}
+
+      {/* Fill-In Modal */}
+      {showFillInModal && (
+        <FillInModal
+          card={card}
+          allCards={allCards}
+          onClose={() => setShowFillInModal(false)}
+          onAccept={handleFillInAccept}
         />
       )}
 
@@ -868,6 +991,37 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     fontSize: '12px',
     transition: 'all 0.2s ease',
+  },
+  fillInButton: {
+    width: '28px',
+    height: '20px',
+    padding: '0',
+    border: 'none',
+    background: 'rgba(212, 175, 55, 0.2)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '12px',
+    position: 'relative' as const,
+    transition: 'all 0.2s ease',
+  },
+  connectionBadge: {
+    position: 'absolute' as const,
+    top: '-4px',
+    right: '-4px',
+    background: '#d4af37',
+    color: 'white',
+    fontSize: '9px',
+    fontWeight: 600,
+    borderRadius: '50%',
+    width: '14px',
+    height: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid white',
   },
   stashButton: {
     width: '20px',
