@@ -8,7 +8,7 @@ import type { CardButton } from '@/types/button';
 import { generateId, saveCard } from '@/utils/storage';
 import { addConnection } from '@/utils/connectionStorage';
 import { claudeAPIService } from './claudeAPIService';
-import { mockContentGenerator } from './mockContentGenerator';
+import { apiConfigService } from './apiConfig';
 
 export class CardGenerationService {
   /**
@@ -34,12 +34,18 @@ export class CardGenerationService {
 
     console.log('[cardGenerationService] Built prompt:', prompt.substring(0, 100) + '...');
 
+    // Check if API key is configured
+    if (!(await apiConfigService.hasAPIKey())) {
+      throw new Error(
+        'Claude API key not configured. Please add your API key in Settings (gear icon) to generate cards.'
+      );
+    }
+
     // Generate content from LLM
-    console.log('[cardGenerationService] Trying Claude API...');
+    console.log('[cardGenerationService] Calling Claude API...');
     let responseContent = '';
 
     try {
-      // TRY REAL API FIRST
       responseContent = await claudeAPIService.sendMessage([
         { role: 'user', content: prompt }
       ], {
@@ -50,19 +56,13 @@ export class CardGenerationService {
       console.log('[cardGenerationService] ✓ Claude API success');
 
     } catch (apiError) {
-      // API FAILED - fall back to mock
       console.error('[cardGenerationService] ✗ Claude API failed:', apiError);
-      console.warn('[cardGenerationService] Falling back to mock');
 
-      const stream = mockContentGenerator.generate(
-        prompt,
-        sourceCard.content || '',
-        new AbortController().signal
+      // Re-throw with user-friendly message
+      const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown error';
+      throw new Error(
+        `Failed to generate card: ${errorMessage}\n\nPlease check:\n- Your API key is valid\n- You have internet connection\n- Claude API service is available`
       );
-
-      for await (const chunk of stream) {
-        responseContent += chunk;
-      }
     }
 
     console.log('[cardGenerationService] Response length:', responseContent.length);

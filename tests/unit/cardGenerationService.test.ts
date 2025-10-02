@@ -23,6 +23,13 @@ vi.mock('@/services/claudeAPIService', () => ({
   },
 }));
 
+vi.mock('@/services/apiConfig', () => ({
+  apiConfigService: {
+    hasAPIKey: vi.fn(async () => true),
+    getAPIKey: vi.fn(async () => 'test-api-key'),
+  },
+}));
+
 describe('CardGenerationService', () => {
   let service: CardGenerationService;
   let sourceCard: Card;

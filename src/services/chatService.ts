@@ -4,8 +4,8 @@
 
 import type { Message } from '@/types/card';
 import { generateId } from '@/utils/storage';
-import { mockContentGenerator } from './mockContentGenerator';
 import { claudeAPIService } from './claudeAPIService';
+import { apiConfigService } from './apiConfig';
 import { getCardById, saveCard } from '@/utils/storage';
 
 /**
@@ -43,6 +43,13 @@ export class ChatService implements IChatService {
     userMessage: string,
     cardContent: string
   ): AsyncGenerator<string, void, unknown> {
+    // Check if API key is configured
+    if (!(await apiConfigService.hasAPIKey())) {
+      throw new Error(
+        'Claude API key not configured. Please add your API key in Settings (gear icon) to use chat.'
+      );
+    }
+
     // Add user message
     const userMsg: Message = {
       id: generateId(),
@@ -68,46 +75,26 @@ export class ChatService implements IChatService {
     this.abortControllers.set(cardId, controller);
 
     try {
-      // TRY REAL API FIRST
-      console.log('[ChatService] Trying Claude API...');
+      console.log('[ChatService] Calling Claude API...');
       const prompt = `Context: ${cardContent}\n\nUser: ${userMessage}`;
 
-      try {
-        const response = await claudeAPIService.sendMessage([
-          { role: 'user', content: prompt }
-        ], {
-          system: 'You are a helpful assistant analyzing web content.',
-          maxTokens: 2048
-        });
+      const response = await claudeAPIService.sendMessage([
+        { role: 'user', content: prompt }
+      ], {
+        system: 'You are a helpful assistant analyzing web content.',
+        maxTokens: 2048
+      });
 
-        console.log('[ChatService] ✓ Claude API success');
+      console.log('[ChatService] ✓ Claude API success');
 
-        // Simulate streaming by yielding chunks
-        const chunkSize = 10;
-        for (let i = 0; i < response.length; i += chunkSize) {
-          if (controller.signal.aborted) break;
-          const chunk = response.slice(i, i + chunkSize);
-          assistantMsg.content += chunk;
-          yield chunk;
-          await new Promise(resolve => setTimeout(resolve, 20));
-        }
-
-      } catch (apiError) {
-        // API FAILED - show error and fall back to mock
-        console.error('[ChatService] ✗ Claude API failed:', apiError);
-        console.warn('[ChatService] Falling back to mock');
-
-        // Fall back to mock
-        const stream = mockContentGenerator.generate(
-          userMessage,
-          cardContent,
-          controller.signal
-        );
-
-        for await (const chunk of stream) {
-          assistantMsg.content += chunk;
-          yield chunk;
-        }
+      // Simulate streaming by yielding chunks
+      const chunkSize = 10;
+      for (let i = 0; i < response.length; i += chunkSize) {
+        if (controller.signal.aborted) break;
+        const chunk = response.slice(i, i + chunkSize);
+        assistantMsg.content += chunk;
+        yield chunk;
+        await new Promise(resolve => setTimeout(resolve, 20));
       }
 
       assistantMsg.streaming = false;
@@ -117,8 +104,9 @@ export class ChatService implements IChatService {
         assistantMsg.content += '\n\n[Response stopped by user]';
         assistantMsg.streaming = false;
       } else {
-        console.error('[ChatService] Error streaming response:', error);
-        assistantMsg.content += '\n\n[Error generating response]';
+        console.error('[ChatService] ✗ Claude API failed:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        assistantMsg.content += `\n\n[Error generating response: ${errorMessage}]\n\nPlease check:\n- Your API key is valid\n- You have internet connection\n- Claude API service is available`;
         assistantMsg.streaming = false;
       }
       await this.saveConversation(cardId);

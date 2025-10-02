@@ -5,7 +5,6 @@
 
 import type { Card, FillInStrategy } from '@/types/card';
 import { getConnectedCards, buildFillInContext } from './connectionContextService';
-import { mockContentGenerator } from './mockContentGenerator';
 import { apiConfigService } from './apiConfig';
 import { claudeAPIService } from './claudeAPIService';
 
@@ -94,6 +93,13 @@ export async function* fillInFromConnections(
 ): AsyncGenerator<string, FillInResult, unknown> {
   const { strategy, userGuidance, signal } = options;
 
+  // Check if API key is configured
+  if (!(await apiConfigService.hasAPIKey())) {
+    throw new Error(
+      'Claude API key not configured. Please add your API key in Settings (gear icon) to use fill-in.'
+    );
+  }
+
   // Get connected cards and build context
   const connectedCards = await getConnectedCards(card.id, allCards, 'both');
   const connectedContext = buildFillInContext(connectedCards);
@@ -108,8 +114,7 @@ export async function* fillInFromConnections(
   console.log('[fillInService] System prompt:', systemPrompt);
   console.log('[fillInService] User prompt:', userPrompt);
 
-  // TRY REAL API FIRST
-  console.log('[fillInService] Trying Claude API...');
+  console.log('[fillInService] Calling Claude API...');
 
   let fullContent = '';
 
@@ -132,28 +137,24 @@ export async function* fillInFromConnections(
     // Yield the full content at once
     yield fullContent;
 
+    return {
+      content: fullContent,
+      sourceCardIds: connectedCards.map((c) => c.id),
+    };
+
   } catch (error) {
-    // API FAILED - fall back to mock
-    console.error('[fillInService] ✗ Claude API failed:', error);
-    console.warn('[fillInService] Falling back to mock');
-
-    const mockStream = mockContentGenerator.generate(
-      userPrompt,
-      connectedContext,
-      signal
-    );
-
-    fullContent = '';
-    for await (const chunk of mockStream) {
-      fullContent += chunk;
-      yield chunk;
+    if (signal?.aborted) {
+      throw new Error('Fill-in cancelled');
     }
-  }
 
-  return {
-    content: fullContent,
-    sourceCardIds: connectedCards.map((c) => c.id),
-  };
+    console.error('[fillInService] ✗ Claude API failed:', error);
+
+    // Re-throw with user-friendly message
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(
+      `Failed to fill in card: ${errorMessage}\n\nPlease check:\n- Your API key is valid\n- You have internet connection\n- Claude API service is available`
+    );
+  }
 }
 
 /**

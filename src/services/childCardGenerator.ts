@@ -5,8 +5,8 @@
 
 import type { Card } from '@/types/card';
 import type { TextSelection } from '@/utils/textSelection';
-import { mockContentGenerator } from './mockContentGenerator';
 import { claudeAPIService } from './claudeAPIService';
+import { apiConfigService } from './apiConfig';
 
 export type GenerationType = 'explanation' | 'definition' | 'deep-dive' | 'examples';
 
@@ -102,11 +102,17 @@ function parseResponse(responseText: string): GenerationResult {
 export async function* generateChildCard(
   request: GenerateChildCardRequest
 ): AsyncGenerator<string, GenerationResult, unknown> {
+  // Check if API key is configured
+  if (!(await apiConfigService.hasAPIKey())) {
+    throw new Error(
+      'Claude API key not configured. Please add your API key in Settings (gear icon) to generate cards.'
+    );
+  }
+
   const prompt = buildPrompt(request);
   let fullResponse = '';
 
-  // TRY REAL API FIRST
-  console.log('[childCardGenerator] Trying Claude API...');
+  console.log('[childCardGenerator] Calling Claude API...');
 
   try {
     // Try real Claude API
@@ -139,25 +145,13 @@ export async function* generateChildCard(
       throw new Error('Generation cancelled');
     }
 
-    // API FAILED - fall back to mock
     console.error('[childCardGenerator] ✗ Claude API failed:', error);
-    console.warn('[childCardGenerator] Falling back to mock');
 
-    const stream = mockContentGenerator.generate(
-      prompt,
-      request.parentCard.content || '',
-      request.signal
+    // Re-throw with user-friendly message
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(
+      `Failed to generate child card: ${errorMessage}\n\nPlease check:\n- Your API key is valid\n- You have internet connection\n- Claude API service is available`
     );
-
-    fullResponse = '';
-    for await (const chunk of stream) {
-      fullResponse += chunk;
-      yield chunk;
-    }
-
-    // Parse final response
-    const result = parseResponse(fullResponse);
-    return result;
   }
 }
 

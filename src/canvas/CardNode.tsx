@@ -1,5 +1,5 @@
 import React, { memo, useState, useRef, useEffect } from 'react';
-import { Handle, Position, NodeResizer } from '@xyflow/react';
+import { Handle, Position, NodeResizer, useNodeId, useStore } from '@xyflow/react';
 import type { Card } from '@/types/card';
 import DOMPurify from 'isomorphic-dompurify';
 import ReactMarkdown from 'react-markdown';
@@ -31,6 +31,18 @@ interface CardNodeProps {
 
 export const CardNode = memo(({ data }: CardNodeProps) => {
   const card = data?.card;
+  const nodeId = useNodeId();
+
+  // Get current node dimensions from React Flow store
+  const nodeSize = useStore((store) => {
+    const node = store.nodes.find(n => n.id === nodeId);
+    if (!node?.measured) return null;
+    return {
+      width: node.measured.width || 320,
+      height: node.measured.height || 240,
+    };
+  });
+
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
   const [editTitle, setEditTitle] = useState('');
@@ -313,9 +325,18 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Extract plain text from HTML content
+    // Extract plain text from HTML content while preserving newlines
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = sanitizedContent;
+
+    // Convert <br> tags to newlines and <p> tags to double newlines
+    // This preserves the structure when editing
+    let htmlWithNewlines = tempDiv.innerHTML;
+    htmlWithNewlines = htmlWithNewlines.replace(/<br\s*\/?>/gi, '\n');
+    htmlWithNewlines = htmlWithNewlines.replace(/<\/p>\s*<p>/gi, '\n\n');
+    htmlWithNewlines = htmlWithNewlines.replace(/<\/?p>/gi, '');
+
+    tempDiv.innerHTML = htmlWithNewlines;
     const plainText = tempDiv.textContent || tempDiv.innerText || '';
 
     setEditContent(plainText);
@@ -466,6 +487,8 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
       const updatedCard: Card = {
         ...card,
         starred: !card.starred,
+        // Preserve current node size from React Flow (in case it was resized but not yet saved due to debounce)
+        size: nodeSize || card.size || { width: 320, height: 240 },
         updatedAt: Date.now(),
       };
 
