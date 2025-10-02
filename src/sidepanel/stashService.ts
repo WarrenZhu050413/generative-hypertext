@@ -60,9 +60,15 @@ export async function stashCard(cardId: string): Promise<void> {
 
     await saveAllCards(allCards);
 
-    // Notify canvas and side panel
+    // Notify canvas and side panel via local events
     window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
     window.dispatchEvent(new CustomEvent('nabokov:stash-updated'));
+
+    // Broadcast to all extension contexts
+    chrome.runtime.sendMessage({
+      type: 'STASH_UPDATED',
+      cardId
+    });
 
     console.log('[stashService] Card stashed:', cardId);
   } catch (error) {
@@ -89,9 +95,15 @@ export async function restoreCard(cardId: string): Promise<void> {
 
     await saveAllCards(allCards);
 
-    // Notify canvas and side panel
+    // Notify canvas and side panel via local events
     window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
     window.dispatchEvent(new CustomEvent('nabokov:stash-updated'));
+
+    // Broadcast to all extension contexts
+    chrome.runtime.sendMessage({
+      type: 'STASH_UPDATED',
+      cardId
+    });
 
     console.log('[stashService] Card restored:', cardId);
   } catch (error) {
@@ -110,9 +122,15 @@ export async function deleteCardPermanently(cardId: string): Promise<void> {
 
     await saveAllCards(updatedCards);
 
-    // Notify canvas and side panel
+    // Notify canvas and side panel via local events
     window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
     window.dispatchEvent(new CustomEvent('nabokov:stash-updated'));
+
+    // Broadcast to all extension contexts
+    chrome.runtime.sendMessage({
+      type: 'STASH_UPDATED',
+      cardId
+    });
 
     console.log('[stashService] Card deleted permanently:', cardId);
   } catch (error) {

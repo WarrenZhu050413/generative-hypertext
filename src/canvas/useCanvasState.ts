@@ -68,16 +68,25 @@ export function useCanvasState(): UseCanvasStateReturn {
   useEffect(() => {
     loadCanvasState();
 
-    // Listen for card updates from other components
+    // Listen for card updates from other components (local events)
     const handleCardUpdate = () => {
       console.log('[Canvas] Received card update event, refreshing...');
       loadCanvasState();
     };
-
     window.addEventListener('nabokov:cards-updated', handleCardUpdate);
+
+    // Listen for runtime messages (cross-context)
+    const handleRuntimeMessage = (message: any) => {
+      if (message.type === 'STASH_UPDATED' || message.type === 'CARD_STASHED') {
+        console.log('[Canvas] Received stash update via runtime message');
+        loadCanvasState();
+      }
+    };
+    chrome.runtime.onMessage.addListener(handleRuntimeMessage);
 
     return () => {
       window.removeEventListener('nabokov:cards-updated', handleCardUpdate);
+      chrome.runtime.onMessage.removeListener(handleRuntimeMessage);
     };
   }, []);
 

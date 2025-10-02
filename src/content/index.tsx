@@ -107,14 +107,14 @@ function removeContainer(container: HTMLElement): void {
 /**
  * Activates the element selector by mounting it in Shadow DOM
  */
-function activateSelector(): void {
+function activateSelector(initialStashState: boolean = false): void {
   // Prevent multiple activations
   if (state.isActive) {
     console.warn('[content] Selector already active');
     return;
   }
 
-  console.log('[content] Activating element selector...');
+  console.log('[content] Activating element selector...', { initialStashState });
 
   try {
     // Create container
@@ -146,10 +146,14 @@ function activateSelector(): void {
       deactivateSelector();
     };
 
-    // Mount ElementSelector
+    // Mount ElementSelector with initial stash state
     const cleanup = mountReactInShadow(
       shadowRoot,
-      <ElementSelector onCapture={handleCapture} onClose={handleClose} />,
+      <ElementSelector
+        onCapture={handleCapture}
+        onClose={handleClose}
+        initialStashState={initialStashState}
+      />,
       { styleCache }
     );
 
@@ -299,7 +303,7 @@ function handleMessage(
   try {
     switch (message.type) {
       case 'ACTIVATE_SELECTOR':
-        activateSelector();
+        activateSelector(message.payload?.stashImmediately || (message as any).stashImmediately || false);
         sendResponse({ success: true });
         break;
 

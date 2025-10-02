@@ -15,13 +15,25 @@ export const SidePanel: React.FC = () => {
   useEffect(() => {
     loadStashedCards();
 
-    // Listen for stash updates
+    // Listen for local events (same page)
     const handleStashUpdate = () => {
       loadStashedCards();
     };
-
     window.addEventListener('nabokov:stash-updated', handleStashUpdate);
-    return () => window.removeEventListener('nabokov:stash-updated', handleStashUpdate);
+
+    // Listen for runtime messages (cross-context)
+    const handleRuntimeMessage = (message: any) => {
+      if (message.type === 'CARD_STASHED' || message.type === 'STASH_UPDATED') {
+        console.log('[SidePanel] Received stash update via runtime message');
+        loadStashedCards();
+      }
+    };
+    chrome.runtime.onMessage.addListener(handleRuntimeMessage);
+
+    return () => {
+      window.removeEventListener('nabokov:stash-updated', handleStashUpdate);
+      chrome.runtime.onMessage.removeListener(handleRuntimeMessage);
+    };
   }, []);
 
   const loadStashedCards = async () => {

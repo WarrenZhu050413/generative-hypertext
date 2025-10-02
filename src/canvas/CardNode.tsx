@@ -2,6 +2,8 @@ import React, { memo, useState, useRef, useEffect } from 'react';
 import { Handle, Position, NodeResizer } from '@xyflow/react';
 import type { Card } from '@/types/card';
 import DOMPurify from 'isomorphic-dompurify';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { windowManager } from '@/services/windowManager';
 import { saveCard } from '@/utils/storage';
 import { ContextInputModal } from '@/components/ContextInputModal';
@@ -19,6 +21,7 @@ import { getConnectionCount } from '@/services/connectionContextService';
 import type { FillInStrategy } from '@/types/card';
 import { useButtons } from './useButtons';
 import { ButtonSettings } from '@/components/ButtonSettings';
+import { OverflowMenu } from '@/components/OverflowMenu';
 
 interface CardNodeProps {
   data: {
@@ -40,6 +43,7 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
   const [connectionCount, setConnectionCount] = useState(0);
   const [allCards, setAllCards] = useState<Card[]>([]);
   const [showButtonSettings, setShowButtonSettings] = useState(false);
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
   const contentEditRef = useRef<HTMLTextAreaElement>(null);
   const titleEditRef = useRef<HTMLInputElement>(null);
   const generationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -334,6 +338,9 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
           ...card.metadata,
           title: editTitle,
         },
+        // CRITICAL FIX: Preserve position and size
+        position: card.position,
+        size: card.size,
         updatedAt: Date.now(),
       };
 
@@ -454,6 +461,21 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
     setSelectedButton(null);
   };
 
+  const handleToggleStar = async () => {
+    try {
+      const updatedCard: Card = {
+        ...card,
+        starred: !card.starred,
+        updatedAt: Date.now(),
+      };
+
+      await saveCard(updatedCard);
+      window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+    } catch (error) {
+      console.error('[CardNode] Error toggling star:', error);
+    }
+  };
+
   if (isEditing) {
     return (
       <div style={styles.card} onKeyDown={handleKeyDown}>
@@ -567,7 +589,7 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
         />
       )}
 
-      {/* Header */}
+      {/* Header - Simplified with only collapse + overflow menu */}
       <div style={styles.header}>
         <div style={styles.headerLeft}>
           {card.metadata.favicon && (
@@ -583,87 +605,6 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
           </div>
         </div>
         <div style={styles.headerRight}>
-          {/* Beautification control (only for non-image cards with content) */}
-          {card.cardType !== 'image' && card.content && (
-            <div style={{ position: 'relative' }}>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowBeautifyMenu(!showBeautifyMenu);
-                }}
-                style={{
-                  ...styles.beautifyButton,
-                  ...(card.beautifiedContent ? styles.beautifyButtonActive : {})
-                }}
-                title={card.beautifiedContent ? 'Beautified (click to change)' : 'Beautify content with AI'}
-                data-testid="beautify-btn"
-                disabled={isBeautifying}
-              >
-                ✨
-              </button>
-              {showBeautifyMenu && (
-                <div style={styles.beautifyMenu} data-testid="beautify-menu">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBeautify('organize-content');
-                    }}
-                    style={styles.beautifyMenuItem}
-                    data-testid="beautify-organize-content"
-                  >
-                    <span style={styles.beautifyMenuLabel}>📋 Organize Content</span>
-                    <span style={styles.beautifyMenuDesc}>Structure information</span>
-                  </button>
-                  {card.beautifiedContent && (
-                    <>
-                      <div style={styles.beautifyMenuDivider} />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRevertBeautification();
-                        }}
-                        style={styles.beautifyMenuItemRevert}
-                        data-testid="beautify-revert"
-                      >
-                        <span style={styles.beautifyMenuLabel}>↩️ Revert</span>
-                        <span style={styles.beautifyMenuDesc}>Restore original</span>
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowButtonSettings(true);
-            }}
-            style={styles.settingsButton}
-            title="Configure custom buttons"
-            data-testid="button-settings-btn"
-          >
-            ⚙️
-          </button>
-          {connectionCount > 0 && (
-            <button
-              onClick={handleOpenFillIn}
-              style={styles.fillInButton}
-              title={`Fill in from ${connectionCount} connected card${connectionCount !== 1 ? 's' : ''}`}
-              data-testid="fill-in-btn"
-            >
-              🔗
-              <span style={styles.connectionBadge}>{connectionCount}</span>
-            </button>
-          )}
-          <button
-            onClick={handleStash}
-            style={styles.stashButton}
-            title="Stash to Side Panel"
-            data-testid="stash-btn"
-          >
-            📥
-          </button>
           <button
             onClick={handleToggleCollapse}
             style={styles.collapseButton}
@@ -673,27 +614,42 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
             {card.collapsed ? '▼' : '▲'}
           </button>
           <button
-            onClick={handleOpenWindow}
-            style={styles.openWindowButton}
-            title="Open as floating window"
-            data-testid="open-window-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowOverflowMenu(!showOverflowMenu);
+            }}
+            style={styles.overflowButton}
+            title="More options"
+            data-testid="overflow-btn"
           >
-            🗖
+            ⋯
           </button>
-          {card.starred && (
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="#D4AF37">
-              <path d="M8 1L10.163 5.382L15 6.089L11.5 9.494L12.326 14.305L8 12.032L3.674 14.305L4.5 9.494L1 6.089L5.837 5.382L8 1Z" />
-            </svg>
-          )}
         </div>
       </div>
 
-      {/* Title - Always shown, but styled differently when collapsed */}
+      {/* Overflow Menu */}
+      <OverflowMenu
+        card={card}
+        isOpen={showOverflowMenu}
+        onClose={() => setShowOverflowMenu(false)}
+        onBeautify={() => {
+          setShowBeautifyMenu(true);
+          handleBeautify('organize-content');
+        }}
+        onFillIn={(e) => handleOpenFillIn(e as React.MouseEvent)}
+        onOpenWindow={(e) => handleOpenWindow(e as React.MouseEvent)}
+        onStash={(e) => handleStash(e as React.MouseEvent)}
+        onToggleStar={handleToggleStar}
+        onButtonSettings={() => setShowButtonSettings(true)}
+        connectionCount={connectionCount}
+      />
+
+      {/* Title - Single line */}
       <div style={{
         ...styles.title,
         ...(card.collapsed ? styles.titleCollapsed : {}),
       }}>
-        {truncateText(card.metadata.title, 80)}
+        {truncateText(card.metadata.title, 100)}
       </div>
 
       {/* Content - Only shown when not collapsed */}
@@ -709,13 +665,12 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
               />
             </div>
           ) : (
-            /* Content Preview for non-image cards */
+            /* Content with Markdown rendering - Maximum space! */
             <div
               className="card-content-scrollable"
               style={styles.content}
               onWheel={(e) => {
                 // Prevent scroll from bubbling to canvas (which would zoom)
-                // Only if there's actual scrollable content
                 const target = e.currentTarget;
                 const canScrollDown = target.scrollTop < target.scrollHeight - target.clientHeight;
                 const canScrollUp = target.scrollTop > 0;
@@ -727,66 +682,69 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
                 }
               }}
             >
-              {/* If beautified, render HTML; otherwise show text preview */}
+              {/* Render markdown if beautified, otherwise show HTML or text */}
               {card.beautifiedContent ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({node, ...props}) => <h2 style={styles.markdownH1} {...props} />,
+                    h2: ({node, ...props}) => <h3 style={styles.markdownH2} {...props} />,
+                    h3: ({node, ...props}) => <h4 style={styles.markdownH3} {...props} />,
+                    p: ({node, ...props}) => <p style={styles.markdownP} {...props} />,
+                    ul: ({node, ...props}) => <ul style={styles.markdownUl} {...props} />,
+                    ol: ({node, ...props}) => <ol style={styles.markdownOl} {...props} />,
+                    li: ({node, ...props}) => <li style={styles.markdownLi} {...props} />,
+                    table: ({node, ...props}) => <table style={styles.markdownTable} {...props} />,
+                    th: ({node, ...props}) => <th style={styles.markdownTh} {...props} />,
+                    td: ({node, ...props}) => <td style={styles.markdownTd} {...props} />,
+                    strong: ({node, ...props}) => <strong style={styles.markdownStrong} {...props} />,
+                    code: ({node, ...props}) => <code style={styles.markdownCode} {...props} />,
+                  }}
+                >
+                  {card.beautifiedContent}
+                </ReactMarkdown>
+              ) : (
                 <div
                   style={styles.contentHTML}
                   dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                 />
-              ) : (
-                <div style={styles.contentText}>{getTextPreview()}</div>
               )}
             </div>
           )}
 
-          {/* Footer */}
-          <div style={styles.footer}>
-            <div style={styles.timestamp}>{formatDate(card.createdAt)}</div>
-            {card.tags && card.tags.length > 0 && (
-              <div style={styles.tags}>
-                {card.tags.slice(0, 3).map((tag: string, i: number) => (
-                  <span key={i} style={styles.tag}>
-                    {tag}
-                  </span>
-                ))}
-                {card.tags.length > 3 && (
-                  <span style={styles.tag}>+{card.tags.length - 3}</span>
+          {/* Compact Footer with merged Continue Chat + Action Buttons */}
+          {card.cardType !== 'image' && card.content && (
+            <div style={styles.footer}>
+              <div style={styles.footerLeft}>
+                {/* Continue Chat for generated cards */}
+                {card.cardType === 'generated' && (
+                  <button
+                    onClick={handleOpenWindow}
+                    style={styles.continueChatButton}
+                    title="Continue chatting with this card"
+                    data-testid="continue-chat-btn"
+                  >
+                    💬 Continue
+                  </button>
                 )}
               </div>
-            )}
-          </div>
-
-          {/* Continue Chat Button for Generated Cards */}
-          {card.cardType === 'generated' && (
-            <div style={styles.continueChatContainer}>
-              <button
-                onClick={handleOpenWindow}
-                style={styles.continueChatButton}
-                title="Continue chatting with this card"
-                data-testid="continue-chat-btn"
-              >
-                💬 Continue Chat
-              </button>
-            </div>
-          )}
-
-          {/* Action Buttons (shown on all card types with content) */}
-          {card.cardType !== 'image' && card.content && (
-            <div style={styles.actionButtons}>
-              {enabledButtons.map(button => (
-                <button
-                  key={button.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleButtonClick(button);
-                  }}
-                  style={styles.actionButton}
-                  title={button.label}
-                  data-testid={`action-btn-${button.id}`}
-                >
-                  {button.icon}
-                </button>
-              ))}
+              <div style={styles.footerRight}>
+                {/* Action Buttons - Show first 3 */}
+                {enabledButtons.slice(0, 3).map(button => (
+                  <button
+                    key={button.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleButtonClick(button);
+                    }}
+                    style={styles.actionButton}
+                    title={button.label}
+                    data-testid={`action-btn-${button.id}`}
+                  >
+                    {button.icon}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </>
@@ -897,8 +855,9 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: '8px',
+    padding: '8px 12px',
     borderBottom: '1px solid rgba(184, 156, 130, 0.15)',
+    background: 'rgba(255, 255, 255, 0.3)',
   },
   headerLeft: {
     display: 'flex',
@@ -919,7 +878,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   domain: {
-    fontSize: '12px',
+    fontSize: '11px',
     color: '#8B7355',
     fontWeight: 500,
     overflow: 'hidden',
@@ -927,28 +886,23 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
   },
   title: {
-    fontSize: '15px',
+    fontSize: '14px',
     fontWeight: 600,
     color: '#3E3226',
-    lineHeight: '1.4',
+    lineHeight: '1.3',
+    padding: '8px 12px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    display: '-webkit-box',
-    WebkitLineClamp: 2,
-    WebkitBoxOrient: 'vertical',
+    whiteSpace: 'nowrap',
   },
   titleCollapsed: {
     fontSize: '13px',
-    WebkitLineClamp: 1,
-    marginTop: '4px',
   },
   content: {
     flex: 1,
-    minHeight: '100px',
-    maxHeight: '300px', // Increased from 140px for better readability
     overflowY: 'auto',
     overflowX: 'hidden',
-    paddingRight: '8px', // Space for scrollbar
+    padding: '12px',
     // Custom scrollbar styling
     scrollbarWidth: 'thin', // Firefox
     scrollbarColor: 'rgba(139, 0, 0, 0.3) transparent', // Firefox
@@ -956,44 +910,32 @@ const styles: Record<string, React.CSSProperties> = {
   contentText: {
     fontSize: '13px',
     color: '#5C4D42',
-    lineHeight: '1.5',
-    // Remove line clamp to show full content with scrolling
+    lineHeight: '1.6',
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
   },
   contentHTML: {
     fontSize: '13px',
     color: '#5C4D42',
-    lineHeight: '1.5',
+    lineHeight: '1.6',
     wordBreak: 'break-word',
-    // Let the beautified HTML control its own styling
   },
   footer: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: '6px',
+    padding: '8px 12px',
     borderTop: '1px solid rgba(184, 156, 130, 0.15)',
-    marginTop: 'auto',
+    gap: '8px',
   },
-  timestamp: {
-    fontSize: '11px',
-    color: '#A89684',
-    fontWeight: 500,
+  footerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
   },
-  tags: {
+  footerRight: {
     display: 'flex',
     gap: '4px',
-    flexWrap: 'wrap',
-  },
-  tag: {
-    fontSize: '10px',
-    padding: '2px 8px',
-    borderRadius: '4px',
-    background: 'rgba(212, 175, 55, 0.15)',
-    color: '#8B7355',
-    fontWeight: 500,
-    border: '1px solid rgba(212, 175, 55, 0.3)',
   },
   openWindowButton: {
     width: '20px',
@@ -1069,17 +1011,33 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'all 0.2s ease',
   },
   collapseButton: {
-    width: '20px',
-    height: '20px',
+    width: '24px',
+    height: '24px',
     padding: '0',
     border: 'none',
-    background: 'rgba(212, 175, 55, 0.15)',
+    background: 'rgba(139, 0, 0, 0.08)',
     borderRadius: '4px',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '10px',
+    fontSize: '14px',
+    color: '#8B7355',
+    transition: 'all 0.2s ease',
+  },
+  overflowButton: {
+    width: '24px',
+    height: '24px',
+    padding: '0',
+    border: 'none',
+    background: 'rgba(139, 0, 0, 0.08)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '18px',
+    fontWeight: 'bold',
     color: '#8B7355',
     transition: 'all 0.2s ease',
   },
@@ -1156,26 +1114,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontStyle: 'italic',
     textAlign: 'center',
   },
-  actionButtons: {
-    display: 'flex',
-    gap: '4px',
-    paddingTop: '6px',
-    borderTop: '1px solid rgba(184, 156, 130, 0.15)',
-    marginTop: '4px',
-    justifyContent: 'center',
-  },
   actionButton: {
-    width: '28px',
-    height: '28px',
+    width: '26px',
+    height: '26px',
     padding: '0',
-    border: '1px solid rgba(139, 0, 0, 0.2)',
-    background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.1), white)',
-    borderRadius: '5px',
+    border: '1px solid rgba(139, 0, 0, 0.15)',
+    background: 'white',
+    borderRadius: '4px',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '14px',
+    fontSize: '13px',
     transition: 'all 0.2s ease',
   },
   imageContainer: {
@@ -1193,20 +1143,13 @@ const styles: Record<string, React.CSSProperties> = {
     objectFit: 'contain',
     borderRadius: '8px',
   },
-  continueChatContainer: {
-    paddingTop: '6px',
-    borderTop: '1px solid rgba(184, 156, 130, 0.15)',
-    marginTop: '4px',
-    display: 'flex',
-    justifyContent: 'center',
-  },
   continueChatButton: {
-    padding: '4px 12px',
+    padding: '4px 10px',
     background: 'linear-gradient(135deg, #D4AF37, #FFD700)',
     color: '#3E3226',
     border: 'none',
-    borderRadius: '6px',
-    fontSize: '12px',
+    borderRadius: '5px',
+    fontSize: '11px',
     fontWeight: 600,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -1286,5 +1229,67 @@ const styles: Record<string, React.CSSProperties> = {
     height: '1px',
     background: 'rgba(184, 156, 130, 0.2)',
     margin: '4px 0',
+  },
+  // Markdown Styles
+  markdownH1: {
+    fontSize: '14px',
+    fontWeight: 600,
+    color: '#8B0000',
+    margin: '12px 0 6px 0',
+  },
+  markdownH2: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#8B7355',
+    margin: '10px 0 4px 0',
+  },
+  markdownH3: {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#5C4D42',
+    margin: '8px 0 3px 0',
+  },
+  markdownP: {
+    margin: '6px 0',
+  },
+  markdownUl: {
+    margin: '6px 0 6px 20px',
+  },
+  markdownOl: {
+    margin: '6px 0 6px 20px',
+  },
+  markdownLi: {
+    margin: '3px 0',
+  },
+  markdownTable: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    margin: '10px 0',
+    fontSize: '12px',
+  } as React.CSSProperties,
+  markdownTh: {
+    border: '1px solid rgba(184, 156, 130, 0.3)',
+    padding: '6px 8px',
+    textAlign: 'left',
+    background: 'rgba(212, 175, 55, 0.1)',
+    fontWeight: 600,
+    color: '#8B7355',
+  } as React.CSSProperties,
+  markdownTd: {
+    border: '1px solid rgba(184, 156, 130, 0.3)',
+    padding: '6px 8px',
+    textAlign: 'left',
+  } as React.CSSProperties,
+  markdownStrong: {
+    color: '#8B0000',
+    fontWeight: 600,
+  },
+  markdownCode: {
+    background: 'rgba(245, 245, 220, 0.5)',
+    border: '1px solid rgba(184, 156, 130, 0.2)',
+    padding: '2px 4px',
+    borderRadius: '3px',
+    fontSize: '12px',
+    fontFamily: 'Monaco, Menlo, monospace',
   },
 };

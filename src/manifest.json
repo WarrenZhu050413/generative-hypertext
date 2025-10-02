@@ -34,10 +34,17 @@
   "commands": {
     "activate-selector": {
       "suggested_key": {
+        "default": "Ctrl+E",
+        "mac": "Command+E"
+      },
+      "description": "Activate element selector"
+    },
+    "activate-selector-stash": {
+      "suggested_key": {
         "default": "Ctrl+Shift+E",
         "mac": "Command+Shift+E"
       },
-      "description": "Activate element selector"
+      "description": "Activate element selector (stash immediately)"
     }
   },
   "web_accessible_resources": [

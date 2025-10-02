@@ -18,7 +18,20 @@ chrome.commands.onCommand.addListener((command) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]?.id) {
         chrome.tabs.sendMessage(tabs[0].id, {
-          type: 'ACTIVATE_SELECTOR'
+          type: 'ACTIVATE_SELECTOR',
+          stashImmediately: false
+        }).catch(err => {
+          console.error('Failed to send message to content script:', err);
+        });
+      }
+    });
+  } else if (command === 'activate-selector-stash') {
+    // Activate element selector with stash mode enabled
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          type: 'ACTIVATE_SELECTOR',
+          stashImmediately: true
         }).catch(err => {
           console.error('Failed to send message to content script:', err);
         });

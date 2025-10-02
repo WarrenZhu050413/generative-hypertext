@@ -134,10 +134,11 @@ interface Card {
 ### Build System
 
 - **Vite** with `@crxjs/vite-plugin` for Chrome extension support
-- **Path aliases**: `@/`, `@components/`, `@utils/`, `@types/`
-- **Emotion CSS-in-JS**: Uses `@emotion/react` with JSX pragma
+- **Path aliases**: `@/`, `@components/`, `@utils/`, `@types/` (configured in both `vite.config.ts` and `tsconfig.json`)
+- **Emotion CSS-in-JS**: Uses `@emotion/react` with JSX pragma (`jsxImportSource: '@emotion/react'` in Vite config)
 - Build output: `dist/` (git-ignored)
 - Manifest copied from `src/manifest.json` → `dist/manifest.json`
+- Dev server runs on port 5173 with HMR
 
 ### Key Components
 
@@ -211,6 +212,7 @@ interface Card {
 
 **Authentication Priority Order:**
 1. **Local Backend** (http://localhost:3100) - Uses Claude Agent SDK
+   - Start with: `npm run backend` (or `npm run backend:dev` for auto-reload)
    - ✅ Works with Claude.ai subscription (no API key needed)
    - ✅ Works with API key from environment variable
    - ✅ Best option - no separate billing required
@@ -458,6 +460,13 @@ archive/            # Old implementations (nabokov-clipper/, deprecated tests)
 ## Testing Strategy
 
 **Unit tests**: Utils, sanitization, storage logic (Vitest + jsdom)
+- Test setup: `tests/setup.ts`
+- Globals enabled for describe/it/expect
+- Coverage reports via `npm run test:coverage`
+
 **E2E tests**: Extension loading, element capture, canvas rendering (Playwright)
+- Always run `npm run build` before E2E tests (tests load from `dist/`)
+- Persistent context required for Chrome extension testing
+
 **Manual tests**: `test-scripts/*.mjs` for quick verification without test harness
-- Always git commit after adding a feature
+- Use Node.js to run: `node test-scripts/test-canvas-direct.mjs`

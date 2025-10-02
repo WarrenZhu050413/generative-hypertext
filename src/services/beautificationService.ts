@@ -10,8 +10,8 @@ import { claudeAPIService, type ClaudeMessage } from './claudeAPIService';
 import { apiConfigService } from './apiConfig';
 
 /**
- * DOMPurify-safe prompt templates
- * These prompts instruct the LLM to return ONLY sanitizable HTML
+ * Markdown-based prompt templates
+ * These prompts instruct the LLM to return clean GitHub-flavored Markdown
  */
 const PROMPT_TEMPLATES = {
   'organize-content': `
@@ -21,60 +21,74 @@ INPUT:
 - Raw HTML content (possibly unstructured)
 
 TASK:
-Organize the content into a clean, readable structure:
+Organize the content into clean, readable GitHub-flavored Markdown:
 1. Extract key information
-2. Create logical sections with headings
+2. Create logical sections with headings (##, ###)
 3. Use lists for enumerated items
-4. Highlight important points
-5. Add visual hierarchy with typography
+4. Use tables for structured data
+5. **Bold** important terms
+6. Add clear visual hierarchy
 
 CRITICAL RULES:
-- Return ONLY valid HTML (no scripts, no event handlers)
-- Use inline styles for all styling (no external CSS)
-- Do NOT include <html>, <head>, or <body> tags
-- Do NOT include any JavaScript or event handlers
-- Use semantic tags: <article>, <section>, <header>, <p>, <ul>, <ol>, etc.
+- Return ONLY GitHub-flavored Markdown (no HTML tags)
+- Use ## for main sections, ### for subsections
+- Use tables for any structured data or comparisons
+- Use **bold** for emphasis, not <strong> tags
+- Use - or * for bullet lists
+- Use 1. 2. 3. for numbered lists
 - Preserve all original information, just reorganize it
+- NO code fences around the output - just raw markdown
 
-Return the beautified HTML directly, with no explanations or markdown code blocks.
+Example format:
+## Overview
+
+This is the main content organized into clear sections.
+
+### Key Points
+
+| Feature | Description |
+|---------|-------------|
+| Point 1 | Details here |
+| Point 2 | More details |
+
+- Bullet point 1
+- Bullet point 2
+
+**Important:** Highlighted information stands out.
+
+Return the beautified Markdown directly, with no explanations or code fences.
   `
 };
 
 /**
- * Mock beautification responses for development
+ * Mock beautification responses for development (Markdown format)
  * In production, these will be replaced with actual Claude API calls
  */
 const MOCK_BEAUTIFIED_CONTENT: Record<BeautificationMode, string> = {
-  'organize-content': `
-    <article style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 700px; padding: 24px; background: #ffffff; border: 1px solid #e1e8ed; border-radius: 8px;">
-      <header style="margin-bottom: 20px;">
-        <h2 style="color: #1a1a1a; font-size: 24px; font-weight: 600; margin: 0 0 8px 0;">Organized Content</h2>
-      </header>
+  'organize-content': `## 🎯 Overview
 
-      <section style="margin-bottom: 24px;">
-        <h3 style="color: #5C4D42; font-size: 18px; font-weight: 600; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid rgba(184, 156, 130, 0.3);">Overview</h3>
-        <p style="color: #4a4a4a; line-height: 1.7; margin: 0 0 12px 0;">
-          The content has been reorganized into logical sections with clear headings, making it easier to scan and understand.
-        </p>
-      </section>
+The content has been reorganized into logical sections with clear headings, making it easier to scan and understand.
 
-      <section style="margin-bottom: 24px;">
-        <h3 style="color: #5C4D42; font-size: 18px; font-weight: 600; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid rgba(184, 156, 130, 0.3);">Key Points</h3>
-        <ol style="color: #4a4a4a; line-height: 1.7; margin: 0; padding-left: 24px;">
-          <li style="margin: 0 0 8px 0;"><strong>Structured hierarchy</strong> — Information flows logically from general to specific</li>
-          <li style="margin: 0 0 8px 0;"><strong>Visual separation</strong> — Clear sections help with comprehension</li>
-          <li style="margin: 0 0 8px 0;"><strong>Emphasized content</strong> — Important points stand out</li>
-        </ol>
-      </section>
+### Key Features
 
-      <section>
-        <h3 style="color: #5C4D42; font-size: 18px; font-weight: 600; margin: 0 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid rgba(184, 156, 130, 0.3);">Additional Details</h3>
-        <p style="color: #4a4a4a; line-height: 1.7; margin: 0;">
-          All original information is preserved while the presentation is enhanced for better readability and visual appeal.
-        </p>
-      </section>
-    </article>
-  `
+| Feature | Description |
+|---------|-------------|
+| **Structured hierarchy** | Information flows logically from general to specific |
+| **Visual separation** | Clear sections help with comprehension |
+| **Emphasized content** | Important points stand out |
+
+### Benefits
+
+- Clean markdown formatting with tables
+- Easy to read and navigate
+- Supports **bold text** for emphasis
+- Organized into logical sections
+
+### Implementation
+
+All original information is preserved while the presentation is enhanced for better readability and visual appeal.
+
+**Important:** This is a mock beautified response for development. In production, the Claude API will generate contextual, relevant content based on the actual card content.`
 };
 
 /**
@@ -118,32 +132,20 @@ export class BeautificationService implements IBeautificationService {
       // Save original content before beautification
       const originalHTML = card.content || '';
 
-      // Generate beautified content using Claude API
-      const beautifiedHTML = await this.generateBeautifiedContent(
+      // Generate beautified content using Claude API (returns Markdown)
+      const beautifiedMarkdown = await this.generateBeautifiedContent(
         originalHTML,
         mode
       );
 
-      // Sanitize the beautified content
-      const sanitizedHTML = DOMPurify.sanitize(beautifiedHTML, {
-        ALLOWED_TAGS: [
-          'div', 'span', 'p', 'br', 'strong', 'em', 'u', 'a', 'img',
-          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-          'ul', 'ol', 'li',
-          'table', 'thead', 'tbody', 'tr', 'td', 'th',
-          'article', 'section', 'header', 'footer', 'nav', 'aside',
-          'blockquote', 'pre', 'code'
-        ],
-        ALLOWED_ATTR: ['style', 'href', 'src', 'alt', 'title', 'class', 'id'],
-        ALLOW_DATA_ATTR: false,
-        ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-      });
+      // Note: No need to sanitize markdown - ReactMarkdown handles safety
+      // The markdown is plain text, so it's inherently safe
 
-      // Update card with beautified content
+      // Update card with beautified content (now markdown instead of HTML)
       const updatedCard: Card = {
         ...card,
         originalHTML,
-        beautifiedContent: sanitizedHTML,
+        beautifiedContent: beautifiedMarkdown,
         beautificationMode: mode,
         beautificationTimestamp: Date.now(),
         updatedAt: Date.now(),
@@ -212,17 +214,17 @@ export class BeautificationService implements IBeautificationService {
   }
 
   /**
-   * Generate beautified content using AI (text-only mode)
+   * Generate beautified content using AI (returns Markdown)
    * @param originalHTML Original HTML content
    * @param mode Beautification mode
-   * @returns Beautified HTML content
+   * @returns Beautified Markdown content
    * @private
    */
   private async generateBeautifiedContent(
     originalHTML: string,
     mode: BeautificationMode
   ): Promise<string> {
-    console.log('[BeautificationService] Generating beautified content...');
+    console.log('[BeautificationService] Generating beautified markdown content...');
     console.log('[BeautificationService] Mode:', mode);
 
     // Use Claude API with text-only mode
@@ -230,25 +232,25 @@ export class BeautificationService implements IBeautificationService {
 
     try {
       const systemPrompt = PROMPT_TEMPLATES[mode];
-      const userMessage = `Please beautify the following HTML content:\n\n${originalHTML}`;
+      const userMessage = `Please beautify the following HTML content into clean GitHub-flavored Markdown:\n\n${originalHTML}`;
 
       const messages: ClaudeMessage[] = [
         { role: 'user', content: userMessage }
       ];
 
-      const beautifiedHTML = await claudeAPIService.sendMessage(messages, {
+      const beautifiedMarkdown = await claudeAPIService.sendMessage(messages, {
         system: systemPrompt,
         temperature: 0.7,
         maxTokens: 4096,
       });
 
       console.log('[BeautificationService] ✓ Claude API success');
-      return beautifiedHTML;
+      return beautifiedMarkdown;
 
     } catch (error) {
       // API FAILED - fall back to mock
       console.error('[BeautificationService] ✗ Claude API failed:', error);
-      console.warn('[BeautificationService] Falling back to mock response');
+      console.warn('[BeautificationService] Falling back to mock markdown response');
       await new Promise(resolve => setTimeout(resolve, 1500));
       return MOCK_BEAUTIFIED_CONTENT[mode];
     }

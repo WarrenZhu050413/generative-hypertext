@@ -29,6 +29,8 @@ export interface ElementSelectorProps {
   onCapture?: (card: Card) => void;
   /** Callback fired when selector is closed/deactivated */
   onClose?: () => void;
+  /** Initial state of the stash immediately checkbox */
+  initialStashState?: boolean;
 }
 
 /**
@@ -54,6 +56,7 @@ interface ElementInfo {
 export const ElementSelector: FC<ElementSelectorProps> = ({
   onCapture,
   onClose,
+  initialStashState = false,
 }) => {
   // State management
   const [isActive, setIsActive] = useState(true);
@@ -63,7 +66,7 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
   const [isCapturing, setIsCapturing] = useState(false);
   const [showFloatingChat, setShowFloatingChat] = useState(false);
   const [capturedCard, setCapturedCard] = useState<Card | null>(null);
-  const [stashImmediately, setStashImmediately] = useState(false);
+  const [stashImmediately, setStashImmediately] = useState(initialStashState);
 
   // Refs (unused, reserved for future use)
   // const overlayRef = useRef<HTMLDivElement>(null);
@@ -220,6 +223,16 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
         console.log('[ElementSelector] Capture successful!', {
           cardId,
         });
+
+        // Broadcast to all extension contexts via chrome.runtime
+        chrome.runtime.sendMessage({
+          type: 'CARD_STASHED',
+          cardId: card.id,
+          stashed: card.stashed
+        });
+
+        // Also keep local event for same-page updates
+        window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
 
         // 8. Show floating chat at element position
         setCapturedCard(card);
