@@ -13,6 +13,8 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Handle keyboard commands
 chrome.commands.onCommand.addListener((command) => {
+  console.log('[background] Command received:', command);
+
   if (command === 'activate-selector') {
     // Get the active tab and send message to activate element selector
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -39,15 +41,21 @@ chrome.commands.onCommand.addListener((command) => {
     });
   } else if (command === 'toggle-inline-chat') {
     // Toggle inline chat with page
+    console.log('[background] Opening inline chat...');
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]?.id) {
+        console.log('[background] Sending OPEN_INLINE_CHAT to tab:', tabs[0].id);
         chrome.tabs.sendMessage(tabs[0].id, {
           type: 'OPEN_INLINE_CHAT'
         }).catch(err => {
-          console.error('Failed to send message to content script:', err);
+          console.error('[background] Failed to send message to content script:', err);
         });
+      } else {
+        console.error('[background] No active tab found');
       }
     });
+  } else {
+    console.log('[background] Unknown command:', command);
   }
 });
 

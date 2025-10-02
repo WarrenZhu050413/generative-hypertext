@@ -495,7 +495,7 @@ function handleMessage(
   sender: chrome.runtime.MessageSender,
   sendResponse: (response?: any) => void
 ): boolean {
-  console.log('[content] Received message:', message.type);
+  console.log('[content] Received message:', message.type, 'Full message:', message);
 
   try {
     switch (message.type) {
@@ -599,9 +599,13 @@ function handleKeyboardShortcut(event: KeyboardEvent): void {
  */
 function initialize(): void {
   console.log('[content] Initializing Nabokov Web Clipper content script...');
+  console.log('[content] Adding message listener...');
 
   // Add message listener
   chrome.runtime.onMessage.addListener(handleMessage);
+
+  console.log('[content] Message listener added');
+  console.log('[content] Testing inline chat function exists:', typeof openInlineChat);
 
   // Add keyboard shortcut listener
   document.addEventListener('keydown', handleKeyboardShortcut, true);

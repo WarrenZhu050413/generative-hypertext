@@ -147,6 +147,65 @@ interface Card {
 - Manifest copied from `src/manifest.json` → `dist/manifest.json`
 - Dev server runs on port 5173 with HMR
 
+### Shared Architecture (NEW)
+
+**Code Sharing Between Canvas and Side Panel:**
+
+To eliminate duplication and maintain consistency, shared code is organized in `src/shared/`:
+
+```
+src/shared/
+  services/
+    cardService.ts        - Unified CRUD operations with cross-context messaging
+    filterService.ts      - Card filtering logic (search, domains, tags, dates)
+    imageService.ts       - Image upload and processing
+
+  hooks/
+    useCards.ts          - Load cards with auto-refresh on storage changes
+    useFilters.ts        - Filtering state management with optional persistence
+    useImageUpload.ts    - Image upload handling with validation
+    useCardOperations.ts - Card operations (stash/restore/delete/update/duplicate)
+
+  components/
+    FilterBar/           - Unified filtering UI (search, domains, tags, dates)
+    ImageUpload/
+      ImageUploadZone.tsx       - Drag & drop zone for images
+      FilePickerButton.tsx      - File picker button
+```
+
+**Cross-Context Synchronization:**
+
+All card operations broadcast updates via **dual event system**:
+1. **Local events** (`window.dispatchEvent`) for same-context listeners
+2. **Runtime messages** (`chrome.runtime.sendMessage`) for cross-context listeners
+
+Example:
+```typescript
+// In cardService.ts
+function broadcastCardUpdate(type: string, cardId: string) {
+  window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+  chrome.runtime.sendMessage({ type, cardId });
+}
+```
+
+This ensures Canvas and Side Panel stay synchronized in real-time without page reloads.
+
+**Keyboard Shortcuts & Mode Indicators:**
+
+- **Cmd+E** / **Ctrl+E**: Activate element selector (Canvas mode)
+  - Mode indicator: 🎨 **CANVAS MODE** (red/gold gradient)
+  - Cards saved directly to canvas
+
+- **Cmd+Shift+E** / **Ctrl+Shift+E**: Activate element selector (Stash mode)
+  - Mode indicator: 📥 **STASH MODE** (blue gradient)
+  - Cards saved to Side Panel stash
+
+- **Ctrl+Shift+C**: Toggle inline chat with page
+  - Opens chat window for page conversations
+  - Can save conversation to canvas as note card
+
+Mode indicators replaced the old checkbox approach with prominent banners at the top of the screen.
+
 ### Key Components
 
 **ElementSelector** (`src/components/ElementSelector.tsx`)
@@ -248,10 +307,13 @@ interface Card {
 
 - **stashService** (`src/sidepanel/stashService.ts`): Manages stashed cards
 - **SidePanel** (`src/sidepanel/SidePanel.tsx`): UI for viewing/managing stashed cards
+- **NEW Features**:
+  - **Image Upload**: Drag & drop or file picker for uploading images directly to stash
+  - **Shared Hooks**: Uses `useCards`, `useCardOperations`, `useImageUpload` from `src/shared/`
+  - **Real-time Sync**: Updates instantly via runtime messages (no reload needed)
 - Cards marked with `stashed: true` are hidden from canvas but not deleted
 - Side panel provides search, restore, and permanent delete functionality
-- Uses `'nabokov:stash-updated'` events for real-time synchronization
-- Access via Chrome Side Panel API
+- Access via Chrome Side Panel API or toolbar button in Canvas
 
 **Fill-In Feature**
 
@@ -440,6 +502,10 @@ src/
   components/       # React components (ElementSelector, FloatingWindow, modals)
   canvas/           # Canvas app (separate React app)
   sidepanel/        # Side Panel app for stashed cards
+  shared/           # NEW: Shared code between Canvas and Side Panel
+    services/       #   - cardService, filterService, imageService
+    hooks/          #   - useCards, useFilters, useImageUpload, useCardOperations
+    components/     #   - FilterBar, ImageUpload (drag & drop, file picker)
   services/         # API services (Claude, beautification, fill-in, card generation)
   config/           # Configuration (default buttons, etc.)
   utils/            # Storage, screenshot, sanitization, image upload, instant expansion

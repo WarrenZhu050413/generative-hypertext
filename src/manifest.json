@@ -48,8 +48,8 @@
     },
     "toggle-inline-chat": {
       "suggested_key": {
-        "default": "Ctrl+Shift+C",
-        "mac": "Ctrl+Shift+C"
+        "default": "Alt+Shift+C",
+        "mac": "Alt+Shift+C"
       },
       "description": "Toggle inline chat with page"
     }
