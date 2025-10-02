@@ -151,7 +151,6 @@ export function createMockCard(overrides?: Partial<Card>): Card {
     createdAt: timestamp,
     updatedAt: timestamp,
     conversation: [],
-    screenshotId: `screenshot-${id}`,
     styles: {
       fontSize: '16px',
       fontFamily: 'Arial, sans-serif',

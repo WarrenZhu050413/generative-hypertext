@@ -243,7 +243,7 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
       setIsBeautifying(true);
 
       setToast({
-        message: `Beautifying content (${mode === 'recreate-design' ? 'Recreate Design' : 'Organize Content'})...`,
+        message: 'Beautifying content (Organize Content)...',
         type: 'loading',
       });
 
@@ -603,17 +603,6 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
               </button>
               {showBeautifyMenu && (
                 <div style={styles.beautifyMenu} data-testid="beautify-menu">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBeautify('recreate-design');
-                    }}
-                    style={styles.beautifyMenuItem}
-                    data-testid="beautify-recreate-design"
-                  >
-                    <span style={styles.beautifyMenuLabel}>🎨 Recreate Design</span>
-                    <span style={styles.beautifyMenuDesc}>Match visual appearance</span>
-                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

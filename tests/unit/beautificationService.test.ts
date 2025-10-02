@@ -85,14 +85,14 @@ describe('BeautificationService', () => {
     // Store card in mock storage
     mockStorage.cards = [testCard];
 
-    await beautificationService.beautifyCard('test-card-1', 'recreate-design');
+    await beautificationService.beautifyCard('test-card-1', 'organize-content');
 
     // Verify card was updated
     expect(chrome.storage.local.set).toHaveBeenCalled();
     const savedCards = mockStorage.cards;
     expect(savedCards).toHaveLength(1);
     expect(savedCards[0].beautifiedContent).toBeDefined();
-    expect(savedCards[0].beautificationMode).toBe('recreate-design');
+    expect(savedCards[0].beautificationMode).toBe('organize-content');
     expect(savedCards[0].originalHTML).toBe('<p>Original content</p>');
   });
 
@@ -127,7 +127,7 @@ describe('BeautificationService', () => {
       content: '<p>Original content</p>',
       originalHTML: '<p>Original content</p>',
       beautifiedContent: '<p>Beautified content</p>',
-      beautificationMode: 'recreate-design' as const,
+      beautificationMode: 'organize-content' as const,
       beautificationTimestamp: Date.now(),
       metadata: {
         url: 'https://example.com',
@@ -181,7 +181,7 @@ describe('BeautificationService', () => {
     mockStorage.cards = [];
 
     await expect(
-      beautificationService.beautifyCard('non-existent', 'recreate-design')
+      beautificationService.beautifyCard('non-existent', 'organize-content')
     ).rejects.toThrow('Card not found');
   });
 });

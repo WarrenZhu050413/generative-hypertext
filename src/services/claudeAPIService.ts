@@ -37,15 +37,22 @@ export interface ClaudeAPIResponse {
 /**
  * Claude API Service
  * Handles communication with Anthropic's Claude API
+ *
+ * Priority order:
+ * 1. Local backend (Agent SDK with subscription auth)
+ * 2. Direct API (requires API key)
+ * 3. Caller falls back to mock
  */
 export class ClaudeAPIService {
   private readonly API_VERSION = '2023-06-01';
   private readonly API_URL = 'https://api.anthropic.com/v1/messages';
+  private readonly BACKEND_URL = 'http://localhost:3100';
   private readonly DEFAULT_MODEL = 'claude-sonnet-4-20250514';
   private readonly DEFAULT_MAX_TOKENS = 4096;
 
   /**
    * Send a message to Claude API
+   * Tries local backend first, then falls back to direct API
    */
   async sendMessage(
     messages: ClaudeMessage[],
@@ -56,8 +63,40 @@ export class ClaudeAPIService {
       system?: string;
     }
   ): Promise<string> {
+    // STEP 1: Try local backend (Agent SDK with subscription auth)
+    try {
+      console.log('[ClaudeAPI] Trying local backend first...');
+      const backendResponse = await fetch(`${this.BACKEND_URL}/api/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages,
+          options: {
+            system: options?.system,
+            maxTokens: options?.maxTokens || this.DEFAULT_MAX_TOKENS,
+            temperature: options?.temperature,
+            model: options?.model || this.DEFAULT_MODEL,
+          },
+        }),
+      });
+
+      if (backendResponse.ok) {
+        const data = await backendResponse.json();
+        if (data.content) {
+          console.log('[ClaudeAPI] ✓ Backend success (subscription auth)');
+          return data.content;
+        }
+      }
+
+      console.log('[ClaudeAPI] Backend unavailable, trying direct API...');
+    } catch (backendError) {
+      console.log('[ClaudeAPI] Backend not running, trying direct API...');
+    }
+
+    // STEP 2: Try direct API with API key
     const apiKey = await apiConfigService.getAPIKey();
-    // apiKey may be null - that's okay, SDK might use other auth methods
 
     const request: ClaudeAPIRequest = {
       model: options?.model || this.DEFAULT_MODEL,
@@ -70,7 +109,7 @@ export class ClaudeAPIService {
       request.system = options.system;
     }
 
-    console.log('[ClaudeAPI] Sending request:', {
+    console.log('[ClaudeAPI] Trying direct API:', {
       model: request.model,
       messageCount: messages.length,
       hasSystem: !!request.system,
@@ -90,7 +129,7 @@ export class ClaudeAPIService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('[ClaudeAPI] API error:', errorData);
+        console.error('[ClaudeAPI] Direct API error:', errorData);
         throw new Error(
           `Claude API error: ${response.status} ${response.statusText}${
             errorData.error?.message ? ` - ${errorData.error.message}` : ''
@@ -99,7 +138,7 @@ export class ClaudeAPIService {
       }
 
       const data: ClaudeAPIResponse = await response.json();
-      console.log('[ClaudeAPI] Response received:', {
+      console.log('[ClaudeAPI] ✓ Direct API success:', {
         id: data.id,
         stopReason: data.stop_reason,
         usage: data.usage,
@@ -121,6 +160,9 @@ export class ClaudeAPIService {
   /**
    * Send a message with vision (screenshot analysis)
    * For beautification "recreate-design" mode
+   *
+   * Note: Vision API requires direct API with API key
+   * Backend doesn't support vision yet
    */
   async sendMessageWithVision(
     messages: ClaudeMessage[],
@@ -132,8 +174,10 @@ export class ClaudeAPIService {
       system?: string;
     }
   ): Promise<string> {
+    // Vision API requires direct API (backend doesn't support vision yet)
+    console.log('[ClaudeAPI] Vision requires direct API');
+
     const apiKey = await apiConfigService.getAPIKey();
-    // apiKey may be null - that's okay, SDK might use other auth methods
 
     // Use vision-capable model
     const model = 'claude-sonnet-4-20250514'; // Sonnet 4 supports vision
@@ -175,7 +219,7 @@ export class ClaudeAPIService {
       request.system = options.system;
     }
 
-    console.log('[ClaudeAPI] Sending vision request:', {
+    console.log('[ClaudeAPI] Sending vision request to direct API:', {
       model: request.model,
       messageCount: enhancedMessages.length,
       hasScreenshot: true,
@@ -195,7 +239,7 @@ export class ClaudeAPIService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('[ClaudeAPI] API error:', errorData);
+        console.error('[ClaudeAPI] Vision API error:', errorData);
         throw new Error(
           `Claude API error: ${response.status} ${response.statusText}${
             errorData.error?.message ? ` - ${errorData.error.message}` : ''
@@ -204,7 +248,7 @@ export class ClaudeAPIService {
       }
 
       const data: ClaudeAPIResponse = await response.json();
-      console.log('[ClaudeAPI] Vision response received:', {
+      console.log('[ClaudeAPI] ✓ Vision API success:', {
         id: data.id,
         stopReason: data.stop_reason,
         usage: data.usage,

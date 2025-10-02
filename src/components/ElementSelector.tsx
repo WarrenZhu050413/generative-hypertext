@@ -9,8 +9,7 @@
  * - Visual overlay highlighting hoverable elements
  * - Chinese aesthetic styling (red/gold borders)
  * - Element info tooltip (tag name, classes, dimensions)
- * - Screenshot capture with compression
- * - Data storage to chrome.storage.local and IndexedDB
+ * - Data storage to chrome.storage.local
  * - Keyboard shortcuts (ESC to deactivate)
  * - FloatingChat integration (placeholder for now)
  */
@@ -19,10 +18,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { css } from '@emotion/react';
 import { CHINESE_AESTHETIC_COLORS } from '../utils/shadowDOM';
 import { sanitizeHTML, extractRelevantStyles, generateSelector } from '../utils/sanitization';
-import { captureElementScreenshot } from '../utils/screenshotChrome';
-import { compressScreenshot } from '../utils/screenshot';
-import { saveCard, saveScreenshot, generateId } from '../utils/storage';
-import type { Card, ScreenshotData } from '@/types';
+import { saveCard, generateId } from '../utils/storage';
+import type { Card } from '@/types';
 
 /**
  * Props for ElementSelector component
@@ -66,6 +63,7 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
   const [isCapturing, setIsCapturing] = useState(false);
   const [showFloatingChat, setShowFloatingChat] = useState(false);
   const [capturedCard, setCapturedCard] = useState<Card | null>(null);
+  const [stashImmediately, setStashImmediately] = useState(false);
 
   // Refs (unused, reserved for future use)
   // const overlayRef = useRef<HTMLDivElement>(null);
@@ -159,9 +157,8 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
       setIsCapturing(true);
 
       try {
-        // Generate unique ID for card and screenshot
+        // Generate unique ID for card
         const cardId = generateId();
-        const screenshotId = generateId();
 
         // Capture element data
         console.log('[ElementSelector] Capturing element:', target);
@@ -175,32 +172,17 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
         // 3. Generate CSS selector
         const selector = generateSelector(target);
 
-        // 4. Capture and compress screenshot (optional - don't block if it fails)
-        console.log('[ElementSelector] Capturing screenshot...');
-        let compressionResult: { dataUrl: string; metadata: any } | null = null;
-        try {
-          const screenshotDataUrl = await captureElementScreenshot(target);
-          compressionResult = await compressScreenshot(screenshotDataUrl, {
-            quality: 0.8,
-            maxWidth: 800,
-          });
-          console.log('[ElementSelector] Screenshot captured successfully');
-        } catch (screenshotError) {
-          console.warn('[ElementSelector] Screenshot capture failed (non-blocking):', screenshotError);
-          // Continue without screenshot - it's optional
-        }
-
-        // 5. Get surrounding context (parent element snippet)
+        // 4. Get surrounding context (parent element snippet)
         const context = target.parentElement
           ? sanitizeHTML(target.parentElement.outerHTML)
           : undefined;
 
-        // 6. Get element metadata
+        // 5. Get element metadata
         const rect = target.getBoundingClientRect();
         const classes = Array.from(target.classList);
         const textContent = target.textContent || '';
 
-        // 7. Create card in unified Card format
+        // 6. Create card in unified Card format
         const card: Card = {
           id: cardId,
           content: htmlContent,
@@ -223,53 +205,32 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
           updatedAt: Date.now(),
           conversation: [],
           // Additional fields for rendering
-          screenshotId: compressionResult ? screenshotId : undefined,
           styles,
           context,
+          // Stash immediately if checkbox is checked
+          stashed: stashImmediately,
         };
 
-        // 8. Save to storage
-        console.log('[ElementSelector] Saving card and screenshot...');
+        // 7. Save to storage
+        console.log('[ElementSelector] Saving card...');
 
         // Save card to chrome.storage.local
         await saveCard(card);
 
-        // Save screenshot to IndexedDB (if capture succeeded)
-        if (compressionResult) {
-          const screenshot: ScreenshotData = {
-            id: screenshotId,
-            dataUrl: compressionResult.dataUrl,
-            compressionMetadata: {
-              originalSize: compressionResult.metadata.originalSize,
-              compressedSize: compressionResult.metadata.compressedSize,
-              compressionRatio: compressionResult.metadata.compressionRatio,
-            },
-            timestamp: Date.now(),
-          };
-          await saveScreenshot(screenshot);
+        console.log('[ElementSelector] Capture successful!', {
+          cardId,
+        });
 
-          console.log('[ElementSelector] Capture successful with screenshot!', {
-            cardId,
-            screenshotId,
-            compressionRatio: `${(compressionResult.metadata.compressionRatio * 100).toFixed(1)}%`,
-          });
-        } else {
-          console.log('[ElementSelector] Capture successful without screenshot!', {
-            cardId,
-            screenshotId: 'none',
-          });
-        }
-
-        // 9. Show floating chat at element position
+        // 8. Show floating chat at element position
         setCapturedCard(card);
         setShowFloatingChat(true);
 
-        // 10. Fire callback
+        // 9. Fire callback
         if (onCapture) {
           onCapture(card);
         }
 
-        // 11. Auto-close after 2 seconds
+        // 10. Auto-close after 2 seconds
         setTimeout(() => {
           if (onClose) {
             onClose();
@@ -358,6 +319,15 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
       {!showFloatingChat && (
         <div css={instructionsStyles}>
           <p>Hover over elements to inspect • Click to capture • Press ESC to cancel</p>
+          <label css={checkboxLabelStyles}>
+            <input
+              type="checkbox"
+              checked={stashImmediately}
+              onChange={(e) => setStashImmediately(e.target.checked)}
+              css={checkboxInputStyles}
+            />
+            <span css={checkboxTextStyles}>📥 Stash immediately (skip canvas)</span>
+          </label>
         </div>
       )}
     </div>
@@ -562,11 +532,44 @@ const instructionsStyles = css`
   z-index: 999999;
   pointer-events: auto;
   border: 1px solid ${CHINESE_AESTHETIC_COLORS.gold};
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
 
   p {
     margin: 0;
     font-weight: 500;
   }
+`;
+
+const checkboxLabelStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.1);
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+`;
+
+const checkboxInputStyles = css`
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: ${CHINESE_AESTHETIC_COLORS.gold};
+`;
+
+const checkboxTextStyles = css`
+  font-size: 13px;
+  font-weight: 500;
+  color: ${CHINESE_AESTHETIC_COLORS.rice};
+  user-select: none;
 `;
 
 const loadingOverlayStyles = css`

@@ -5,7 +5,7 @@
  * Includes sample HTML elements, cards, conversations, and screenshots.
  */
 
-import type { Card, Message, Screenshot } from '@/types';
+import type { Card, Message } from '@/types';
 
 // ============================================================================
 // Sample HTML Elements
@@ -129,7 +129,6 @@ export const SAMPLE_BASIC_CARD: Card = {
   createdAt: 1706140800000,
   updatedAt: 1706140800000,
   conversation: [],
-  screenshotId: 'screenshot-basic-001',
   styles: {
     fontSize: '16px',
     fontFamily: 'Georgia, serif',
@@ -169,7 +168,6 @@ export const SAMPLE_CARD_WITH_CONVERSATION: Card = {
     color: '#000000',
     backgroundColor: '#ffffff',
   },
-  screenshotId: undefined,
   context: 'This article is part of a series on productivity tools.',
   conversation: [
     {
@@ -229,7 +227,6 @@ export const SAMPLE_CODE_CARD: Card = {
     padding: '16px',
     border: '1px solid #ddd',
   },
-  screenshotId: undefined,
   context: 'This code example demonstrates basic function syntax in JavaScript.',
   conversation: [
     {
@@ -277,46 +274,6 @@ export const SAMPLE_MESSAGES: Message[] = [
     timestamp: 1706140300000,
   },
 ];
-
-// ============================================================================
-// Sample Screenshots
-// ============================================================================
-
-/**
- * 1x1 red pixel PNG (base64)
- */
-export const SAMPLE_SCREENSHOT_RED: Screenshot = {
-  id: 'screenshot-red-001',
-  dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==',
-  width: 1,
-  height: 1,
-  compressedSize: 68,
-  timestamp: 1706140800000,
-};
-
-/**
- * 1x1 blue pixel PNG (base64)
- */
-export const SAMPLE_SCREENSHOT_BLUE: Screenshot = {
-  id: 'screenshot-blue-001',
-  dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChAGANV8dGwAAAABJRU5ErkJggg==',
-  width: 1,
-  height: 1,
-  compressedSize: 68,
-  timestamp: 1706140900000,
-};
-
-/**
- * Larger test screenshot (100x100 gradient)
- */
-export const SAMPLE_SCREENSHOT_GRADIENT: Screenshot = {
-  id: 'screenshot-gradient-001',
-  dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-  width: 100,
-  height: 100,
-  compressedSize: 256,
-  timestamp: 1706141000000,
-};
 
 // ============================================================================
 // Collection of Sample Cards

@@ -92,19 +92,8 @@ async function testAgentSubscriptions() {
     console.log(`\n✅ Test complete! Processed ${messageCount} messages`);
 
   } catch (error) {
-    // Expected error if no API key is set
-    if (error.message?.includes('API key') || error.message?.includes('ANTHROPIC_API_KEY')) {
-      console.log('\n⚠️  Expected error: No API key configured');
-      console.log('   This is normal for a subscription pattern test');
-      console.log('\n✓ Subscription pattern validated successfully!');
-      console.log('\nTo run with real API:');
-      console.log('  export ANTHROPIC_API_KEY=your-key-here');
-      console.log('  node test-scripts/test-agent-subscriptions.mjs');
-    } else {
-      console.error('\n❌ Unexpected error:', error.message);
-      console.error(error.stack);
-      process.exit(1);
-    }
+    console.error('\n❌ Error:', error.message);
+    process.exit(1);
   }
 }
 

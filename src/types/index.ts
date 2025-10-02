@@ -89,40 +89,6 @@ export interface CardMetadata {
 
 
 // ============================================================================
-// Screenshot Types
-// ============================================================================
-
-/**
- * Screenshot data stored in IndexedDB.
- */
-export interface Screenshot {
-  id: string;                // Unique screenshot ID
-  dataUrl: string;           // Base64 encoded JPEG image
-  width: number;             // Original width in pixels
-  height: number;            // Original height in pixels
-  compressedSize: number;    // Size in bytes after compression
-  timestamp: number;         // Unix timestamp of capture
-}
-
-/**
- * Screenshot data stored in IndexedDB (legacy format)
- */
-export interface ScreenshotData {
-  /** Unique identifier (same as card.screenshotId) */
-  id: string;
-  /** Compressed screenshot data URL */
-  dataUrl: string;
-  /** Compression metadata */
-  compressionMetadata?: {
-    originalSize: number;
-    compressedSize: number;
-    compressionRatio: number;
-  };
-  /** Timestamp when screenshot was taken */
-  timestamp: number;
-}
-
-// ============================================================================
 // Conversation Types
 // ============================================================================
 // Message and ChatContext are exported from './card'

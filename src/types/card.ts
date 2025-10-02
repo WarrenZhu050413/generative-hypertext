@@ -62,7 +62,7 @@ export interface CardSize {
 /**
  * AI Beautification mode for card content
  */
-export type BeautificationMode = 'recreate-design' | 'organize-content';
+export type BeautificationMode = 'organize-content';
 
 /**
  * Fill-in strategy for connection-based synthesis
@@ -96,7 +96,6 @@ export interface Card {
   updatedAt: number;
   conversation?: Message[]; // Conversation history with Claude
   // Additional fields for element rendering
-  screenshotId?: string; // Reference to screenshot in IndexedDB
   styles?: import('../types').RelevantStyles; // Computed styles for rendering
   context?: string; // Parent element context (HTML snippet)
   // Card type and relationships

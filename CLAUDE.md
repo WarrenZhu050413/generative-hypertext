@@ -23,6 +23,10 @@ npm run watch:extension
 # Type checking (always run before committing)
 npm run type-check
 
+# Backend server (Agent SDK for subscription auth)
+npm run backend           # Start backend server
+npm run backend:dev       # With auto-reload
+
 # Unit tests (Vitest)
 npm test                  # Run once
 npm run test:watch        # Watch mode
@@ -47,7 +51,6 @@ node test-scripts/test-canvas-direct.mjs
    - Manifest V3 service worker
    - Handles keyboard commands (`Cmd+Shift+E`)
    - Context menu registration
-   - Screenshot capture via `chrome.tabs.captureVisibleTab()`
    - Opens canvas on toolbar icon click
 
 2. **Content Script** (`src/content/index.tsx`)
@@ -78,27 +81,20 @@ User presses Cmd+Shift+E
 → User clicks element
 → Capture pipeline:
   1. Extract HTML + sanitize (DOMPurify)
-  2. Capture screenshot via background worker
-  3. Compress screenshot (canvas-based compression)
-  4. Generate unique ID (timestamp + random)
-  5. Save Card to chrome.storage.local
-  6. Save Screenshot to IndexedDB
+  2. Generate unique ID (timestamp + random)
+  3. Save Card to chrome.storage.local
 → Canvas auto-refreshes to show new card
 ```
 
 **Storage Architecture:**
 
-- **chrome.storage.local**: Card metadata (limit: ~5MB after JSON serialization)
+- **chrome.storage.local**: All card data and metadata (limit: ~5MB after JSON serialization)
   - Key: `'cards'` → `Card[]`
   - Key: `'nabokov_canvas_state'` → `CanvasState` (positions, zoom)
   - Key: `'nabokov_filters'` → `FilterState`
   - Key: `'nabokov_connections'` → `Connection[]` (card relationships/arrows)
   - Key: `'nabokov_claude_api_key'` → `string` (Claude API key for LLM features)
   - Key: `'nabokov_custom_buttons'` → `CustomButton[]` (user-defined action buttons)
-- **IndexedDB**: Screenshots (limit: much larger, browser-dependent)
-  - Database: `'nabokov-clipper'`
-  - Store: `'screenshots'`
-  - Key: `screenshotId` (matches `Card.screenshotId`)
 
 ### Core Type: Card
 
@@ -114,7 +110,6 @@ interface Card {
   createdAt: number;
   updatedAt: number;
   conversation?: Message[]; // Chat history with Claude
-  screenshotId?: string; // Reference to IndexedDB screenshot
   styles?: RelevantStyles; // Computed CSS for rendering
   context?: string; // Parent element HTML
   cardType?: "clipped" | "generated" | "note" | "image"; // Source type
@@ -152,7 +147,6 @@ interface Card {
 - Visual overlay with Chinese aesthetic (red/gold colors)
 - Element info tooltip (tag, classes, dimensions)
 - Handles keyboard (ESC to exit)
-- Screenshot capture is **optional and non-blocking** (fails silently if blocked by CORS)
 
 **Canvas** (`src/canvas/Canvas.tsx`)
 
@@ -210,20 +204,34 @@ interface Card {
 
 **Claude API Integration**
 
-- **claudeAPIService** (`src/services/claudeAPIService.ts`): Real Anthropic Claude API integration
+- **claudeAPIService** (`src/services/claudeAPIService.ts`): Multi-tier Claude API integration with fallbacks
+- **Backend Server** (`backend/server.mjs`): Local Node.js server using Agent SDK for subscription auth
 - **apiConfigService** (`src/services/apiConfig.ts`): Secure API key management
 - **APISettings** (`src/components/APISettings.tsx`): UI for API key configuration
+
+**Authentication Priority Order:**
+1. **Local Backend** (http://localhost:3100) - Uses Claude Agent SDK
+   - ✅ Works with Claude.ai subscription (no API key needed)
+   - ✅ Works with API key from environment variable
+   - ✅ Best option - no separate billing required
+2. **Direct API** (api.anthropic.com) - Direct fetch to Anthropic API
+   - ⚠️ Requires separate Claude API key and billing
+   - ✅ Vision API support (screenshot analysis)
+3. **Mock Fallback** - Development mock responses
+   - 📝 Always works, but not real AI
+
+**Key Features:**
 - Supports text-only and vision (screenshot analysis) modes
 - Default model: `claude-sonnet-4-20250514`
 - API key stored securely in chrome.storage.local
+- Backend enables subscription-based auth (see `backend/README.md`)
 
 **Beautification System**
 
 - **beautificationService** (`src/services/beautificationService.ts`): AI-powered card content enhancement
-- Two modes:
-  - `'recreate-design'`: Recreate visual design from screenshot with clean HTML
-  - `'organize-content'`: Restructure content for better readability
-- Uses Claude API with vision capabilities for screenshot analysis
+- Mode:
+  - `'organize-content'`: Restructure content for better readability with clean, semantic HTML
+- Uses Claude API for text-based content analysis
 - Always sanitizes output with DOMPurify before storing
 - Falls back to mock content in development mode
 
@@ -276,32 +284,6 @@ interface Card {
 - Generated cards automatically linked to parent via connections
 
 ## Critical Implementation Details
-
-### Screenshot Capture
-
-Screenshot capture can fail due to:
-
-- CORS restrictions (cross-origin images)
-- Canvas tainting
-- Missing activeTab permission
-
-**Always make screenshot capture optional:**
-
-```typescript
-let compressionResult = null;
-try {
-  const screenshot = await captureElementScreenshot(element);
-  compressionResult = await compressScreenshot(screenshot);
-} catch (error) {
-  console.warn("Screenshot failed (non-blocking):", error);
-  // Continue without screenshot
-}
-
-const card: Card = {
-  // ...
-  screenshotId: compressionResult ? screenshotId : undefined,
-};
-```
 
 ### Extension Reload Requirement
 

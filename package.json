@@ -18,7 +18,9 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:all": "npm run test && npm run test:e2e",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "backend": "node backend/server.mjs",
+    "backend:dev": "nodemon backend/server.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.1",
@@ -27,7 +29,8 @@
     "@emotion/styled": "^11.11.0",
     "@floating-ui/react": "^0.26.0",
     "@xyflow/react": "^12.3.2",
-    "idb": "^8.0.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "isomorphic-dompurify": "^2.14.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

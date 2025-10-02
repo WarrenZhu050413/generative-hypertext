@@ -422,6 +422,87 @@ const cardTitleStyles = css`
   -webkit-box-orient: vertical;
 `;
 
+const contentPreviewStyles = css`
+  font-size: 12px;
+  color: #5c4d42;
+  line-height: 1.5;
+  margin-bottom: 6px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+  border-left: 2px solid rgba(212, 175, 55, 0.3);
+`;
+
+const contentExpandedStyles = css`
+  font-size: 12px;
+  color: #5c4d42;
+  line-height: 1.5;
+  margin-bottom: 6px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+  border-left: 2px solid rgba(212, 175, 55, 0.5);
+  max-height: 400px;
+  overflow-y: auto;
+
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(139, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 0, 0, 0.4);
+  }
+
+  /* Preserve formatting from HTML content */
+  p {
+    margin: 0 0 8px 0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    margin: 12px 0 6px 0;
+    color: #3e3226;
+  }
+
+  ul, ol {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+
+  a {
+    color: #d4af37;
+    text-decoration: underline;
+  }
+`;
+
+const expandButtonStyles = css`
+  font-size: 11px;
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid rgba(184, 156, 130, 0.3);
+  border-radius: 4px;
+  color: #8b7355;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 8px;
+  width: 100%;
+  font-weight: 500;
+
+  &:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: rgba(212, 175, 55, 0.5);
+  }
+`;
+
 const tagsStyles = css`
   display: flex;
   gap: 4px;

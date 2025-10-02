@@ -2,39 +2,9 @@
  * Storage utilities for Nabokov Web Clipper
  *
  * Handles storage of clipped cards in chrome.storage.local
- * and screenshots in IndexedDB.
  */
 
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import type { Card, ScreenshotData } from '@/types';
-
-/**
- * IndexedDB schema for screenshots
- */
-interface ScreenshotDB extends DBSchema {
-  screenshots: {
-    key: string;
-    value: ScreenshotData;
-  };
-}
-
-const DB_NAME = 'nabokov-clipper';
-const DB_VERSION = 1;
-const SCREENSHOT_STORE = 'screenshots';
-
-/**
- * Opens or creates the IndexedDB database
- */
-async function getDB(): Promise<IDBPDatabase<ScreenshotDB>> {
-  return openDB<ScreenshotDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      // Create screenshot store if it doesn't exist
-      if (!db.objectStoreNames.contains(SCREENSHOT_STORE)) {
-        db.createObjectStore(SCREENSHOT_STORE, { keyPath: 'id' });
-      }
-    },
-  });
-}
+import type { Card } from '@/types';
 
 /**
  * Saves a card to chrome.storage.local
@@ -135,67 +105,7 @@ export async function deleteCard(cardId: string): Promise<void> {
 }
 
 /**
- * Saves a screenshot to IndexedDB
- *
- * @param screenshot - The screenshot data to save
- * @returns Promise that resolves when saved
- *
- * @example
- * ```typescript
- * const screenshot: ScreenshotData = {
- *   id: card.screenshotId,
- *   dataUrl: compressedDataUrl,
- *   timestamp: Date.now()
- * };
- * await saveScreenshot(screenshot);
- * ```
- */
-export async function saveScreenshot(screenshot: ScreenshotData): Promise<void> {
-  try {
-    const db = await getDB();
-    await db.put(SCREENSHOT_STORE, screenshot);
-    console.log('[storage] Screenshot saved successfully:', screenshot.id);
-  } catch (error) {
-    console.error('[storage] Error saving screenshot:', error);
-    throw error;
-  }
-}
-
-/**
- * Retrieves a screenshot from IndexedDB
- *
- * @param id - The screenshot ID
- * @returns Promise resolving to screenshot data, or undefined if not found
- */
-export async function getScreenshot(id: string): Promise<ScreenshotData | undefined> {
-  try {
-    const db = await getDB();
-    return await db.get(SCREENSHOT_STORE, id);
-  } catch (error) {
-    console.error('[storage] Error getting screenshot:', error);
-    return undefined;
-  }
-}
-
-/**
- * Deletes a screenshot from IndexedDB
- *
- * @param id - The screenshot ID to delete
- * @returns Promise that resolves when deleted
- */
-export async function deleteScreenshot(id: string): Promise<void> {
-  try {
-    const db = await getDB();
-    await db.delete(SCREENSHOT_STORE, id);
-    console.log('[storage] Screenshot deleted successfully:', id);
-  } catch (error) {
-    console.error('[storage] Error deleting screenshot:', error);
-    throw error;
-  }
-}
-
-/**
- * Generates a unique ID for cards and screenshots
+ * Generates a unique ID for cards
  *
  * @returns A unique ID string
  */

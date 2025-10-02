@@ -65,42 +65,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
-  if (message.type === 'CAPTURE_SCREENSHOT') {
-    console.log('[background] Handling CAPTURE_SCREENSHOT');
-    // Capture visible tab screenshot
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]?.id) {
-        console.log('[background] Capturing visible tab:', tabs[0].id);
-        chrome.tabs.captureVisibleTab(
-          tabs[0].windowId,
-          { format: 'png' },
-          (dataUrl) => {
-            if (chrome.runtime.lastError) {
-              console.error('[background] Capture error:', chrome.runtime.lastError.message);
-              sendResponse({
-                success: false,
-                error: chrome.runtime.lastError.message
-              });
-            } else {
-              console.log('[background] Capture successful, data URL length:', dataUrl?.length);
-              sendResponse({
-                success: true,
-                dataUrl: dataUrl
-              });
-            }
-          }
-        );
-      } else {
-        console.error('[background] No active tab found');
-        sendResponse({
-          success: false,
-          error: 'No active tab found'
-        });
-      }
-    });
-    return true; // Keep message channel open for async response
-  }
-
   console.warn('[background] Unknown message type:', message.type);
   sendResponse({ success: false, error: 'Unknown message type' });
   return false;
