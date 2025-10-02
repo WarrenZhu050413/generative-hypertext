@@ -146,3 +146,23 @@ input[type="text"]:focus {
 .filter-panel::-webkit-scrollbar-thumb:hover {
   background: rgba(184, 156, 130, 0.5);
 }
+
+/* Card content scrollbar styling */
+.card-content-scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-content-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.card-content-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(139, 0, 0, 0.2);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.card-content-scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 0, 0, 0.4);
+}

@@ -15,8 +15,11 @@ import { Toolbar } from './Toolbar';
 import { useCanvasState } from './useCanvasState';
 import { KeyboardHelp } from '@/components/KeyboardHelp';
 import { SettingsPanel } from './SettingsPanel';
+import { APISettings } from '@/components/APISettings';
 import { FloatingWindow } from '@/components/FloatingWindow';
+import { EdgeEditModal } from '@/components/EdgeEditModal';
 import { windowManager } from '@/services/windowManager';
+import type { ConnectionType } from '@/types/connection';
 import {
   globalShortcutManager,
   KeyboardShortcut,
@@ -26,6 +29,7 @@ import {
 import type { WindowState } from '@/types/window';
 import type { Card } from '@/types/card';
 import { saveCard, generateId } from '@/utils/storage';
+import { createImageCards } from '@/utils/imageUpload';
 
 // Register custom node types
 const nodeTypes = {
@@ -55,12 +59,16 @@ function CanvasInner() {
   const { fitView, zoomIn, zoomOut } = useReactFlow();
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAPISettings, setShowAPISettings] = useState(false);
   const [shortcuts, setShortcuts] = useState<KeyboardShortcut[]>([]);
   const toolbarRef = useRef<{ focusSearch: () => void; toggleFilters: () => void }>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [windows, setWindows] = useState(windowManager.getWindows());
   const [connectionMode, setConnectionMode] = useState(false);
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [showEdgeModal, setShowEdgeModal] = useState(false);
+  const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
 
   // Initialize keyboard shortcuts
   useEffect(() => {
@@ -197,6 +205,10 @@ function CanvasInner() {
     setShowSettings(true);
   };
 
+  const handleOpenAPISettings = () => {
+    setShowAPISettings(true);
+  };
+
   const handleCreateNote = async () => {
     try {
       // Get current viewport center position
@@ -227,8 +239,8 @@ function CanvasInner() {
 
       await saveCard(newNote);
 
-      // Reload canvas to show new note
-      window.location.reload();
+      // Dispatch event to refresh cards
+      window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
 
       showFeedback('Note created');
     } catch (error) {
@@ -255,16 +267,95 @@ function CanvasInner() {
       setSelectedSource(null);
       showFeedback('Selection cleared - click source card');
     } else {
-      // Second click - create connection
-      try {
-        await addConnection(selectedSource, node.id, 'related', '');
-        showFeedback('Connection created');
-        setSelectedSource(null);
-        setConnectionMode(false);
-      } catch (error) {
-        console.error('[Canvas] Error creating connection:', error);
-        showFeedback('Failed to create connection');
-      }
+      // Second click - show modal to customize connection
+      setPendingConnection({ source: selectedSource, target: node.id });
+      setShowEdgeModal(true);
+    }
+  };
+
+  const handleEdgeSubmit = async (type: ConnectionType, label: string) => {
+    if (!pendingConnection) return;
+
+    try {
+      await addConnection(pendingConnection.source, pendingConnection.target, type, label);
+      showFeedback('Connection created');
+      setSelectedSource(null);
+      setConnectionMode(false);
+      setShowEdgeModal(false);
+      setPendingConnection(null);
+    } catch (error) {
+      console.error('[Canvas] Error creating connection:', error);
+      showFeedback('Failed to create connection');
+    }
+  };
+
+  const handleEdgeCancel = () => {
+    setShowEdgeModal(false);
+    setPendingConnection(null);
+    // Keep source selected so user can try again
+    showFeedback('Connection cancelled - select target again');
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Check if dragging files
+    if (e.dataTransfer.types.includes('Files')) {
+      e.dataTransfer.dropEffect = 'copy';
+      setIsDraggingOver(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Only reset if leaving the canvas container
+    if (e.currentTarget === e.target) {
+      setIsDraggingOver(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+
+    if (files.length === 0) {
+      return;
+    }
+
+    // Filter for image files only
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length === 0) {
+      showFeedback('No image files found');
+      return;
+    }
+
+    try {
+      showFeedback(`Uploading ${imageFiles.length} image${imageFiles.length > 1 ? 's' : ''}...`);
+
+      // Get drop position relative to canvas
+      // Use the position where the drop occurred
+      const position = {
+        x: e.clientX - 200, // Offset to center the card at drop point
+        y: e.clientY - 150,
+      };
+
+      // Create image cards
+      const createdCards = await createImageCards(imageFiles, position);
+
+      // Dispatch event to refresh cards
+      window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+
+      showFeedback(`Successfully added ${createdCards.length} image card${createdCards.length > 1 ? 's' : ''} ✨`);
+    } catch (error) {
+      console.error('[Canvas] Error uploading images:', error);
+      showFeedback('Failed to upload images');
     }
   };
 
@@ -336,7 +427,22 @@ function CanvasInner() {
     filters.dateRange !== 'all';
 
   return (
-    <>
+    <div
+      style={styles.container}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDraggingOver && (
+        <div style={styles.dragOverlay}>
+          <div style={styles.dragOverlayContent}>
+            <div style={styles.dragIcon}>🖼️</div>
+            <div style={styles.dragText}>Drop images here</div>
+          </div>
+        </div>
+      )}
+
       <Toolbar
         ref={toolbarRef}
         stats={stats}
@@ -347,6 +453,7 @@ function CanvasInner() {
         resultCount={filteredCards.length}
         totalCount={cards.length}
         onSettingsClick={handleOpenSettings}
+        onAPISettingsClick={handleOpenAPISettings}
         onCreateNote={handleCreateNote}
         onToggleConnectionMode={handleToggleConnectionMode}
         connectionMode={connectionMode}
@@ -373,6 +480,11 @@ function CanvasInner() {
         stats={stats}
         onRefreshStats={refreshStats}
       />
+
+      {/* API Settings */}
+      {showAPISettings && (
+        <APISettings onClose={() => setShowAPISettings(false)} />
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -485,16 +597,22 @@ function CanvasInner() {
           );
         })}
       </div>
-    </>
+
+      {/* Edge Edit Modal */}
+      {showEdgeModal && (
+        <EdgeEditModal
+          onSubmit={handleEdgeSubmit}
+          onCancel={handleEdgeCancel}
+        />
+      )}
+    </div>
   );
 }
 
 export function Canvas() {
   return (
     <ReactFlowProvider>
-      <div style={styles.container}>
-        <CanvasInner />
-      </div>
+      <CanvasInner />
     </ReactFlowProvider>
   );
 }
@@ -645,5 +763,39 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 10001,
     animation: 'slideUpFade 0.3s ease-out',
     backdropFilter: 'blur(10px)',
+  },
+  dragOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(212, 175, 55, 0.1)',
+    backdropFilter: 'blur(4px)',
+    zIndex: 10000,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+    border: '3px dashed #D4AF37',
+  },
+  dragOverlayContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: '40px',
+    background: 'rgba(250, 247, 242, 0.95)',
+    borderRadius: '16px',
+    boxShadow: '0 8px 32px rgba(92, 77, 66, 0.15)',
+    border: '1px solid rgba(184, 156, 130, 0.3)',
+  },
+  dragIcon: {
+    fontSize: '64px',
+    marginBottom: '16px',
+  },
+  dragText: {
+    fontSize: '20px',
+    fontWeight: 600,
+    color: '#3E3226',
   },
 };

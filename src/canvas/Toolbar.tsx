@@ -12,6 +12,7 @@ interface ToolbarProps {
   resultCount: number;
   totalCount: number;
   onSettingsClick?: () => void;
+  onAPISettingsClick?: () => void;
   onCreateNote?: () => void;
   onToggleConnectionMode?: () => void;
   connectionMode?: boolean;
@@ -31,6 +32,7 @@ export const Toolbar = forwardRef<ToolbarRef, ToolbarProps>(({
   resultCount,
   totalCount,
   onSettingsClick,
+  onAPISettingsClick,
   onCreateNote,
   onToggleConnectionMode,
   connectionMode,
@@ -349,6 +351,17 @@ export const Toolbar = forwardRef<ToolbarRef, ToolbarProps>(({
                 stroke="currentColor"
                 strokeWidth="1.5"
               />
+            </svg>
+          </button>
+          <button style={{...styles.button, color: '#D4AF37'}} title="API Settings (Claude API Key)" onClick={onAPISettingsClick}>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path
+                d="M10 2L11.5 8.5L15 10L11.5 11.5L10 18L8.5 11.5L5 10L8.5 8.5L10 2Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                fill="none"
+              />
+              <circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.5" fill="none" />
             </svg>
           </button>
         </div>

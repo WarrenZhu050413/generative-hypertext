@@ -28,6 +28,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [streamingContent, setStreamingContent] = useState('');
+  const [autoSaveOnClose, setAutoSaveOnClose] = useState(false);
 
   // Restore scroll position on mount/maximize
   useEffect(() => {
@@ -49,7 +50,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
     windowManager.updateChatInput(card.id, '');
 
     try {
-      const stream = chatService.sendMessage(card.id, message, card.content);
+      const stream = chatService.sendMessage(card.id, message, card.content || '');
 
       for await (const chunk of stream) {
         setStreamingContent(prev => prev + chunk);
@@ -164,8 +165,17 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   };
 
   // Handle close
-  const handleClose = () => {
+  const handleClose = async () => {
+    // Auto-save conversation if enabled and there are messages
+    if (autoSaveOnClose && windowState.conversationMessages && windowState.conversationMessages.length > 0) {
+      await handleSaveConversation();
+    }
     windowManager.closeWindow(card.id);
+  };
+
+  // Handle toggle auto-save
+  const handleToggleAutoSave = (enabled: boolean) => {
+    setAutoSaveOnClose(enabled);
   };
 
   // Handle minimize
@@ -237,7 +247,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
           onScroll={handleScroll}
         >
           <div
-            dangerouslySetInnerHTML={{ __html: card.content }}
+            dangerouslySetInnerHTML={{ __html: card.content || '<p>No content</p>' }}
           />
 
           {card.metadata.url && (
@@ -256,14 +266,17 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
 
         <FloatingWindowChat
           cardId={card.id}
-          cardContent={card.content}
+          cardContent={card.content || ''}
           messages={windowState.conversationMessages}
           currentInput={windowState.chatInput}
           isStreaming={windowState.isStreaming}
+          autoSaveOnClose={autoSaveOnClose}
           onSendMessage={handleSendMessage}
           onInputChange={handleInputChange}
           onStopStreaming={handleStopStreaming}
           onClearChat={handleClearChat}
+          onSaveConversation={handleSaveConversation}
+          onToggleAutoSave={handleToggleAutoSave}
         />
       </div>
     </Draggable>

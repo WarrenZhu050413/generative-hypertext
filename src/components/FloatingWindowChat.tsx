@@ -12,10 +12,13 @@ export interface FloatingWindowChatProps {
   messages: Message[];
   currentInput: string;
   isStreaming: boolean;
+  autoSaveOnClose: boolean;
   onSendMessage: (message: string) => void;
   onInputChange: (value: string) => void;
   onStopStreaming: () => void;
   onClearChat: () => void;
+  onSaveConversation: () => void;
+  onToggleAutoSave: (enabled: boolean) => void;
 }
 
 /**
@@ -26,10 +29,13 @@ export const FloatingWindowChat: React.FC<FloatingWindowChatProps> = ({
   messages,
   currentInput,
   isStreaming,
+  autoSaveOnClose,
   onSendMessage,
   onInputChange,
   onStopStreaming,
-  onClearChat
+  onClearChat,
+  onSaveConversation,
+  onToggleAutoSave
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -69,6 +75,29 @@ export const FloatingWindowChat: React.FC<FloatingWindowChatProps> = ({
           ))
         )}
         <div ref={messagesEndRef} />
+      </div>
+
+      {/* Save and Auto-Save Controls */}
+      <div css={controlsBarStyles}>
+        <button
+          onClick={onSaveConversation}
+          css={saveButtonStyles}
+          disabled={messages.length === 0}
+          title="Save conversation as a new card"
+          data-testid="save-conversation-btn"
+        >
+          💾 Save Conversation
+        </button>
+
+        <label css={autoSaveCheckboxStyles}>
+          <input
+            type="checkbox"
+            checked={autoSaveOnClose}
+            onChange={e => onToggleAutoSave(e.target.checked)}
+            data-testid="auto-save-checkbox"
+          />
+          <span>Auto-save on close</span>
+        </label>
       </div>
 
       <form onSubmit={handleSubmit} css={inputFormStyles}>
@@ -304,5 +333,65 @@ const clearButtonStyles = css`
   &:hover {
     background: rgba(0, 0, 0, 0.1);
     transform: scale(1.05);
+  }
+`;
+
+const controlsBarStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid #ddd;
+  background: rgba(255, 215, 0, 0.05);
+`;
+
+const saveButtonStyles = css`
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #D4AF37, #FFD700);
+  color: #3E3226;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(212, 175, 55, 0.3);
+    background: linear-gradient(135deg, #FFD700, #D4AF37);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+`;
+
+const autoSaveCheckboxStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #5C4D42;
+  cursor: pointer;
+  user-select: none;
+
+  input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    color: #3E3226;
   }
 `;

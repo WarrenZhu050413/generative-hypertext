@@ -1,5 +1,5 @@
 import React, { memo, useState, useRef, useEffect } from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, NodeResizer } from '@xyflow/react';
 import type { Card } from '@/types/card';
 import DOMPurify from 'isomorphic-dompurify';
 import { windowManager } from '@/services/windowManager';
@@ -10,8 +10,6 @@ import { cardGenerationService } from '@/services/cardGenerationService';
 import { beautificationService } from '@/services/beautificationService';
 import { DEFAULT_BUTTONS } from '@/config/defaultButtons';
 import type { CardButton } from '@/types/button';
-import type { SizePreset } from '@/utils/cardSizes';
-import { SIZE_LABELS } from '@/utils/cardSizes';
 import type { BeautificationMode } from '@/types/card';
 
 interface CardNodeProps {
@@ -28,7 +26,6 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
   const [showContextModal, setShowContextModal] = useState(false);
   const [selectedButton, setSelectedButton] = useState<CardButton | null>(null);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-  const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [showBeautifyMenu, setShowBeautifyMenu] = useState(false);
   const [isBeautifying, setIsBeautifying] = useState(false);
   const contentEditRef = useRef<HTMLTextAreaElement>(null);
@@ -103,23 +100,6 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
     }
   };
 
-  const handleSizeChange = async (size: SizePreset) => {
-    try {
-      const updatedCard: Card = {
-        ...card,
-        sizePreset: size,
-        updatedAt: Date.now(),
-      };
-
-      await saveCard(updatedCard);
-      setShowSizeMenu(false);
-
-      // Dispatch event to refresh cards
-      window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
-    } catch (error) {
-      console.error('[CardNode] Error changing size:', error);
-    }
-  };
 
   const handleBeautify = async (mode: BeautificationMode) => {
     try {
@@ -433,6 +413,23 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
       }}
       onDoubleClick={handleDoubleClick}
     >
+      {/* Resize Handle - bottom-right corner */}
+      {!card.collapsed && (
+        <NodeResizer
+          minWidth={200}
+          minHeight={150}
+          handleStyle={{
+            width: '12px',
+            height: '12px',
+            borderRadius: '0 0 12px 0',
+          }}
+          lineStyle={{
+            borderColor: 'rgba(139, 0, 0, 0.3)',
+            borderWidth: '2px',
+          }}
+        />
+      )}
+
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerLeft}>
@@ -511,41 +508,6 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
               )}
             </div>
           )}
-          {/* Size control */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowSizeMenu(!showSizeMenu);
-              }}
-              style={styles.sizeButton}
-              title={`Size: ${card.sizePreset || 'M'}`}
-              data-testid="size-btn"
-            >
-              {card.sizePreset || 'M'}
-            </button>
-            {showSizeMenu && (
-              <div style={styles.sizeMenu} data-testid="size-menu">
-                {(['S', 'M', 'L', 'XL'] as SizePreset[]).map(size => (
-                  <button
-                    key={size}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSizeChange(size);
-                    }}
-                    style={{
-                      ...styles.sizeMenuItem,
-                      ...(card.sizePreset === size || (!card.sizePreset && size === 'M') ? styles.sizeMenuItemActive : {}),
-                    }}
-                    data-testid={`size-option-${size}`}
-                  >
-                    <span style={styles.sizeMenuLabel}>{size}</span>
-                    <span style={styles.sizeMenuDesc}>{SIZE_LABELS[size]}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
           <button
             onClick={handleToggleCollapse}
             style={styles.collapseButton}
@@ -1001,60 +963,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '4px',
     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
-  },
-  sizeButton: {
-    width: '24px',
-    height: '20px',
-    padding: '0',
-    border: '1px solid rgba(184, 156, 130, 0.3)',
-    background: 'white',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '10px',
-    fontWeight: 600,
-    color: '#5C4D42',
-    transition: 'all 0.2s ease',
-  },
-  sizeMenu: {
-    position: 'absolute',
-    top: '100%',
-    right: 0,
-    marginTop: '4px',
-    background: 'white',
-    border: '1px solid rgba(184, 156, 130, 0.3)',
-    borderRadius: '6px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-    zIndex: 1000,
-    minWidth: '140px',
-    overflow: 'hidden',
-  },
-  sizeMenuItem: {
-    width: '100%',
-    padding: '8px 12px',
-    border: 'none',
-    background: 'white',
-    cursor: 'pointer',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: '2px',
-    transition: 'all 0.2s ease',
-    textAlign: 'left',
-  },
-  sizeMenuItemActive: {
-    background: 'rgba(212, 175, 55, 0.1)',
-  },
-  sizeMenuLabel: {
-    fontSize: '13px',
-    fontWeight: 600,
-    color: '#3E3226',
-  },
-  sizeMenuDesc: {
-    fontSize: '11px',
-    color: '#8B7355',
   },
   beautifyButton: {
     width: '24px',

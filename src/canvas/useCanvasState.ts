@@ -67,6 +67,18 @@ export function useCanvasState(): UseCanvasStateReturn {
   // Load initial canvas state and cards
   useEffect(() => {
     loadCanvasState();
+
+    // Listen for card updates from other components
+    const handleCardUpdate = () => {
+      console.log('[Canvas] Received card update event, refreshing...');
+      loadCanvasState();
+    };
+
+    window.addEventListener('nabokov:cards-updated', handleCardUpdate);
+
+    return () => {
+      window.removeEventListener('nabokov:cards-updated', handleCardUpdate);
+    };
   }, []);
 
   const loadCanvasState = async () => {
@@ -151,6 +163,8 @@ export function useCanvasState(): UseCanvasStateReturn {
   const cardToNode = (card: Card, index: number, _canvasState?: CanvasState): Node => {
     // Use saved position or calculate grid position
     const position = card.position || calculateGridPosition(index);
+
+    // Use saved size or default
     const size = card.size || { width: 320, height: 240 };
 
     return {
@@ -316,7 +330,7 @@ export function useCanvasState(): UseCanvasStateReturn {
       result = result.filter(card => {
         const titleMatch = card.metadata.title.toLowerCase().includes(query);
         const domainMatch = card.metadata.domain.toLowerCase().includes(query);
-        const contentMatch = card.content.toLowerCase().includes(query);
+        const contentMatch = card.content?.toLowerCase().includes(query) || false;
         const tagsMatch = card.tags.some(tag => tag.toLowerCase().includes(query));
         return titleMatch || domainMatch || contentMatch || tagsMatch;
       });

@@ -60,12 +60,17 @@ export interface CardSize {
 }
 
 /**
+ * AI Beautification mode for card content
+ */
+export type BeautificationMode = 'recreate-design' | 'organize-content';
+
+/**
  * Main card data structure for the canvas view
  * This is the primary Card type used throughout the application
  */
 export interface Card {
   id: string;
-  content: string; // HTML content (sanitized)
+  content?: string; // HTML content (sanitized) - optional for image-only cards
   metadata: ClipMetadata;
   position?: CardPosition;
   size?: CardSize;
@@ -79,13 +84,23 @@ export interface Card {
   styles?: import('../types').RelevantStyles; // Computed styles for rendering
   context?: string; // Parent element context (HTML snippet)
   // Card type and relationships
-  cardType?: 'clipped' | 'generated' | 'note'; // Type of card
+  cardType?: 'clipped' | 'generated' | 'note' | 'image'; // Type of card
   parentCardId?: string; // Reference to parent card (for generated cards)
   generationContext?: {
     sourceMessageId: string;
     userPrompt: string;
     timestamp: number;
   };
+  // Image upload fields
+  imageData?: string; // Base64-encoded image data for drag-dropped images
+  imageMimeType?: string; // MIME type of image (e.g., 'image/png', 'image/jpeg')
+  // UI state
+  collapsed?: boolean; // Whether card is collapsed to minimal height
+  // AI Beautification fields
+  originalHTML?: string; // Original HTML before beautification
+  beautifiedContent?: string; // LLM-beautified HTML content
+  beautificationMode?: BeautificationMode; // Which beautification mode was used
+  beautificationTimestamp?: number; // When beautification was applied
 }
 
 /**
