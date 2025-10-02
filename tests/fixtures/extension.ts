@@ -160,6 +160,17 @@ export async function getExtensionStorage(
   keys?: string | string[] | null
 ): Promise<any> {
   const page = await context.newPage();
+
+  // Navigate to extension page to get chrome API access
+  let [background] = context.serviceWorkers();
+  if (!background) {
+    background = await context.waitForEvent('serviceworker');
+  }
+  const extensionId = background?.url().split('/')[2];
+  if (extensionId) {
+    await page.goto(`chrome-extension://${extensionId}/src/canvas/index.html`);
+  }
+
   return await page.evaluate(
     async (storageKeys) => {
       return new Promise((resolve) => {
@@ -180,6 +191,17 @@ export async function setExtensionStorage(
   items: Record<string, any>
 ): Promise<void> {
   const page = await context.newPage();
+
+  // Navigate to extension page to get chrome API access
+  let [background] = context.serviceWorkers();
+  if (!background) {
+    background = await context.waitForEvent('serviceworker');
+  }
+  const extensionId = background?.url().split('/')[2];
+  if (extensionId) {
+    await page.goto(`chrome-extension://${extensionId}/src/canvas/index.html`);
+  }
+
   await page.evaluate(
     async (data) => {
       return new Promise<void>((resolve) => {
@@ -199,6 +221,17 @@ export async function clearExtensionStorage(
   context: BrowserContext
 ): Promise<void> {
   const page = await context.newPage();
+
+  // Navigate to extension page to get chrome API access
+  let [background] = context.serviceWorkers();
+  if (!background) {
+    background = await context.waitForEvent('serviceworker');
+  }
+  const extensionId = background?.url().split('/')[2];
+  if (extensionId) {
+    await page.goto(`chrome-extension://${extensionId}/src/canvas/index.html`);
+  }
+
   await page.evaluate(
     async () => {
       return new Promise<void>((resolve) => {

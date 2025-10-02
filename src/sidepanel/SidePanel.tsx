@@ -9,6 +9,8 @@ import { useCards } from '@/shared/hooks/useCards';
 import { useCardOperations } from '@/shared/hooks/useCardOperations';
 import { useImageUpload } from '@/shared/hooks/useImageUpload';
 import { ImageUploadZone, FilePickerButton } from '@/shared/components/ImageUpload';
+import { useFontSize } from '@/shared/hooks/useFontSize';
+import { FontSizeSelector } from '@/components/FontSizeSelector';
 
 export const SidePanel: React.FC = () => {
   // Use shared hooks
@@ -21,6 +23,7 @@ export const SidePanel: React.FC = () => {
     },
     { stashImmediately: true } // Images uploaded in side panel go to stash
   );
+  const { fontSizeValues } = useFontSize();
 
   // Filter to only stashed cards
   const stashedCards = useMemo(
@@ -136,9 +139,12 @@ export const SidePanel: React.FC = () => {
         {/* Header */}
         <div css={headerStyles}>
           <h1 css={titleStyles}>📦 Stashed Cards</h1>
-          <button onClick={handleOpenCanvas} css={openCanvasButtonStyles} title="Open Canvas">
-            🗺️ Canvas
-          </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <FontSizeSelector />
+            <button onClick={handleOpenCanvas} css={openCanvasButtonStyles} title="Open Canvas">
+              🗺️ Canvas
+            </button>
+          </div>
         </div>
 
         {/* Upload Button */}
@@ -225,7 +231,7 @@ export const SidePanel: React.FC = () => {
 
                 {/* Compact Title with tags inline */}
                 <div css={compactTitleRowStyles}>
-                  <span css={compactTitleStyles} title={card.metadata.title}>
+                  <span css={getCompactTitleStyles(fontSizeValues.title)} title={card.metadata.title}>
                     {truncateText(card.metadata.title, 60)}
                   </span>
                   {card.tags && card.tags.length > 0 && (
@@ -252,29 +258,29 @@ export const SidePanel: React.FC = () => {
                   card.content && (
                     <>
                       <div
-                        css={isExpanded ? contentExpandedStyles : contentCollapsedStyles}
+                        css={isExpanded ? getContentExpandedStyles(fontSizeValues.content) : getContentCollapsedStyles(fontSizeValues.content)}
                       >
                         {/* Render markdown if beautified, otherwise show HTML */}
                         {card.beautifiedContent ? (
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
-                              h1: ({node, ...props}) => <h2 css={markdownH1} {...props} />,
-                              h2: ({node, ...props}) => <h3 css={markdownH2} {...props} />,
-                              h3: ({node, ...props}) => <h4 css={markdownH3} {...props} />,
+                              h1: ({node, ...props}) => <h2 css={getMarkdownH1(fontSizeValues.h1)} {...props} />,
+                              h2: ({node, ...props}) => <h3 css={getMarkdownH2(fontSizeValues.h2)} {...props} />,
+                              h3: ({node, ...props}) => <h4 css={getMarkdownH3(fontSizeValues.h3)} {...props} />,
                               p: ({node, ...props}) => <p css={markdownP} {...props} />,
                               ul: ({node, ...props}) => <ul css={markdownUl} {...props} />,
                               ol: ({node, ...props}) => <ol css={markdownOl} {...props} />,
                               li: ({node, ...props}) => <li css={markdownLi} {...props} />,
                               strong: ({node, ...props}) => <strong css={markdownStrong} {...props} />,
-                              code: ({node, ...props}) => <code css={markdownCode} {...props} />,
+                              code: ({node, ...props}) => <code css={getMarkdownCode(fontSizeValues.code)} {...props} />,
                             }}
                           >
                             {card.beautifiedContent}
                           </ReactMarkdown>
                         ) : (
                           <div
-                            css={contentHTMLStyles}
+                            css={getContentHTMLStyles(fontSizeValues.contentHTML)}
                             dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                           />
                         )}
@@ -562,8 +568,9 @@ const compactTitleRowStyles = css`
   border-bottom: 1px solid rgba(184, 156, 130, 0.08);
 `;
 
-const compactTitleStyles = css`
-  font-size: 11px;
+// Converted to function to accept dynamic font sizes
+const getCompactTitleStyles = (fontSize: string) => css`
+  font-size: ${fontSize};
   font-weight: 600;
   color: #3E3226;
   line-height: 1.3;
@@ -615,11 +622,11 @@ const imageStyles = css`
 `;
 
 // Content Styles (maximize space, minimal padding)
-const contentCollapsedStyles = css`
+const getContentCollapsedStyles = (fontSize: string) => css`
   max-height: 150px;
   overflow: hidden;
   padding: 8px;
-  font-size: 11px;
+  font-size: ${fontSize};
   color: #5C4D42;
   line-height: 1.5;
   border-left: 2px solid rgba(212, 175, 55, 0.3);
@@ -638,11 +645,11 @@ const contentCollapsedStyles = css`
   }
 `;
 
-const contentExpandedStyles = css`
+const getContentExpandedStyles = (fontSize: string) => css`
   max-height: 500px;
   overflow-y: auto;
   padding: 8px;
-  font-size: 11px;
+  font-size: ${fontSize};
   color: #5C4D42;
   line-height: 1.5;
   border-left: 2px solid rgba(212, 175, 55, 0.5);
@@ -663,8 +670,8 @@ const contentExpandedStyles = css`
   }
 `;
 
-const contentHTMLStyles = css`
-  font-size: 12px;
+const getContentHTMLStyles = (fontSize: string) => css`
+  font-size: ${fontSize};
   color: #5C4D42;
   line-height: 1.6;
   word-break: break-word;
@@ -710,22 +717,22 @@ const expandButtonStyles = css`
 `;
 
 // Markdown Styles (for ReactMarkdown) - more compact
-const markdownH1 = css`
-  font-size: 12px;
+const getMarkdownH1 = (fontSize: string) => css`
+  font-size: ${fontSize};
   font-weight: 600;
   color: #8B0000;
   margin: 8px 0 4px 0;
 `;
 
-const markdownH2 = css`
-  font-size: 11px;
+const getMarkdownH2 = (fontSize: string) => css`
+  font-size: ${fontSize};
   font-weight: 600;
   color: #8B7355;
   margin: 6px 0 3px 0;
 `;
 
-const markdownH3 = css`
-  font-size: 11px;
+const getMarkdownH3 = (fontSize: string) => css`
+  font-size: ${fontSize};
   font-weight: 600;
   color: #5C4D42;
   margin: 4px 0 2px 0;
@@ -752,12 +759,12 @@ const markdownStrong = css`
   font-weight: 600;
 `;
 
-const markdownCode = css`
+const getMarkdownCode = (fontSize: string) => css`
   background: rgba(245, 245, 220, 0.5);
   border: 1px solid rgba(184, 156, 130, 0.2);
   padding: 1px 3px;
   border-radius: 2px;
-  font-size: 10px;
+  font-size: ${fontSize};
   font-family: Monaco, Menlo, monospace;
 `;
 

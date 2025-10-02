@@ -343,4 +343,171 @@ test.describe('Element Capture Flow', () => {
 
     expect(element).toBe(0);
   });
+
+  test('REGRESSION: overlay should track elements during scroll', async ({ context, extensionId }) => {
+    // Create a tall page with scrollable content
+    const scrollableHTML = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { margin: 0; padding: 0; }
+            #top-spacer { height: 500px; background: #f0f0f0; }
+            #target-element {
+              width: 300px;
+              height: 100px;
+              background: #4CAF50;
+              color: white;
+              padding: 20px;
+              margin: 20px;
+              font-size: 18px;
+            }
+            #bottom-spacer { height: 1500px; background: #e0e0e0; }
+          </style>
+        </head>
+        <body>
+          <div id="top-spacer">Top spacer</div>
+          <div id="target-element">Target Element - This is the element to track</div>
+          <div id="bottom-spacer">Bottom spacer</div>
+        </body>
+      </html>
+    `;
+
+    const page = await context.newPage();
+    await page.setContent(scrollableHTML);
+    await page.waitForLoadState('domcontentloaded');
+
+    // Helper to activate selector (from keyboard-shortcuts.spec.ts)
+    const activateSelector = async () => {
+      let [serviceWorker] = context.serviceWorkers();
+      if (!serviceWorker) {
+        serviceWorker = await context.waitForEvent('serviceworker');
+      }
+
+      await serviceWorker.evaluate(async () => {
+        const tabs = await chrome.tabs.query({});
+        for (const tab of tabs) {
+          if (tab.id && tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+            try {
+              await chrome.tabs.sendMessage(tab.id, {
+                type: 'ACTIVATE_SELECTOR',
+                payload: { stashImmediately: false }
+              });
+              break;
+            } catch (e) {
+              // Continue to next tab
+            }
+          }
+        }
+      });
+    };
+
+    // Activate element selector
+    await activateSelector();
+    await page.waitForTimeout(1000);
+
+    // Verify selector is active
+    const hasShadowRoot = await page.evaluate(() => {
+      const container = document.querySelector('#nabokov-selector-container');
+      return container !== null && container.shadowRoot !== null;
+    });
+    expect(hasShadowRoot).toBe(true);
+
+    // Get target element's initial position
+    const targetElement = page.locator('#target-element');
+    await targetElement.waitFor({ state: 'visible' });
+
+    const initialElementRect = await targetElement.boundingBox();
+    expect(initialElementRect).not.toBeNull();
+
+    // Hover over element to trigger overlay
+    await targetElement.hover();
+    await page.waitForTimeout(500);
+
+    // Check overlay position relative to element (before scroll)
+    const overlayDataBefore = await page.evaluate(() => {
+      const container = document.querySelector('#nabokov-selector-container');
+      if (!container?.shadowRoot) return null;
+
+      const targetEl = document.querySelector('#target-element');
+      if (!targetEl) return null;
+
+      const targetRect = targetEl.getBoundingClientRect();
+
+      // Find highlight overlay in shadow DOM
+      const highlight = container.shadowRoot.querySelector('[data-nabokov-overlay] > div');
+      if (!highlight) return null;
+
+      const highlightStyle = (highlight as HTMLElement).style;
+      const overlayTop = parseFloat(highlightStyle.top || '0');
+      const overlayLeft = parseFloat(highlightStyle.left || '0');
+
+      return {
+        targetTop: targetRect.top,
+        targetLeft: targetRect.left,
+        overlayTop,
+        overlayLeft,
+        // Calculate offset (should be ~0 if aligned correctly)
+        offsetTop: Math.abs(overlayTop - targetRect.top),
+        offsetLeft: Math.abs(overlayLeft - targetRect.left)
+      };
+    });
+
+    expect(overlayDataBefore).not.toBeNull();
+    // Overlay should be aligned with element (within 2px tolerance for rounding)
+    expect(overlayDataBefore!.offsetTop).toBeLessThan(2);
+    expect(overlayDataBefore!.offsetLeft).toBeLessThan(2);
+
+    // Scroll the page down by 300px
+    await page.evaluate(() => {
+      window.scrollBy(0, 300);
+    });
+    await page.waitForTimeout(300); // Wait for scroll handler to trigger re-render
+
+    // Check overlay position after scroll
+    const overlayDataAfter = await page.evaluate(() => {
+      const container = document.querySelector('#nabokov-selector-container');
+      if (!container?.shadowRoot) return null;
+
+      const targetEl = document.querySelector('#target-element');
+      if (!targetEl) return null;
+
+      const targetRect = targetEl.getBoundingClientRect();
+
+      const highlight = container.shadowRoot.querySelector('[data-nabokov-overlay] > div');
+      if (!highlight) return null;
+
+      const highlightStyle = (highlight as HTMLElement).style;
+      const overlayTop = parseFloat(highlightStyle.top || '0');
+      const overlayLeft = parseFloat(highlightStyle.left || '0');
+
+      return {
+        targetTop: targetRect.top,
+        targetLeft: targetRect.left,
+        overlayTop,
+        overlayLeft,
+        offsetTop: Math.abs(overlayTop - targetRect.top),
+        offsetLeft: Math.abs(overlayLeft - targetRect.left)
+      };
+    });
+
+    expect(overlayDataAfter).not.toBeNull();
+
+    // CRITICAL: After scroll, overlay should STILL be aligned with element
+    // This is the regression test for the bug where overlay stayed in fixed position
+    expect(overlayDataAfter!.offsetTop).toBeLessThan(2);
+    expect(overlayDataAfter!.offsetLeft).toBeLessThan(2);
+
+    // Additionally verify that the overlay position changed by the same amount as the element
+    // Element moved up on screen (negative direction) by 300px
+    const elementMovement = overlayDataAfter!.targetTop - overlayDataBefore!.targetTop;
+    expect(elementMovement).toBeLessThan(-250); // Should be around -300px (with tolerance)
+    expect(elementMovement).toBeGreaterThan(-350);
+
+    console.log('[Regression Test] Scroll tracking verified:', {
+      before: overlayDataBefore,
+      after: overlayDataAfter,
+      elementMovement
+    });
+  });
 });

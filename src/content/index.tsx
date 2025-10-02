@@ -19,6 +19,7 @@ import { createShadowRoot, mountReactInShadow, CHINESE_AESTHETIC_STYLES } from '
 import { ElementSelector } from '../components/ElementSelector';
 import { FloatingChat } from '../components/FloatingChat';
 import { InlineChatWindow } from '../components/InlineChatWindow';
+import { ElementChatWindow } from '../components/ElementChatWindow';
 import { capturePageContext } from '../services/pageContextCapture';
 import { captureElementContext } from '../services/elementContextCapture';
 import { Card } from '../types';
@@ -79,6 +80,33 @@ let inlineChatState: InlineChatState = {
 let lastRightClickedElement: HTMLElement | null = null;
 let lastRightClickPosition: { x: number; y: number } = { x: 0, y: 0 };
 
+/**
+ * Element chat windows state (for element-attached persistent chats)
+ */
+interface ElementChatWindowState {
+  elementId: string;
+  containerElement: HTMLElement;
+  cleanup: () => void;
+}
+
+/**
+ * Track all active element chat windows
+ */
+let elementChatWindows: Map<string, ElementChatWindowState> = new Map();
+
+/**
+ * Container for chat selector (separate from element selector)
+ */
+let chatSelectorState: {
+  isActive: boolean;
+  containerElement: HTMLElement | null;
+  cleanup: (() => void) | null;
+} = {
+  isActive: false,
+  containerElement: null,
+  cleanup: null
+};
+
 // ============================================================================
 // Shadow DOM Setup
 // ============================================================================
@@ -138,7 +166,11 @@ function activateSelector(initialStashState: boolean = false): void {
     return;
   }
 
-  console.log('[content] Activating element selector...', { initialStashState });
+  console.log('[content] Activating element selector...', {
+    initialStashState,
+    stashModeEnabled: initialStashState,
+    timestamp: Date.now()
+  });
 
   try {
     // Create container
@@ -609,6 +641,274 @@ function openElementChat(): void {
 }
 
 // ============================================================================
+// Element-Attached Chat Functions
+// ============================================================================
+
+/**
+ * Activates the element selector in chat mode
+ * If text is selected, opens text-contextual chat instead
+ */
+function activateChatSelector(): void {
+  // Prevent multiple activations
+  if (chatSelectorState.isActive) {
+    console.warn('[content] Chat selector already active');
+    return;
+  }
+
+  console.log('[content] Activating chat selector...');
+
+  // Check for text selection
+  const selection = window.getSelection();
+  const selectedText = selection?.toString().trim() || '';
+
+  if (selectedText && selectedText.length > 0) {
+    console.log('[content] Text selected, opening text-contextual chat:', selectedText.substring(0, 50) + '...');
+    openTextContextChat(selectedText, selection);
+    return;
+  }
+
+  try {
+    // Create container
+    const container = createContainer();
+    chatSelectorState.containerElement = container;
+
+    // Create shadow root
+    const { shadowRoot, styleCache } = createShadowRoot(container, {
+      injectBaseStyles: true,
+    });
+
+    // Handle element selection for chat
+    const handleChatSelect = async (element: HTMLElement, existingChatId: string | null) => {
+      console.log('[content] Element selected for chat:', {
+        element,
+        existingChatId,
+        hasExisting: existingChatId !== null
+      });
+
+      // Close the selector
+      deactivateChatSelector();
+
+      // Open chat window for this element
+      await openElementChatWindow(element, existingChatId);
+    };
+
+    // Handle selector close
+    const handleClose = () => {
+      console.log('[content] Chat selector closed');
+      deactivateChatSelector();
+    };
+
+    // Mount ElementSelector in chat mode
+    const cleanup = mountReactInShadow(
+      shadowRoot,
+      <ElementSelector
+        mode="chat"
+        onChatSelect={handleChatSelect}
+        onClose={handleClose}
+      />,
+      { styleCache }
+    );
+
+    chatSelectorState.isActive = true;
+    chatSelectorState.cleanup = cleanup;
+
+    console.log('[content] Chat selector activated successfully');
+
+  } catch (error) {
+    console.error('[content] Error activating chat selector:', error);
+
+    // Cleanup on error
+    if (chatSelectorState.containerElement) {
+      removeContainer(chatSelectorState.containerElement);
+      chatSelectorState.containerElement = null;
+    }
+  }
+}
+
+/**
+ * Deactivates the chat selector
+ */
+function deactivateChatSelector(): void {
+  if (!chatSelectorState.isActive) {
+    return;
+  }
+
+  console.log('[content] Deactivating chat selector...');
+
+  try {
+    // Unmount React component
+    if (chatSelectorState.cleanup) {
+      chatSelectorState.cleanup();
+      chatSelectorState.cleanup = null;
+    }
+
+    // Remove container
+    if (chatSelectorState.containerElement) {
+      removeContainer(chatSelectorState.containerElement);
+      chatSelectorState.containerElement = null;
+    }
+
+    chatSelectorState.isActive = false;
+
+    console.log('[content] Chat selector deactivated');
+
+  } catch (error) {
+    console.error('[content] Error deactivating chat selector:', error);
+
+    // Force cleanup
+    chatSelectorState = {
+      isActive: false,
+      containerElement: null,
+      cleanup: null
+    };
+  }
+}
+
+/**
+ * Opens an element chat window
+ */
+async function openElementChatWindow(
+  element: HTMLElement,
+  existingChatId: string | null
+): Promise<void> {
+  try {
+    // Import services
+    const { assignElementChatId, generateElementDescriptor, getElementChatId } =
+      await import('@/services/elementIdService');
+    const { loadElementChat } = await import('@/services/elementChatService');
+
+    // Assign chat ID if needed
+    const elementId = existingChatId || assignElementChatId(element);
+
+    // Check if window already open for this element
+    if (elementChatWindows.has(elementId)) {
+      console.log('[content] Chat window already open for element:', elementId);
+      return;
+    }
+
+    // Get element descriptor
+    const elementDescriptor = generateElementDescriptor(element);
+
+    // Load existing session if available
+    const existingSession = await loadElementChat(elementId, window.location.href);
+
+    console.log('[content] Opening chat window for element:', {
+      elementId,
+      hasExistingSession: existingSession !== null,
+      messageCount: existingSession?.messages.length || 0
+    });
+
+    // Create container for chat window
+    const container = document.createElement('div');
+    container.id = `nabokov-element-chat-${elementId}`;
+    container.setAttribute('data-nabokov-element-chat', elementId);
+
+    container.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2147483645;
+      pointer-events: none;
+    `;
+
+    document.body.appendChild(container);
+
+    // Create shadow root
+    const { shadowRoot, styleCache } = createShadowRoot(container, {
+      injectBaseStyles: true,
+    });
+
+    // Calculate initial position
+    const rect = element.getBoundingClientRect();
+    const initialPosition = {
+      x: Math.min(rect.right + 20, window.innerWidth - 450),
+      y: Math.max(20, rect.top)
+    };
+
+    // Handle close
+    const handleClose = () => {
+      console.log('[content] Element chat window closed:', elementId);
+      closeElementChatWindow(elementId);
+    };
+
+    // Mount ElementChatWindow
+    const cleanup = mountReactInShadow(
+      shadowRoot,
+      <ElementChatWindow
+        elementId={elementId}
+        elementDescriptor={elementDescriptor}
+        existingSession={existingSession}
+        onClose={handleClose}
+        initialPosition={initialPosition}
+      />,
+      { styleCache }
+    );
+
+    // Track window
+    elementChatWindows.set(elementId, {
+      elementId,
+      containerElement: container,
+      cleanup
+    });
+
+    console.log('[content] Element chat window opened successfully:', elementId);
+
+  } catch (error) {
+    console.error('[content] Error opening element chat window:', error);
+  }
+}
+
+/**
+ * Closes an element chat window
+ */
+function closeElementChatWindow(elementId: string): void {
+  const windowState = elementChatWindows.get(elementId);
+  if (!windowState) {
+    console.warn('[content] No chat window found for element:', elementId);
+    return;
+  }
+
+  console.log('[content] Closing element chat window:', elementId);
+
+  try {
+    // Unmount React component
+    if (windowState.cleanup) {
+      windowState.cleanup();
+    }
+
+    // Remove container
+    if (windowState.containerElement && windowState.containerElement.parentNode) {
+      windowState.containerElement.parentNode.removeChild(windowState.containerElement);
+    }
+
+    // Remove from tracking
+    elementChatWindows.delete(elementId);
+
+    console.log('[content] Element chat window closed successfully:', elementId);
+
+  } catch (error) {
+    console.error('[content] Error closing element chat window:', error);
+
+    // Force removal
+    elementChatWindows.delete(elementId);
+  }
+}
+
+/**
+ * Closes all element chat windows
+ */
+function closeAllElementChatWindows(): void {
+  console.log('[content] Closing all element chat windows...');
+
+  const elementIds = Array.from(elementChatWindows.keys());
+  elementIds.forEach(closeElementChatWindow);
+
+  console.log('[content] All element chat windows closed');
+}
+
+// ============================================================================
 // Message Handling
 // ============================================================================
 
@@ -618,6 +918,7 @@ function openElementChat(): void {
 type MessageType =
   | 'ACTIVATE_SELECTOR'
   | 'DEACTIVATE_SELECTOR'
+  | 'ACTIVATE_CHAT_SELECTOR'
   | 'GET_STATE'
   | 'PING'
   | 'OPEN_INLINE_CHAT'
@@ -650,26 +951,38 @@ function handleMessage(
   try {
     switch (message.type) {
       case 'ACTIVATE_SELECTOR':
-        activateSelector(message.payload?.stashImmediately || (message as any).stashImmediately || false);
-        sendResponse({ success: true });
+        const stashMode = message.payload?.stashImmediately || (message as any).stashImmediately || false;
+        console.log('[content] Activating selector with stashMode:', stashMode);
+        activateSelector(stashMode);
+        sendResponse({ success: true, stashMode });
         break;
 
       case 'DEACTIVATE_SELECTOR':
+        console.log('[content] Deactivating selector');
         deactivateSelector();
         sendResponse({ success: true });
         break;
 
+      case 'ACTIVATE_CHAT_SELECTOR':
+        console.log('[content] Activating chat selector');
+        activateChatSelector();
+        sendResponse({ success: true });
+        break;
+
       case 'OPEN_INLINE_CHAT':
+        console.log('[content] Opening inline chat');
         openInlineChat();
         sendResponse({ success: true });
         break;
 
       case 'CLOSE_INLINE_CHAT':
+        console.log('[content] Closing inline chat');
         closeInlineChat();
         sendResponse({ success: true });
         break;
 
       case 'OPEN_ELEMENT_CHAT':
+        console.log('[content] Opening element chat');
         openElementChat();
         sendResponse({ success: true });
         break;
@@ -809,10 +1122,18 @@ function cleanup(): void {
     deactivateSelector();
   }
 
+  // Deactivate chat selector if active
+  if (chatSelectorState.isActive) {
+    deactivateChatSelector();
+  }
+
   // Close inline chat if open
   if (inlineChatState.isOpen) {
     closeInlineChat();
   }
+
+  // Close all element chat windows
+  closeAllElementChatWindows();
 
   // Remove event listeners
   document.removeEventListener('keydown', handleKeyboardShortcut, true);

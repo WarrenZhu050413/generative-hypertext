@@ -701,24 +701,88 @@ npm run type-check
 
 ### E2E Test Organization
 
-**Current Test Files**:
+**Comprehensive Test Coverage** (206 total tests across 15 files):
+
+**Core Feature Tests** (130 new tests):
 ```
 tests/e2e/
-├── element-capture.spec.ts       # Element selector and capture
-├── image-upload.spec.ts          # Drag-drop image upload
-├── phase-1-2-refinements.spec.ts # FilePickerButton, sync, etc.
-├── keyboard-shortcuts.spec.ts    # Keyboard shortcuts (Cmd+Shift+E, Ctrl+Shift+E, Ctrl+Shift+C)
-├── context-input.spec.ts         # Context input modal
-├── floating-windows.spec.ts      # Floating chat windows
-├── card-scrolling.spec.ts        # Canvas navigation
-├── loading-states.spec.ts        # Loading and feedback
-└── extension-load.spec.ts        # Extension initialization
+├── card-operations.spec.ts       # 20 tests - Card CRUD operations
+│   ├── Deletion (single, multiple, keyboard shortcuts)
+│   ├── Duplication and positioning
+│   ├── Starring/unstarring
+│   ├── Tag management (add, remove, display)
+│   ├── Inline editing with sanitization
+│   └── Collapse/expand states
+│
+├── connection-editing.spec.ts    # 17 tests - Graph relationships
+│   ├── Edge creation via drag-and-drop
+│   ├── Connection type editing (references, generated-from, contradicts, etc.)
+│   ├── Custom labels on edges
+│   ├── Visual rendering
+│   └── Edge deletion
+│
+├── stash-operations.spec.ts      # 25 tests - Side panel stash system
+│   ├── Stashing cards from canvas
+│   ├── Side panel display and metadata
+│   ├── Restore to canvas
+│   ├── Permanent deletion
+│   ├── Cross-context synchronization
+│   ├── Image upload to stash
+│   └── Filter and search in stash
+│
+├── filtering.spec.ts             # 26 tests - Search and filters
+│   ├── Text search (title, content, domain)
+│   ├── Domain filters
+│   ├── Tag filters (single and multi-select)
+│   ├── Date range filters
+│   ├── Combined filters
+│   ├── Filter persistence across sessions
+│   └── UI feedback (count, active states)
+│
+├── beautification.spec.ts        # 18 tests - AI content enhancement
+│   ├── Triggering beautification
+│   ├── Organize content mode
+│   ├── Loading states and feedback
+│   ├── Content transformation and sanitization
+│   ├── API integration (backend/direct/mock)
+│   └── Edge cases (empty, unicode, long content)
+│
+└── custom-buttons.spec.ts        # 24 tests - Action buttons
+    ├── Button creation and configuration
+    ├── Template variable substitution ({{content}}, {{title}}, {{customContext}})
+    ├── Card generation from buttons
+    ├── Connection creation with proper types
+    ├── Default buttons (Learn More, Summarize, ELI5, Critique, Expand)
+    └── Button management (edit, delete, reorder)
+```
+
+**Existing Feature Tests** (76 tests):
+```
+tests/e2e/
+├── element-capture.spec.ts       # 15 tests - Element selector and capture
+├── image-upload.spec.ts          # 5 tests  - Drag-drop image upload
+├── phase-1-2-refinements.spec.ts # 19 tests - FilePickerButton, sync, etc.
+├── keyboard-shortcuts.spec.ts    # 8 tests  - Keyboard shortcuts (Cmd+Shift+E, Ctrl+Shift+E, Ctrl+Shift+C)
+├── context-input.spec.ts         # 8 tests  - Context input modal
+├── floating-windows.spec.ts      # 7 tests  - Floating chat windows
+├── card-scrolling.spec.ts        # 6 tests  - Canvas navigation
+├── loading-states.spec.ts        # 4 tests  - Loading and feedback
+└── extension-load.spec.ts        # 4 tests  - Extension initialization
 ```
 
 **When to Add New Test Files**:
-- New major feature (e.g., "agent-subscriptions.spec.ts")
-- New user workflow (e.g., "fill-in-feature.spec.ts")
-- Complex interaction (e.g., "connection-editing.spec.ts")
+- New major feature (e.g., "fill-in-feature.spec.ts", "agent-subscriptions.spec.ts")
+- New user workflow (e.g., "export-import.spec.ts")
+- Complex interaction (e.g., "llm-hyperlinks.spec.ts")
+
+**Test Infrastructure**:
+- **Extension helpers** (`tests/fixtures/extension.ts`):
+  - `getExtensionStorage()` - Read chrome.storage.local
+  - `setExtensionStorage()` - Write chrome.storage.local
+  - `clearExtensionStorage()` - Clear storage between tests
+  - All helpers properly navigate to extension pages for chrome API access
+- **Service worker handling**: Auto-waits for background worker before API calls
+- **Data helpers**: Create test cards, connections, buttons programmatically
 
 **Keyboard Shortcuts Testing**:
 - Tests in `keyboard-shortcuts.spec.ts` send messages directly to content script
@@ -794,9 +858,71 @@ npm run type-check && npm run build && npm test && npm run test:e2e
 # Specific feature test
 npm run test:e2e:headed tests/e2e/phase-1-2-refinements.spec.ts
 
+# Test specific feature suites
+npm run test:e2e:headed tests/e2e/card-operations.spec.ts       # Card CRUD
+npm run test:e2e:headed tests/e2e/connection-editing.spec.ts    # Graph edges
+npm run test:e2e:headed tests/e2e/stash-operations.spec.ts      # Stash system
+npm run test:e2e:headed tests/e2e/filtering.spec.ts             # Search/filters
+npm run test:e2e:headed tests/e2e/beautification.spec.ts        # AI enhancement
+npm run test:e2e:headed tests/e2e/custom-buttons.spec.ts        # Action buttons
+
 # Watch mode for development
 npm run test:watch
 ```
+
+### Detailed Test Suite Descriptions
+
+**card-operations.spec.ts** (20 tests):
+- **Deletion**: Delete single cards via button/keyboard (Delete/Backspace), delete multiple selected cards
+- **Duplication**: Duplicate cards with offset positioning, preserve content/metadata
+- **Starring**: Star/unstar cards, visual indicators
+- **Tagging**: Display existing tags, add new tags, remove tags
+- **Inline Editing**: Double-click to edit, save on blur/Cmd+Enter, cancel on Escape, XSS sanitization
+- **Collapse/Expand**: Toggle card size, persist state
+
+**connection-editing.spec.ts** (17 tests):
+- **Creation**: Drag from card handle to create edges
+- **Type Editing**: Change connection types (related, references, generated-from, contradicts, custom)
+- **Custom Labels**: Add/edit/remove custom text labels on edges
+- **Visual Rendering**: Verify edges render with correct styles for each type
+- **Deletion**: Remove connections via edit modal
+
+**stash-operations.spec.ts** (25 tests):
+- **Stashing**: Stash cards via button/context menu, hide from canvas
+- **Display**: Show stashed cards in side panel with metadata/tags/badges
+- **Restoration**: Restore cards to canvas, remove from stash
+- **Deletion**: Permanently delete stashed cards with confirmation
+- **Sync**: Cross-context updates between canvas and side panel
+- **Image Upload**: Upload images directly to stash via drag-drop/file picker
+- **Filtering**: Search and filter stashed cards by text/domain/tags
+
+**filtering.spec.ts** (26 tests):
+- **Search**: Filter by text in title, content, or domain (case-insensitive)
+- **Domain Filter**: Filter cards by domain with dropdown
+- **Tag Filter**: Single and multi-tag filtering
+- **Date Range**: Filter by last 7/30 days or custom date range
+- **Combined Filters**: Test multiple filters working together
+- **Persistence**: Filters persist across page reloads
+- **UI Feedback**: Show result counts, active filter indicators, clear all button
+
+**beautification.spec.ts** (18 tests):
+- **Triggering**: Beautify button on cards, options menu
+- **Organize Mode**: Restructure content with headings/lists
+- **Loading States**: Loading indicators, disabled buttons during processing
+- **Transformation**: Restructure unorganized content, preserve important HTML
+- **Sanitization**: Remove scripts/dangerous elements from beautified content
+- **API Integration**: Use Claude API when configured, fallback to mock
+- **Edge Cases**: Handle empty content, very long content, unicode/special characters
+
+**custom-buttons.spec.ts** (24 tests):
+- **Creation**: Create custom buttons via settings modal
+- **Configuration**: Set label, prompt template, connection type, context input option
+- **Templates**: Variable substitution ({{content}}, {{title}}, {{customContext}})
+- **Actions**: Trigger button actions, open context input modal when configured
+- **Card Generation**: Generate new cards from button actions with proper positioning
+- **Connections**: Auto-create connections with configured type
+- **Default Buttons**: Test Learn More, Summarize, Critique, ELI5, Expand
+- **Management**: Edit, delete, reorder buttons
 
 ### Known Testing Limitations
 
@@ -862,3 +988,4 @@ jobs:
 **Manual tests**: `test-scripts/*.mjs` for quick verification without test harness
 - Use Node.js to run: `node test-scripts/test-canvas-direct.mjs`
 - Update the local CLAUDE.md after new feature changes
+- Add a regression test whenever you fix an issue.

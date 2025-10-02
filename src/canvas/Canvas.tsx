@@ -55,6 +55,9 @@ function CanvasInner() {
     connections,
     addConnection,
     removeConnection,
+    viewport,
+    onViewportChange,
+    shouldFitView,
   } = useCanvasState();
 
   const { fitView, zoomIn, zoomOut } = useReactFlow();
@@ -93,6 +96,14 @@ function CanvasInner() {
       unsubscribe();
     };
   }, []);
+
+  // Handle fitView for first-time users (when no saved viewport exists)
+  useEffect(() => {
+    if (shouldFitView && !isLoading) {
+      console.log('[Canvas] First-time user detected, fitting view');
+      fitView({ padding: 0.2, duration: 400 });
+    }
+  }, [shouldFitView, isLoading, fitView]);
 
   const initializeShortcuts = async () => {
     try {
@@ -537,12 +548,8 @@ function CanvasInner() {
         onNodesChange={onNodesChange}
         onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{
-          padding: 0.2,
-          minZoom: 0.1,
-          maxZoom: 1.5,
-        }}
+        defaultViewport={viewport}
+        onMove={(_event, viewport) => onViewportChange(viewport)}
         defaultEdgeOptions={{
           type: 'smoothstep',
         }}

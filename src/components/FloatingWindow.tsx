@@ -46,6 +46,9 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
 
   // Handle send message
   const handleSendMessage = async (message: string) => {
+    console.log('[FloatingWindow] Sending message:', message);
+    console.log('[FloatingWindow] Current messages before send:', windowState.conversationMessages);
+
     windowManager.updateStreamingState(card.id, true);
     windowManager.updateChatInput(card.id, '');
 
@@ -54,8 +57,10 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
 
       for await (const chunk of stream) {
         setStreamingContent(prev => prev + chunk);
+        console.log('[FloatingWindow] Streaming chunk, total length:', streamingContent.length + chunk.length);
         // Update conversation in window manager
         const conversation = chatService.getConversation(card.id);
+        console.log('[FloatingWindow] Updated conversation:', conversation);
         windowManager.updateConversationMessages(card.id, conversation);
       }
     } catch (error) {
@@ -63,6 +68,8 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
     } finally {
       windowManager.updateStreamingState(card.id, false);
       setStreamingContent('');
+      const finalConversation = chatService.getConversation(card.id);
+      console.log('[FloatingWindow] Final conversation after streaming:', finalConversation);
     }
   };
 
@@ -325,20 +332,22 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
               )}
             </div>
 
-            <FloatingWindowChat
-              cardId={card.id}
-              cardContent={card.content || ''}
-              messages={windowState.conversationMessages}
-              currentInput={windowState.chatInput}
-              isStreaming={windowState.isStreaming}
-              autoSaveOnClose={autoSaveOnClose}
-              onSendMessage={handleSendMessage}
-              onInputChange={handleInputChange}
-              onStopStreaming={handleStopStreaming}
-              onClearChat={handleClearChat}
-              onSaveConversation={handleSaveConversation}
-              onToggleAutoSave={handleToggleAutoSave}
-            />
+            <div css={chatWrapperStyles}>
+              <FloatingWindowChat
+                cardId={card.id}
+                cardContent={card.content || ''}
+                messages={windowState.conversationMessages}
+                currentInput={windowState.chatInput}
+                isStreaming={windowState.isStreaming}
+                autoSaveOnClose={autoSaveOnClose}
+                onSendMessage={handleSendMessage}
+                onInputChange={handleInputChange}
+                onStopStreaming={handleStopStreaming}
+                onClearChat={handleClearChat}
+                onSaveConversation={handleSaveConversation}
+                onToggleAutoSave={handleToggleAutoSave}
+              />
+            </div>
           </>
         )}
       </div>
@@ -467,7 +476,7 @@ const saveConversationButtonStyles = css`
 `;
 
 const contentStyles = css`
-  flex: 1;
+  flex: 0 0 30%;
   overflow-y: auto;
   padding: 16px;
   font-size: 14px;
@@ -545,6 +554,13 @@ const contentStyles = css`
       padding: 0;
     }
   }
+`;
+
+const chatWrapperStyles = css`
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 `;
 
 const metadataStyles = css`

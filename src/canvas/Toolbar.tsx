@@ -3,6 +3,7 @@ import { useReactFlow } from '@xyflow/react';
 import type { StorageStats } from '@/types/card';
 import type { FilterState } from './useCanvasState';
 import { FilePickerButton } from '@/shared/components/ImageUpload';
+import { FontSizeSelector } from '@/components/FontSizeSelector';
 
 interface ToolbarProps {
   stats: StorageStats | null;
@@ -373,6 +374,7 @@ export const Toolbar = forwardRef<ToolbarRef, ToolbarProps>(({
               <path d="M8 7V18" stroke="currentColor" strokeWidth="1.5"/>
             </svg>
           </button>
+          <FontSizeSelector />
           <button style={styles.button} title="Settings" onClick={onSettingsClick}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path

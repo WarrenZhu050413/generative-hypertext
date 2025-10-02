@@ -22,6 +22,7 @@ import type { FillInStrategy } from '@/types/card';
 import { useButtons } from './useButtons';
 import { ButtonSettings } from '@/components/ButtonSettings';
 import { OverflowMenu } from '@/components/OverflowMenu';
+import { useFontSize } from '@/shared/hooks/useFontSize';
 
 // Add CSS animation for skeleton pulsing
 if (typeof document !== 'undefined' && !document.getElementById('skeleton-animation')) {
@@ -90,6 +91,12 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
 
   // Load buttons (default + custom)
   const { enabledButtons } = useButtons();
+
+  // Load font size preference
+  const { fontSizeValues } = useFontSize();
+
+  // Generate dynamic styles based on font size
+  const styles = getStyles(fontSizeValues);
 
   // Load connection count for Fill-In feature
   useEffect(() => {
@@ -682,7 +689,7 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
         <>
           {/* Image Card: Display Image */}
           {card.cardType === 'image' && card.imageData ? (
-            <div style={styles.imageContainer}>
+            <div style={styles.imageContainer} onDoubleClick={handleDoubleClick}>
               <img
                 src={card.imageData}
                 alt={card.metadata.title}
@@ -697,6 +704,7 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
                 ...styles.content,
                 ...(card.isGenerating ? styles.contentGenerating : {}),
               }}
+              onDoubleClick={handleDoubleClick}
               onWheel={(e) => {
                 // Prevent scroll from bubbling to canvas (which would zoom)
                 const target = e.currentTarget;
@@ -925,7 +933,9 @@ export const CardNode = memo(({ data }: CardNodeProps) => {
 
 CardNode.displayName = 'CardNode';
 
-const styles: Record<string, React.CSSProperties> = {
+// Helper function to generate styles with dynamic font sizes
+function getStyles(fontSizeValues: import('@/types/settings').FontSizeValues): Record<string, React.CSSProperties> {
+  return {
   card: {
     width: '100%',
     height: '100%',
@@ -988,7 +998,7 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
   },
   title: {
-    fontSize: '14px',
+    fontSize: fontSizeValues.title,
     fontWeight: 600,
     color: '#3E3226',
     lineHeight: '1.3',
@@ -1010,14 +1020,14 @@ const styles: Record<string, React.CSSProperties> = {
     scrollbarColor: 'rgba(139, 0, 0, 0.3) transparent', // Firefox
   },
   contentText: {
-    fontSize: '13px',
+    fontSize: fontSizeValues.content,
     color: '#5C4D42',
     lineHeight: '1.6',
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
   },
   contentHTML: {
-    fontSize: '13px',
+    fontSize: fontSizeValues.contentHTML,
     color: '#5C4D42',
     lineHeight: '1.6',
     wordBreak: 'break-word',
@@ -1208,7 +1218,7 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'all 0.2s ease',
   },
   titleEdit: {
-    fontSize: '15px',
+    fontSize: fontSizeValues.title,
     fontWeight: 600,
     color: '#3E3226',
     background: 'rgba(255, 255, 255, 0.7)',
@@ -1220,7 +1230,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   contentEdit: {
     flex: 1,
-    fontSize: '13px',
+    fontSize: fontSizeValues.content,
     color: '#5C4D42',
     lineHeight: '1.5',
     background: 'rgba(255, 255, 255, 0.7)',
@@ -1360,19 +1370,19 @@ const styles: Record<string, React.CSSProperties> = {
   },
   // Markdown Styles
   markdownH1: {
-    fontSize: '14px',
+    fontSize: fontSizeValues.h1,
     fontWeight: 600,
     color: '#8B0000',
     margin: '12px 0 6px 0',
   },
   markdownH2: {
-    fontSize: '13px',
+    fontSize: fontSizeValues.h2,
     fontWeight: 600,
     color: '#8B7355',
     margin: '10px 0 4px 0',
   },
   markdownH3: {
-    fontSize: '12px',
+    fontSize: fontSizeValues.h3,
     fontWeight: 600,
     color: '#5C4D42',
     margin: '8px 0 3px 0',
@@ -1417,7 +1427,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid rgba(184, 156, 130, 0.2)',
     padding: '2px 4px',
     borderRadius: '3px',
-    fontSize: '12px',
+    fontSize: fontSizeValues.code,
     fontFamily: 'Monaco, Menlo, monospace',
   },
   // Skeleton loading styles
@@ -1444,4 +1454,5 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: '20px',
     animation: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
   } as React.CSSProperties,
-};
+  };
+}

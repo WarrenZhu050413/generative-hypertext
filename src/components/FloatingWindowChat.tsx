@@ -149,7 +149,8 @@ const containerStyles = css`
   background: rgba(255, 215, 0, 0.03);
   display: flex;
   flex-direction: column;
-  height: 200px;
+  flex: 1;
+  min-height: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
 `;
 

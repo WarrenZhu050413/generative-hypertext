@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Node, Edge, NodeChange, applyNodeChanges } from '@xyflow/react';
+import { Node, Edge, NodeChange, applyNodeChanges, Viewport } from '@xyflow/react';
 import type { Card, CanvasState, StorageStats } from '@/types/card';
 import type { CardConnection, ConnectionType } from '@/types/connection';
 import { loadConnections, saveConnections } from '@/utils/connectionStorage';
@@ -9,6 +9,7 @@ const STORAGE_KEY = 'nabokov_canvas_state';
 const CARDS_KEY = 'cards'; // Must match the key used in src/utils/storage.ts
 const FILTERS_KEY = 'nabokov_filters';
 const DEBOUNCE_DELAY = 2000; // 2 seconds
+const VIEWPORT_DEBOUNCE_DELAY = 500; // 500ms for viewport (faster than card saves)
 
 export interface FilterState {
   searchQuery: string;
@@ -35,6 +36,9 @@ interface UseCanvasStateReturn {
   connections: CardConnection[];
   addConnection: (source: string, target: string, type: ConnectionType, label?: string) => Promise<void>;
   removeConnection: (connectionId: string) => Promise<void>;
+  viewport: Viewport;
+  onViewportChange: (viewport: Viewport) => void;
+  shouldFitView: boolean;
 }
 
 /**
@@ -61,8 +65,12 @@ export function useCanvasState(): UseCanvasStateReturn {
     dateRange: 'all',
   });
 
+  const [viewport, setViewport] = useState<Viewport>({ x: 0, y: 0, zoom: 1 });
+  const [shouldFitView, setShouldFitView] = useState(false);
+
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
   const pendingChangesRef = useRef<Map<string, Node>>(new Map());
+  const viewportSaveTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Load initial canvas state and cards
   useEffect(() => {
@@ -118,6 +126,16 @@ export function useCanvasState(): UseCanvasStateReturn {
       // Restore saved filters
       if (savedFilters) {
         setFiltersState(savedFilters);
+      }
+
+      // Restore saved viewport or fit view for first-time users
+      if (canvasState?.viewportPosition) {
+        console.log('[Canvas] Restoring saved viewport:', canvasState.viewportPosition);
+        setViewport(canvasState.viewportPosition);
+        setShouldFitView(false);
+      } else {
+        console.log('[Canvas] No saved viewport, will fit view on first load');
+        setShouldFitView(true);
       }
 
       // Load connections
@@ -270,15 +288,36 @@ export function useCanvasState(): UseCanvasStateReturn {
       const updatedCards = currentCards.map(card => {
         const node = nodesToSave.find(n => n.id === card.id);
         if (node) {
+          // Helper function to extract numeric dimension from various formats
+          const getNumericDimension = (value: any, fallback: number): number => {
+            if (typeof value === 'number') return value;
+            if (typeof value === 'string') {
+              const parsed = parseFloat(value);
+              if (!isNaN(parsed)) return parsed;
+            }
+            return fallback;
+          };
+
+          // In React Flow v12, dimensions are stored in node.measured.width/height
+          // Try multiple sources for width/height in order of preference
+          const width =
+            getNumericDimension(node.measured?.width, 0) ||     // React Flow v12 measured dimensions (primary)
+            getNumericDimension(node.width, 0) ||               // Direct property (if setAttributes was used)
+            getNumericDimension(node.style?.width, 0) ||        // Style property (legacy/fallback)
+            card.size?.width ||                                  // Existing saved size
+            320;                                                 // Default
+
+          const height =
+            getNumericDimension(node.measured?.height, 0) ||    // React Flow v12 measured dimensions (primary)
+            getNumericDimension(node.height, 0) ||              // Direct property (if setAttributes was used)
+            getNumericDimension(node.style?.height, 0) ||       // Style property (legacy/fallback)
+            card.size?.height ||                                 // Existing saved size
+            240;                                                 // Default
+
           return {
             ...card,
             position: node.position,
-            size: node.style
-              ? {
-                  width: typeof node.style.width === 'number' ? node.style.width : 320,
-                  height: typeof node.style.height === 'number' ? node.style.height : 240,
-                }
-              : card.size,
+            size: { width, height },
             updatedAt: Date.now(),
           };
         }
@@ -298,15 +337,62 @@ export function useCanvasState(): UseCanvasStateReturn {
     }
   };
 
-  // Cleanup timeout on unmount
+  /**
+   * Save viewport position and zoom to storage (debounced)
+   */
+  const saveViewport = async (newViewport: Viewport) => {
+    try {
+      // Load current canvas state
+      const result = await chrome.storage.local.get(STORAGE_KEY);
+      const canvasState: CanvasState = result[STORAGE_KEY] || { cards: [], viewportPosition: { x: 0, y: 0, zoom: 1 } };
+
+      // Update viewport position
+      const updatedCanvasState: CanvasState = {
+        ...canvasState,
+        viewportPosition: newViewport,
+      };
+
+      // Save to storage
+      await chrome.storage.local.set({ [STORAGE_KEY]: updatedCanvasState });
+
+      console.log('[Canvas] Saved viewport:', newViewport);
+    } catch (err) {
+      console.error('[Canvas] Failed to save viewport:', err);
+    }
+  };
+
+  /**
+   * Handle viewport changes with debouncing
+   */
+  const onViewportChange = useCallback((newViewport: Viewport) => {
+    // Update local state immediately for responsive UI
+    setViewport(newViewport);
+
+    // Debounced save to storage
+    if (viewportSaveTimeoutRef.current) {
+      clearTimeout(viewportSaveTimeoutRef.current);
+    }
+
+    viewportSaveTimeoutRef.current = setTimeout(() => {
+      saveViewport(newViewport);
+    }, VIEWPORT_DEBOUNCE_DELAY);
+  }, []);
+
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
         saveNodeChanges(); // Save any pending changes
       }
+      if (viewportSaveTimeoutRef.current) {
+        clearTimeout(viewportSaveTimeoutRef.current);
+        // Save viewport immediately on unmount
+        const currentViewport = viewport;
+        saveViewport(currentViewport);
+      }
     };
-  }, []);
+  }, [viewport]);
 
   // Save filters to session storage when they change
   useEffect(() => {
@@ -504,5 +590,8 @@ export function useCanvasState(): UseCanvasStateReturn {
     connections,
     addConnection,
     removeConnection,
+    viewport,
+    onViewportChange,
+    shouldFitView,
   };
 }

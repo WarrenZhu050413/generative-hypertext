@@ -34,22 +34,22 @@
   "commands": {
     "activate-selector": {
       "suggested_key": {
-        "default": "Ctrl+E",
-        "mac": "Command+E"
+        "default": "Ctrl+Shift+E",
+        "mac": "Ctrl+Shift+E"
       },
       "description": "Activate element selector (Canvas mode)"
     },
     "activate-selector-stash": {
       "suggested_key": {
-        "default": "Ctrl+Shift+E",
+        "default": "Alt+Shift+E",
         "mac": "Command+Shift+E"
       },
       "description": "Activate element selector (Stash mode)"
     },
     "toggle-inline-chat": {
       "suggested_key": {
-        "default": "Alt+Shift+C",
-        "mac": "Alt+Shift+C"
+        "default": "Ctrl+Shift+C",
+        "mac": "Ctrl+Shift+C"
       },
       "description": "Toggle inline chat with page"
     }

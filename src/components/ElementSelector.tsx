@@ -25,8 +25,12 @@ import type { Card } from '@/types';
  * Props for ElementSelector component
  */
 export interface ElementSelectorProps {
+  /** Mode: 'capture' for card capture, 'chat' for attaching chat windows */
+  mode?: 'capture' | 'chat';
   /** Callback fired when an element is successfully captured */
   onCapture?: (card: Card) => void;
+  /** Callback fired when an element is selected for chat */
+  onChatSelect?: (element: HTMLElement, existingChatId: string | null) => void;
   /** Callback fired when selector is closed/deactivated */
   onClose?: () => void;
   /** Initial state of the stash immediately checkbox */
@@ -49,12 +53,26 @@ interface ElementInfo {
 }
 
 /**
+ * Selected element data for multi-selection
+ */
+interface SelectedElement {
+  element: HTMLElement;
+  index: number;
+  selector: string;
+  html: string;
+  position: { x: number; y: number };
+  dimensions: { width: number; height: number };
+}
+
+/**
  * ElementSelector Component
  *
  * Provides visual element selection with overlay, tooltip, and capture functionality.
  */
 export const ElementSelector: FC<ElementSelectorProps> = ({
+  mode = 'capture',
   onCapture,
+  onChatSelect,
   onClose,
   initialStashState = false,
 }) => {
@@ -68,8 +86,59 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
   const [capturedCard, setCapturedCard] = useState<Card | null>(null);
   const [stashImmediately, setStashImmediately] = useState(initialStashState);
 
+  // Multi-selection state (only used in capture mode)
+  const [selections, setSelections] = useState<SelectedElement[]>([]);
+
+  // Chat mode state
+  const [existingChats, setExistingChats] = useState<Set<string>>(new Set());
+
+  // Scroll tracking - triggers re-render to update overlay positions
+  const [scrollTrigger, setScrollTrigger] = useState(0);
+
   // Refs (unused, reserved for future use)
   // const overlayRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Load existing chats for this page (chat mode only)
+   */
+  useEffect(() => {
+    if (mode !== 'chat') {
+      return;
+    }
+
+    const loadExistingChats = async () => {
+      try {
+        const { getAllElementChats } = await import('@/services/elementChatService');
+        const { getElementChatId } = await import('@/services/elementIdService');
+
+        const chats = await getAllElementChats(window.location.href);
+        const chatIds = new Set<string>();
+
+        // Find all elements with chat IDs and mark them
+        chats.forEach(chat => {
+          chatIds.add(chat.elementId);
+        });
+
+        // Also scan the DOM for elements with data-nabokov-chat-id
+        const elementsWithChatIds = document.querySelectorAll('[data-nabokov-chat-id]');
+        elementsWithChatIds.forEach(el => {
+          if (el instanceof HTMLElement) {
+            const chatId = getElementChatId(el);
+            if (chatId) {
+              chatIds.add(chatId);
+            }
+          }
+        });
+
+        setExistingChats(chatIds);
+        console.log(`[ElementSelector] Loaded ${chatIds.size} existing chats for this page`);
+      } catch (error) {
+        console.warn('[ElementSelector] Failed to load existing chats:', error);
+      }
+    };
+
+    loadExistingChats();
+  }, [mode]);
 
   /**
    * Deactivates the selector and cleans up
@@ -78,10 +147,169 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
     setIsActive(false);
     setHoveredElement(null);
     setElementInfo(null);
+    setSelections([]);
     if (onClose) {
       onClose();
     }
   }, [onClose]);
+
+  /**
+   * Clear all selections
+   */
+  const clearSelections = useCallback(() => {
+    setSelections([]);
+  }, []);
+
+  /**
+   * Toggle element in/out of selection set
+   */
+  const toggleSelection = useCallback((element: HTMLElement) => {
+    setSelections(prev => {
+      // Check if element is already selected
+      const existingIndex = prev.findIndex(s => s.element === element);
+
+      if (existingIndex >= 0) {
+        // Deselect: remove element and renumber remaining
+        const updated = prev.filter((_, i) => i !== existingIndex);
+        return updated.map((sel, idx) => ({
+          ...sel,
+          index: idx + 1
+        }));
+      } else {
+        // Check limit
+        if (prev.length >= 20) {
+          alert('Maximum 20 elements. Please capture current selection first.');
+          return prev;
+        }
+
+        // Add to selection: capture HTML immediately
+        const rect = element.getBoundingClientRect();
+        const htmlContent = sanitizeHTML(element.outerHTML);
+        const selector = generateSelector(element);
+
+        const newSelection: SelectedElement = {
+          element,
+          index: prev.length + 1,
+          selector,
+          html: htmlContent,
+          position: {
+            x: rect.left + window.scrollX,
+            y: rect.top + window.scrollY
+          },
+          dimensions: {
+            width: Math.round(rect.width),
+            height: Math.round(rect.height)
+          }
+        };
+
+        return [...prev, newSelection];
+      }
+    });
+  }, []);
+
+  /**
+   * Combine all selected elements and create single card
+   */
+  const combineAndCapture = useCallback(async () => {
+    if (selections.length === 0) {
+      return;
+    }
+
+    setIsCapturing(true);
+
+    try {
+      // Combine all HTML in selection order
+      const combinedHTML = selections
+        .map((sel, idx) => `
+          <div class="captured-element" data-index="${idx + 1}">
+            ${sel.html}
+          </div>
+        `)
+        .join('\n\n');
+
+      // Sanitize combined HTML
+      const sanitized = sanitizeHTML(combinedHTML);
+
+      // Create single card
+      const cardId = generateId();
+      const card: Card = {
+        id: cardId,
+        content: sanitized,
+        metadata: {
+          url: window.location.href,
+          title: document.title,
+          domain: new URL(window.location.href).hostname,
+          timestamp: Date.now(),
+          tagName: 'multi-element',
+          selector: `${selections.length} elements combined`,
+          textContent: selections.map(s => s.element.textContent || '').join(' '),
+          dimensions: {
+            width: 0,
+            height: 0
+          }
+        },
+        starred: false,
+        tags: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        conversation: [],
+        cardType: 'clipped',
+        stashed: stashImmediately
+      };
+
+      // Save to storage
+      console.log('[ElementSelector] Saving combined card...');
+      await saveCard(card);
+
+      console.log('[ElementSelector] Combined capture successful!', {
+        cardId,
+        elementCount: selections.length,
+        stashed: card.stashed
+      });
+
+      // Broadcast update
+      try {
+        await chrome.runtime.sendMessage({
+          type: 'CARD_STASHED',
+          cardId: card.id,
+          stashed: card.stashed
+        });
+      } catch (broadcastError) {
+        console.warn('[ElementSelector] Failed to broadcast update (non-critical):', broadcastError);
+      }
+
+      window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+
+      // Show success message
+      alert(`Combined ${selections.length} elements into one card!`);
+
+      // Clear selections
+      clearSelections();
+
+      // Auto-close
+      setTimeout(() => {
+        if (onClose) {
+          onClose();
+        }
+      }, 500);
+
+    } catch (error) {
+      console.error('[ElementSelector] Error combining elements:', error);
+      alert('Failed to combine elements. Please try again.');
+    } finally {
+      setIsCapturing(false);
+    }
+  }, [selections, stashImmediately, clearSelections, onClose]);
+
+  /**
+   * Handles page scroll - triggers re-render to update overlay positions
+   */
+  const handleScroll = useCallback(() => {
+    // Increment counter to trigger re-render
+    // This causes SelectionBadge, SelectionOutline, and ElementHighlight
+    // to recalculate positions via getBoundingClientRect()
+    setScrollTrigger(prev => prev + 1);
+  }, []);
 
   /**
    * Handles keyboard shortcuts
@@ -90,10 +318,17 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        deactivate();
+        if (selections.length > 0) {
+          clearSelections();
+        } else {
+          deactivate();
+        }
+      } else if (e.key === 'Enter' && selections.length > 0) {
+        e.preventDefault();
+        combineAndCapture();
       }
     },
-    [deactivate]
+    [deactivate, clearSelections, selections, combineAndCapture]
   );
 
   /**
@@ -140,7 +375,7 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
   }, [isCapturing, showFloatingChat]);
 
   /**
-   * Handles element click for capture
+   * Handles element click for capture or chat
    */
   const handleClick = useCallback(
     async (e: MouseEvent) => {
@@ -155,7 +390,60 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
         return;
       }
 
-      // Set selected element
+      // Ignore clicks on ignored tags
+      const ignoredTags = ['SCRIPT', 'STYLE', 'LINK', 'META', 'HEAD'];
+      if (ignoredTags.includes(target.tagName)) {
+        return;
+      }
+
+      // CHAT MODE: Attach chat to element
+      if (mode === 'chat') {
+        try {
+          const { assignElementChatId, getElementChatId } = await import('@/services/elementIdService');
+
+          // Assign or get existing chat ID
+          const existingChatId = getElementChatId(target);
+          const chatId = existingChatId || assignElementChatId(target);
+
+          console.log('[ElementSelector] Element selected for chat:', {
+            chatId,
+            hasExistingChat: existingChatId !== null,
+            element: target
+          });
+
+          // Call onChatSelect callback
+          if (onChatSelect) {
+            onChatSelect(target, existingChatId);
+          }
+
+          // Close selector
+          setTimeout(() => {
+            if (onClose) {
+              onClose();
+            }
+          }, 100);
+
+        } catch (error) {
+          console.error('[ElementSelector] Error selecting element for chat:', error);
+          alert('Failed to select element for chat. Please try again.');
+        }
+        return;
+      }
+
+      // CAPTURE MODE: Continue with existing capture logic
+      // Check if Cmd/Ctrl key is held for multi-selection
+      if (e.metaKey || e.ctrlKey) {
+        // Multi-select mode: toggle element in selection
+        toggleSelection(target);
+        return;
+      }
+
+      // Single-click without modifier: immediate capture (legacy behavior)
+      // But if we have selections, ignore single clicks
+      if (selections.length > 0) {
+        return;
+      }
+
       setSelectedElement(target);
       setIsCapturing(true);
 
@@ -285,7 +573,7 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
         setIsCapturing(false);
       }
     },
-    [onCapture, onClose, stashImmediately]
+    [mode, onCapture, onChatSelect, onClose, stashImmediately, selections, toggleSelection]
   );
 
   /**
@@ -305,13 +593,17 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
     // Add click listener
     window.addEventListener('click', handleClick, true);
 
+    // Add scroll listener to update overlay positions
+    window.addEventListener('scroll', handleScroll, true);
+
     // Cleanup
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('mousemove', handleMouseMove, true);
       window.removeEventListener('click', handleClick, true);
+      window.removeEventListener('scroll', handleScroll, true);
     };
-  }, [isActive, handleKeyDown, handleMouseMove, handleClick]);
+  }, [isActive, handleKeyDown, handleMouseMove, handleClick, handleScroll]);
 
   /**
    * Don't render anything if not active
@@ -323,13 +615,35 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
   return (
     <div data-nabokov-overlay css={overlayContainerStyles}>
       {/* Overlay highlight for hovered element */}
-      {hoveredElement && !showFloatingChat && (
-        <ElementHighlight element={hoveredElement} />
+      {hoveredElement && !showFloatingChat && selections.length === 0 && (
+        <ElementHighlight element={hoveredElement} mode={mode} existingChats={existingChats} />
+      )}
+
+      {/* Chat indicator badge for hovered element with existing chat */}
+      {mode === 'chat' && hoveredElement && !showFloatingChat && selections.length === 0 && (
+        <ChatIndicatorBadge element={hoveredElement} existingChats={existingChats} />
       )}
 
       {/* Tooltip showing element info */}
-      {elementInfo && !showFloatingChat && (
+      {elementInfo && !showFloatingChat && selections.length === 0 && (
         <ElementTooltip info={elementInfo} />
+      )}
+
+      {/* Selection badges and outlines */}
+      {selections.map((sel) => (
+        <div key={sel.index}>
+          <SelectionOutline selection={sel} />
+          <SelectionBadge selection={sel} />
+        </div>
+      ))}
+
+      {/* Multi-select action panel */}
+      {selections.length > 0 && !showFloatingChat && (
+        <MultiSelectActionPanel
+          selections={selections}
+          onCapture={combineAndCapture}
+          onClear={clearSelections}
+        />
       )}
 
       {/* Loading indicator during capture */}
@@ -340,7 +654,9 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
             <div css={spinnerDotStyles} />
             <div css={spinnerDotStyles} />
           </div>
-          <p css={loadingTextStyles}>Capturing element...</p>
+          <p css={loadingTextStyles}>
+            {selections.length > 0 ? `Combining ${selections.length} elements...` : 'Capturing element...'}
+          </p>
         </div>
       )}
 
@@ -358,17 +674,19 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
 
       {/* Mode indicator banner */}
       {!showFloatingChat && (
-        <div css={modeIndicatorStyles(stashImmediately)}>
+        <div css={modeIndicatorStyles(mode === 'chat' ? 'chat' : (stashImmediately ? 'stash' : 'canvas'))}>
           <div css={modeIconStyles}>
-            {stashImmediately ? '📥' : '🎨'}
+            {mode === 'chat' ? '💬' : (stashImmediately ? '📥' : '🎨')}
           </div>
           <div css={modeTitleStyles}>
-            {stashImmediately ? 'STASH MODE' : 'CANVAS MODE'}
+            {mode === 'chat' ? 'CHAT MODE' : (stashImmediately ? 'STASH MODE' : 'CANVAS MODE')}
           </div>
           <div css={modeDescStyles}>
-            {stashImmediately
-              ? 'Cards will be saved to Side Panel'
-              : 'Cards will appear on Canvas'}
+            {mode === 'chat'
+              ? 'Click element to attach chat window'
+              : (stashImmediately
+                ? 'Cards will be saved to Side Panel'
+                : 'Cards will appear on Canvas')}
           </div>
         </div>
       )}
@@ -376,7 +694,13 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
       {/* Instructions overlay */}
       {!showFloatingChat && (
         <div css={instructionsStyles}>
-          <p>Hover over elements to inspect • Click to capture • Press ESC to cancel</p>
+          <p>
+            {mode === 'chat'
+              ? 'Hover to inspect • Click element to attach chat • ESC to cancel'
+              : (selections.length > 0
+                ? `${selections.length} selected • Cmd/Ctrl+Click to add/remove • Enter to capture • ESC to clear`
+                : 'Hover to inspect • Click to capture • Cmd/Ctrl+Click for multiple • ESC to cancel')}
+          </p>
         </div>
       )}
     </div>
@@ -386,15 +710,42 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
 /**
  * ElementHighlight - Draws a border around the hovered element
  */
-const ElementHighlight: FC<{ element: HTMLElement }> = ({ element }) => {
+const ElementHighlight: FC<{
+  element: HTMLElement;
+  mode: 'capture' | 'chat';
+  existingChats: Set<string>;
+}> = ({ element, mode, existingChats }) => {
   const rect = element.getBoundingClientRect();
+
+  const [hasChat, setHasChat] = useState(false);
+
+  useEffect(() => {
+    if (mode !== 'chat') {
+      return;
+    }
+
+    const checkExistingChat = async (): Promise<boolean> => {
+      try {
+        const { getElementChatId } = await import('@/services/elementIdService');
+        const chatId = getElementChatId(element);
+        if (chatId === null) {
+          return false;
+        }
+        return existingChats.has(chatId);
+      } catch {
+        return false;
+      }
+    };
+
+    checkExistingChat().then(result => setHasChat(result));
+  }, [element, mode, existingChats]);
 
   return (
     <div
-      css={highlightStyles}
+      css={highlightStyles(mode, hasChat)}
       style={{
-        top: `${rect.top + window.scrollY}px`,
-        left: `${rect.left + window.scrollX}px`,
+        top: `${rect.top}px`,
+        left: `${rect.left}px`,
         width: `${rect.width}px`,
         height: `${rect.height}px`,
       }}
@@ -438,6 +789,119 @@ const ElementTooltip: FC<{ info: ElementInfo }> = ({ info }) => {
 };
 
 /**
+ * ChatIndicatorBadge - Shows 💬 badge on elements with existing chats
+ */
+const ChatIndicatorBadge: FC<{
+  element: HTMLElement;
+  existingChats: Set<string>;
+}> = ({ element, existingChats }) => {
+  const [hasChat, setHasChat] = useState(false);
+
+  useEffect(() => {
+    const checkChat = async () => {
+      try {
+        const { getElementChatId } = await import('@/services/elementIdService');
+        const chatId = getElementChatId(element);
+        setHasChat(chatId !== null && existingChats.has(chatId));
+      } catch {
+        setHasChat(false);
+      }
+    };
+    checkChat();
+  }, [element, existingChats]);
+
+  if (!hasChat) {
+    return null;
+  }
+
+  const rect = element.getBoundingClientRect();
+
+  return (
+    <div
+      css={chatIndicatorBadgeStyles}
+      style={{
+        top: `${rect.top - 12}px`,
+        left: `${rect.left - 12}px`,
+      }}
+    >
+      💬
+    </div>
+  );
+};
+
+/**
+ * SelectionBadge - Shows numbered badge for selected element
+ */
+const SelectionBadge: FC<{ selection: SelectedElement }> = ({ selection }) => {
+  const rect = selection.element.getBoundingClientRect();
+
+  return (
+    <div
+      css={selectionBadgeStyles}
+      style={{
+        top: `${rect.top - 12}px`,
+        left: `${rect.left - 12}px`,
+      }}
+    >
+      {selection.index}
+    </div>
+  );
+};
+
+/**
+ * SelectionOutline - Shows outline for selected element
+ */
+const SelectionOutline: FC<{ selection: SelectedElement }> = ({ selection }) => {
+  const rect = selection.element.getBoundingClientRect();
+
+  return (
+    <div
+      css={selectionOutlineStyles}
+      style={{
+        top: `${rect.top}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+      }}
+    />
+  );
+};
+
+/**
+ * MultiSelectActionPanel - Floating panel for multi-selection actions
+ */
+const MultiSelectActionPanel: FC<{
+  selections: SelectedElement[];
+  onCapture: () => void;
+  onClear: () => void;
+}> = ({ selections, onCapture, onClear }) => {
+  return (
+    <div css={actionPanelStyles}>
+      <div css={actionPanelHeaderStyles}>
+        <span css={actionPanelCountStyles}>{selections.length}</span> element{selections.length > 1 ? 's' : ''} selected
+      </div>
+
+      <div css={actionPanelListStyles}>
+        {selections.map((sel, idx) => (
+          <div key={idx} css={actionPanelItemStyles}>
+            {sel.index}. {sel.selector}
+          </div>
+        ))}
+      </div>
+
+      <div css={actionPanelButtonsStyles}>
+        <button css={captureButtonStyles} onClick={onCapture}>
+          📥 Capture All
+        </button>
+        <button css={clearButtonStyles} onClick={onClear}>
+          ✕ Clear
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/**
  * FloatingChatPlaceholder - Placeholder for FloatingChat component
  * TODO: Replace with actual FloatingChat component
  */
@@ -452,8 +916,8 @@ const FloatingChatPlaceholder: FC<{
     <div
       css={floatingChatStyles}
       style={{
-        top: `${rect.bottom + window.scrollY + 10}px`,
-        left: `${rect.left + window.scrollX}px`,
+        top: `${rect.bottom + 10}px`,
+        left: `${rect.left}px`,
       }}
     >
       <div css={chatHeaderStyles}>
@@ -497,14 +961,30 @@ const overlayContainerStyles = css`
     'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 `;
 
-const highlightStyles = css`
+const highlightStyles = (mode: 'capture' | 'chat', hasExistingChat: boolean) => css`
   position: absolute;
   pointer-events: none;
-  border: 3px solid ${CHINESE_AESTHETIC_COLORS.cinnabar};
+  border: 3px solid ${
+    mode === 'chat'
+      ? (hasExistingChat ? '#C77DFF' : '#7B2CBF')
+      : CHINESE_AESTHETIC_COLORS.cinnabar
+  };
   box-shadow:
-    0 0 0 1px ${CHINESE_AESTHETIC_COLORS.gold},
-    0 4px 16px rgba(194, 59, 34, 0.3);
-  background-color: rgba(194, 59, 34, 0.05);
+    0 0 0 1px ${
+      mode === 'chat'
+        ? (hasExistingChat ? '#E0AAFF' : '#9D4EDD')
+        : CHINESE_AESTHETIC_COLORS.gold
+    },
+    0 4px 16px ${
+      mode === 'chat'
+        ? (hasExistingChat ? 'rgba(199, 125, 255, 0.4)' : 'rgba(123, 44, 191, 0.3)')
+        : 'rgba(194, 59, 34, 0.3)'
+    };
+  background-color: ${
+    mode === 'chat'
+      ? (hasExistingChat ? 'rgba(199, 125, 255, 0.08)' : 'rgba(123, 44, 191, 0.05)')
+      : 'rgba(194, 59, 34, 0.05)'
+  };
   transition: all 150ms ease-in-out;
   z-index: 999998;
   border-radius: 2px;
@@ -592,13 +1072,15 @@ const instructionsStyles = css`
   }
 `;
 
-const modeIndicatorStyles = (isStashMode: boolean) => css`
+const modeIndicatorStyles = (mode: 'chat' | 'stash' | 'canvas') => css`
   position: fixed;
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
   background: ${
-    isStashMode
+    mode === 'chat'
+      ? 'linear-gradient(135deg, #7B2CBF 0%, #5A189A 100%)'
+      : mode === 'stash'
       ? 'linear-gradient(135deg, #2C5F7E 0%, #1E3A5F 100%)'
       : `linear-gradient(135deg, ${CHINESE_AESTHETIC_COLORS.cinnabar} 0%, #8B0000 100%)`
   };
@@ -608,10 +1090,22 @@ const modeIndicatorStyles = (isStashMode: boolean) => css`
   font-size: 16px;
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.5),
-    0 0 0 3px ${isStashMode ? '#5DADE2' : CHINESE_AESTHETIC_COLORS.gold};
+    0 0 0 3px ${
+      mode === 'chat'
+        ? '#C77DFF'
+        : mode === 'stash'
+        ? '#5DADE2'
+        : CHINESE_AESTHETIC_COLORS.gold
+    };
   z-index: 999999;
   pointer-events: auto;
-  border: 2px solid ${isStashMode ? '#5DADE2' : CHINESE_AESTHETIC_COLORS.gold};
+  border: 2px solid ${
+    mode === 'chat'
+      ? '#C77DFF'
+      : mode === 'stash'
+      ? '#5DADE2'
+      : CHINESE_AESTHETIC_COLORS.gold
+  };
   display: flex;
   align-items: center;
   gap: 16px;
@@ -796,6 +1290,228 @@ const successTextStyles = css`
   color: ${CHINESE_AESTHETIC_COLORS.verdigris} !important;
   font-weight: 600 !important;
   font-size: 13px !important;
+`;
+
+// Multi-selection styles
+
+const chatIndicatorBadgeStyles = css`
+  position: absolute;
+  pointer-events: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #C77DFF 0%, #7B2CBF 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  box-shadow:
+    0 2px 8px rgba(123, 44, 191, 0.4),
+    0 0 0 2px #E0AAFF;
+  z-index: 999999;
+  animation: chatBadgePulse 2s ease-in-out infinite;
+
+  @keyframes chatBadgePulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow:
+        0 2px 8px rgba(123, 44, 191, 0.4),
+        0 0 0 2px #E0AAFF;
+    }
+    50% {
+      transform: scale(1.1);
+      box-shadow:
+        0 4px 12px rgba(123, 44, 191, 0.6),
+        0 0 0 3px #E0AAFF;
+    }
+  }
+`;
+
+const selectionBadgeStyles = css`
+  position: absolute;
+  pointer-events: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: ${CHINESE_AESTHETIC_COLORS.cinnabar};
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow:
+    0 2px 8px rgba(139, 0, 0, 0.4),
+    0 0 0 2px ${CHINESE_AESTHETIC_COLORS.gold};
+  z-index: 999999;
+  animation: badgeFadeIn 0.3s ease-out;
+
+  @keyframes badgeFadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+`;
+
+const selectionOutlineStyles = css`
+  position: absolute;
+  pointer-events: none;
+  border: 3px solid ${CHINESE_AESTHETIC_COLORS.cinnabar};
+  box-shadow:
+    0 0 0 3px ${CHINESE_AESTHETIC_COLORS.gold},
+    0 4px 16px rgba(194, 59, 34, 0.4);
+  background-color: rgba(194, 59, 34, 0.08);
+  z-index: 999998;
+  border-radius: 2px;
+  animation: outlineFadeIn 0.3s ease-out;
+
+  @keyframes outlineFadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+`;
+
+const actionPanelStyles = css`
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: white;
+  border: 2px solid ${CHINESE_AESTHETIC_COLORS.gold};
+  border-radius: 8px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px ${CHINESE_AESTHETIC_COLORS.cinnabar};
+  z-index: 1000000;
+  pointer-events: auto;
+  max-width: 350px;
+  animation: slideUp 0.3s ease-out;
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const actionPanelHeaderStyles = css`
+  padding: 12px 16px;
+  background: linear-gradient(
+    135deg,
+    ${CHINESE_AESTHETIC_COLORS.cinnabar} 0%,
+    #8B0000 100%
+  );
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px 6px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const actionPanelCountStyles = css`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: ${CHINESE_AESTHETIC_COLORS.gold};
+  color: ${CHINESE_AESTHETIC_COLORS.ink};
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+`;
+
+const actionPanelListStyles = css`
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 8px 12px;
+  background: ${CHINESE_AESTHETIC_COLORS.silk};
+`;
+
+const actionPanelItemStyles = css`
+  font-size: 12px;
+  color: ${CHINESE_AESTHETIC_COLORS.ink};
+  padding: 4px 0;
+  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+`;
+
+const actionPanelButtonsStyles = css`
+  padding: 12px;
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid ${CHINESE_AESTHETIC_COLORS.bamboo};
+`;
+
+const captureButtonStyles = css`
+  flex: 1;
+  background: linear-gradient(
+    135deg,
+    ${CHINESE_AESTHETIC_COLORS.cinnabar} 0%,
+    #8B0000 100%
+  );
+  color: white;
+  border: 1px solid ${CHINESE_AESTHETIC_COLORS.gold};
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+  box-shadow: 0 2px 8px rgba(139, 0, 0, 0.2);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const clearButtonStyles = css`
+  background: transparent;
+  color: ${CHINESE_AESTHETIC_COLORS.ink};
+  border: 1px solid ${CHINESE_AESTHETIC_COLORS.bamboo};
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease-in-out;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: ${CHINESE_AESTHETIC_COLORS.cinnabar};
+    color: ${CHINESE_AESTHETIC_COLORS.cinnabar};
+  }
+
+  &:active {
+    background: rgba(0, 0, 0, 0.1);
+  }
 `;
 
 export default ElementSelector;

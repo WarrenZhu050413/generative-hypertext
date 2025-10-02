@@ -25,43 +25,58 @@ chrome.commands.onCommand.addListener((command) => {
     // Get the active tab and send message to activate element selector
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]?.id) {
+        console.log('[background] Activating selector (Canvas mode) on tab:', tabs[0].id);
         chrome.tabs.sendMessage(tabs[0].id, {
           type: 'ACTIVATE_SELECTOR',
-          stashImmediately: false
+          payload: {
+            stashImmediately: false
+          },
+          stashImmediately: false // Keep for backward compat
         }).catch(err => {
-          console.error('Failed to send message to content script:', err);
+          console.error('[background] Failed to send ACTIVATE_SELECTOR message:', err);
+          console.error('[background] This usually means content script is not loaded. Try refreshing the page.');
         });
+      } else {
+        console.error('[background] No active tab found for activate-selector');
       }
     });
   } else if (command === 'activate-selector-stash') {
     // Activate element selector with stash mode enabled
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]?.id) {
+        console.log('[background] Activating selector (Stash mode) on tab:', tabs[0].id);
         chrome.tabs.sendMessage(tabs[0].id, {
           type: 'ACTIVATE_SELECTOR',
-          stashImmediately: true
+          payload: {
+            stashImmediately: true
+          },
+          stashImmediately: true // Keep for backward compat
         }).catch(err => {
-          console.error('Failed to send message to content script:', err);
+          console.error('[background] Failed to send ACTIVATE_SELECTOR (stash) message:', err);
+          console.error('[background] This usually means content script is not loaded. Try refreshing the page.');
         });
+      } else {
+        console.error('[background] No active tab found for activate-selector-stash');
       }
     });
   } else if (command === 'toggle-inline-chat') {
-    // Toggle inline chat with page
-    console.log('[background] Opening inline chat...');
+    // Activate chat selector (element-attached chat mode)
+    console.log('[background] Activating chat selector...');
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]?.id) {
-        console.log('[background] Sending OPEN_INLINE_CHAT to tab:', tabs[0].id);
+        console.log('[background] Sending ACTIVATE_CHAT_SELECTOR to tab:', tabs[0].id);
         chrome.tabs.sendMessage(tabs[0].id, {
-          type: 'OPEN_INLINE_CHAT'
+          type: 'ACTIVATE_CHAT_SELECTOR'
         }).catch(err => {
-          console.error('[background] Failed to send message to content script:', err);
+          console.error('[background] Failed to send ACTIVATE_CHAT_SELECTOR message:', err);
+          console.error('[background] This usually means content script is not loaded. Try refreshing the page.');
         });
       } else {
-        console.error('[background] No active tab found');
+        console.error('[background] No active tab found for toggle-inline-chat');
       }
     });
   } else {
-    console.log('[background] Unknown command:', command);
+    console.warn('[background] Unknown command received:', command);
   }
 });
 

@@ -13,8 +13,18 @@ const mockStorage = {
   },
 };
 
+// Mock chrome runtime API
+const mockRuntime = {
+  onMessage: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+  },
+  sendMessage: vi.fn(),
+};
+
 (global as any).chrome = {
   storage: mockStorage,
+  runtime: mockRuntime,
 };
 
 describe('Canvas', () => {
