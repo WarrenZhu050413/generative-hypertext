@@ -17,28 +17,9 @@ vi.mock('@/utils/connectionStorage', () => ({
   addConnection: vi.fn(),
 }));
 
-vi.mock('@/services/chatService', () => ({
-  chatService: {
-    sendMessage: vi.fn(async function* () {
-      yield 'Generated ';
-      yield 'response ';
-      yield 'content';
-    }),
-    getConversation: vi.fn(() => [
-      {
-        id: 'msg-1',
-        role: 'user',
-        content: 'Test prompt',
-        timestamp: Date.now(),
-      },
-      {
-        id: 'msg-2',
-        role: 'assistant',
-        content: 'Generated response content',
-        timestamp: Date.now(),
-      },
-    ]),
-    clearConversation: vi.fn(),
+vi.mock('@/services/claudeAPIService', () => ({
+  claudeAPIService: {
+    sendMessage: vi.fn(async () => 'Generated response content'),
   },
 }));
 
@@ -95,13 +76,14 @@ describe('CardGenerationService', () => {
   });
 
   it('extracts plain text from HTML content', async () => {
-    const { chatService } = await import('@/services/chatService');
+    const { claudeAPIService } = await import('@/services/claudeAPIService');
 
     await service.generateCardFromButton(sourceCard, button, '');
 
-    expect(chatService.sendMessage).toHaveBeenCalled();
-    const callArgs = (chatService.sendMessage as any).mock.calls[0];
-    const prompt = callArgs[1];
+    expect(claudeAPIService.sendMessage).toHaveBeenCalled();
+    const callArgs = (claudeAPIService.sendMessage as any).mock.calls[0];
+    const messages = callArgs[0];
+    const prompt = messages[0].content;
 
     // Should contain plain text, not HTML
     expect(prompt).toContain('This is the source content');
@@ -109,12 +91,13 @@ describe('CardGenerationService', () => {
   });
 
   it('substitutes template variables correctly', async () => {
-    const { chatService } = await import('@/services/chatService');
+    const { claudeAPIService } = await import('@/services/claudeAPIService');
 
     await service.generateCardFromButton(sourceCard, button, 'historical context');
 
-    const callArgs = (chatService.sendMessage as any).mock.calls[0];
-    const prompt = callArgs[1];
+    const callArgs = (claudeAPIService.sendMessage as any).mock.calls[0];
+    const messages = callArgs[0];
+    const prompt = messages[0].content;
 
     expect(prompt).toContain('Source Card Title');
     expect(prompt).toContain('This is the source content');
@@ -122,12 +105,13 @@ describe('CardGenerationService', () => {
   });
 
   it('uses default value when customContext is empty', async () => {
-    const { chatService } = await import('@/services/chatService');
+    const { claudeAPIService } = await import('@/services/claudeAPIService');
 
     await service.generateCardFromButton(sourceCard, button, '');
 
-    const callArgs = (chatService.sendMessage as any).mock.calls[0];
-    const prompt = callArgs[1];
+    const callArgs = (claudeAPIService.sendMessage as any).mock.calls[0];
+    const messages = callArgs[0];
+    const prompt = messages[0].content;
 
     expect(prompt).toContain('the main topic');
   });
@@ -165,11 +149,4 @@ describe('CardGenerationService', () => {
     );
   });
 
-  it('clears temporary conversation after generation', async () => {
-    const { chatService } = await import('@/services/chatService');
-
-    await service.generateCardFromButton(sourceCard, button, '');
-
-    expect(chatService.clearConversation).toHaveBeenCalled();
-  });
 });

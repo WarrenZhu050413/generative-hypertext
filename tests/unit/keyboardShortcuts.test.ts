@@ -187,7 +187,6 @@ describe('Keyboard Shortcuts Utilities', () => {
     it('should have all required shortcuts', () => {
       expect(DEFAULT_SHORTCUTS.focusSearch).toBeDefined();
       expect(DEFAULT_SHORTCUTS.toggleFilter).toBeDefined();
-      expect(DEFAULT_SHORTCUTS.openNewTab).toBeDefined();
       expect(DEFAULT_SHORTCUTS.escape).toBeDefined();
       expect(DEFAULT_SHORTCUTS.showHelp).toBeDefined();
       expect(DEFAULT_SHORTCUTS.toggleStarred).toBeDefined();

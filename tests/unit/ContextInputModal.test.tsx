@@ -2,8 +2,8 @@
  * Unit tests for ContextInputModal component
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ContextInputModal } from '@/components/ContextInputModal';
 
 describe('ContextInputModal', () => {
@@ -28,11 +28,13 @@ describe('ContextInputModal', () => {
     expect(screen.getByPlaceholderText(/historical context/i)).toBeTruthy();
   });
 
-  it('focuses input on mount', () => {
+  it('focuses input on mount', async () => {
     render(<ContextInputModal {...defaultProps} />);
 
     const input = screen.getByTestId('context-input');
-    expect(document.activeElement).toBe(input);
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input);
+    });
   });
 
   it('calls onSubmit with input value when submit button clicked', () => {
