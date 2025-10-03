@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { css } from '@emotion/react';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import DOMPurify from 'isomorphic-dompurify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -13,6 +13,8 @@ import { useFontSize } from '@/shared/hooks/useFontSize';
 import { FontSizeSelector } from '@/components/FontSizeSelector';
 import { SidePanelChat } from './SidePanelChat';
 import { saveCard } from '@/utils/storage';
+import { StashCardChatWindow } from '@/components/StashCardChatWindow';
+import { Toast } from '@/components/Toast';
 
 export const SidePanel: React.FC = () => {
   // Use shared hooks
@@ -35,28 +37,53 @@ export const SidePanel: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [activeChatCardId, setActiveChatCardId] = useState<string | null>(null);
+  const [skipConfirm, setSkipConfirm] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Load skip confirm preference from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('nabokov_skip_delete_confirm');
+    if (stored === 'true') {
+      setSkipConfirm(true);
+    }
+  }, []);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info') => {
+    setToast({ message, type });
+  };
+
+  const handleToggleSkipConfirm = (checked: boolean) => {
+    setSkipConfirm(checked);
+    localStorage.setItem('nabokov_skip_delete_confirm', checked.toString());
+  };
 
   const handleRestore = async (card: Card) => {
     try {
       await restoreCard(card.id);
       console.log('[SidePanel] Card restored:', card.metadata.title);
+      showToast('Card restored to canvas', 'success');
     } catch (error) {
       console.error('[SidePanel] Error restoring card:', error);
-      alert('Failed to restore card');
+      showToast('Failed to restore card', 'error');
     }
   };
 
   const handleDelete = async (card: Card) => {
-    if (!confirm(`Permanently delete "${card.metadata.title}"?`)) {
-      return;
+    // Check if user wants to skip confirmation
+    if (!skipConfirm) {
+      if (!confirm(`Permanently delete "${card.metadata.title}"?`)) {
+        return;
+      }
     }
 
     try {
       await deleteCard(card.id);
       console.log('[SidePanel] Card deleted:', card.metadata.title);
+      showToast('Card deleted successfully', 'success');
     } catch (error) {
       console.error('[SidePanel] Error deleting card:', error);
-      alert('Failed to delete card');
+      showToast('Failed to delete card', 'error');
     }
   };
 
@@ -65,7 +92,7 @@ export const SidePanel: React.FC = () => {
       await handleImageUpload(file);
     } catch (error) {
       console.error('[SidePanel] Image upload failed:', error);
-      alert('Failed to upload image');
+      showToast('Failed to upload image', 'error');
     }
   };
 
@@ -163,6 +190,14 @@ export const SidePanel: React.FC = () => {
     return badges[type as keyof typeof badges] || badges.clipped;
   };
 
+  const handleOpenCardChat = (cardId: string) => {
+    setActiveChatCardId(cardId);
+  };
+
+  const handleCloseCardChat = () => {
+    setActiveChatCardId(null);
+  };
+
   return (
     <ImageUploadZone onImageUpload={handleImageDrop}>
       <div css={containerStyles}>
@@ -246,7 +281,7 @@ export const SidePanel: React.FC = () => {
               : '';
 
             return (
-              <div key={card.id} css={cardItemStyles}>
+              <div key={card.id} data-id={card.id} css={cardItemStyles}>
                 {/* Compact Header - Single line */}
                 <div css={compactHeaderStyles}>
                   <div css={headerInfoStyles}>
@@ -256,9 +291,22 @@ export const SidePanel: React.FC = () => {
                     <span css={dateStyles}>{formatDate(card.createdAt)}</span>
                   </div>
                   <div css={actionButtonsStyles}>
+                    <button onClick={() => handleOpenCardChat(card.id)} css={chatIconButtonStyles} title="Chat with card">
+                      💬
+                    </button>
                     <button onClick={() => handleRestore(card)} css={iconButtonStyles} title="Restore to canvas">
                       ↩️
                     </button>
+                    {/* Skip confirm checkbox */}
+                    <label css={skipCheckboxStyles} title="Skip delete confirmation">
+                      <input
+                        type="checkbox"
+                        checked={skipConfirm}
+                        onChange={(e) => handleToggleSkipConfirm(e.target.checked)}
+                        css={checkboxInputStyles}
+                      />
+                      <span css={checkboxLabelStyles}>Skip</span>
+                    </label>
                     <button onClick={() => handleDelete(card)} css={iconButtonStyles} title="Delete permanently">
                       🗑️
                     </button>
@@ -334,6 +382,16 @@ export const SidePanel: React.FC = () => {
                     </>
                   )
                 )}
+
+                {/* Inline Chat Window (appears below card when active) */}
+                {activeChatCardId === card.id && (
+                  <StashCardChatWindow
+                    card={card}
+                    onClose={handleCloseCardChat}
+                    onSaveToCanvas={handleSaveToCanvas}
+                    onSaveToStash={handleSaveToStash}
+                  />
+                )}
               </div>
             );
           })
@@ -345,6 +403,16 @@ export const SidePanel: React.FC = () => {
         <div css={footerStyles}>
           {filteredCards.length} of {stashedCards.length} cards
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          duration={4000}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
     </ImageUploadZone>
@@ -585,11 +653,29 @@ const iconButtonStyles = css`
     transform: scale(1.1);
   }
 
-  &:first-of-type:hover {
+  &:nth-of-type(2):hover {
     filter: drop-shadow(0 0 3px rgba(46, 125, 50, 0.6));
   }
 
   &:last-of-type:hover {
+    filter: drop-shadow(0 0 3px rgba(139, 0, 0, 0.6));
+  }
+`;
+
+const chatIconButtonStyles = css`
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(205, 92, 92, 0.1));
+  border: 1px solid rgba(139, 0, 0, 0.2);
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.85;
+  transition: all 0.15s ease;
+  border-radius: 4px;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.2), rgba(205, 92, 92, 0.2));
     filter: drop-shadow(0 0 3px rgba(139, 0, 0, 0.6));
   }
 `;
@@ -811,4 +897,38 @@ const footerStyles = css`
   font-size: 12px;
   color: #8b7355;
   background: linear-gradient(to top, rgba(255, 215, 0, 0.03), transparent);
+`;
+
+// Skip confirmation checkbox styles
+const skipCheckboxStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: rgba(255, 215, 0, 0.15);
+    border-color: rgba(212, 175, 55, 0.4);
+  }
+`;
+
+const checkboxInputStyles = css`
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+  margin: 0;
+`;
+
+const checkboxLabelStyles = css`
+  font-size: 9px;
+  color: #5C4D42;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
 `;

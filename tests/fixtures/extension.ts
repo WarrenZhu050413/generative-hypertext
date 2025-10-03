@@ -60,24 +60,80 @@ export const test = base.extend<ExtensionFixtures>({
       viewport: { width: 1280, height: 720 },
     });
 
+    // Wait for extension to initialize before running tests
+    const initPage = await context.newPage();
+    await initPage.goto('https://example.com');
+    await initPage.waitForTimeout(2000);
+    await initPage.close();
+
     await use(context);
     await context.close();
   },
 
   // Provide extension ID for testing
   extensionId: async ({ context }, use) => {
-    // Wait for background page to load (for MV3)
-    let [background] = context.serviceWorkers();
-    if (!background) {
-      background = await context.waitForEvent('serviceworker');
+    // Extract extension ID from service worker URL
+    // This is more reliable than chrome://extensions which doesn't render in Playwright
+    let extensionId: string | null = null;
+
+    // Wait for service worker to be available
+    const maxAttempts = 10;
+    for (let i = 0; i < maxAttempts; i++) {
+      const workers = context.serviceWorkers();
+      if (workers.length > 0) {
+        const workerUrl = workers[0].url();
+        // Extract ID from URL like: chrome-extension://mkdbacmghakikjkemcahonodffmphffp/...
+        const match = workerUrl.match(/chrome-extension:\/\/([a-z]+)\//);
+        if (match) {
+          extensionId = match[1];
+          break;
+        }
+      }
+
+      // Wait and retry
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    const extensionId = background.url().split('/')[2];
+    if (!extensionId) {
+      throw new Error(
+        'Extension service worker not found. ' +
+        'Ensure "npm run build" completed successfully and dist/ directory exists.'
+      );
+    }
+
     await use(extensionId);
   },
 });
 
 export { expect } from '@playwright/test';
+
+/**
+ * Helper: Extract extension ID from service worker URL
+ * More reliable than chrome://extensions which doesn't render properly in Playwright
+ */
+export async function getExtensionId(context: BrowserContext): Promise<string> {
+  // Wait for service worker to be available
+  const maxAttempts = 20;
+  for (let i = 0; i < maxAttempts; i++) {
+    const workers = context.serviceWorkers();
+    if (workers.length > 0) {
+      const workerUrl = workers[0].url();
+      // Extract ID from URL like: chrome-extension://mkdbacmghakikjkemcahonodffmphffp/...
+      const match = workerUrl.match(/chrome-extension:\/\/([a-z]+)\//);
+      if (match) {
+        return match[1];
+      }
+    }
+
+    // Wait and retry
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  throw new Error(
+    'Extension service worker not found after 10 seconds. ' +
+    'Ensure "npm run build" completed successfully and dist/ directory exists.'
+  );
+}
 
 /**
  * Helper: Navigate to extension popup
@@ -157,21 +213,15 @@ export async function sendExtensionMessage(
  */
 export async function getExtensionStorage(
   context: BrowserContext,
+  extensionId: string,
   keys?: string | string[] | null
 ): Promise<any> {
   const page = await context.newPage();
 
   // Navigate to extension page to get chrome API access
-  let [background] = context.serviceWorkers();
-  if (!background) {
-    background = await context.waitForEvent('serviceworker');
-  }
-  const extensionId = background?.url().split('/')[2];
-  if (extensionId) {
-    await page.goto(`chrome-extension://${extensionId}/src/canvas/index.html`);
-  }
+  await page.goto(`chrome-extension://${extensionId}/src/canvas/index.html`);
 
-  return await page.evaluate(
+  const result = await page.evaluate(
     async (storageKeys) => {
       return new Promise((resolve) => {
         chrome.storage.local.get(storageKeys || null, (items) => {
@@ -181,6 +231,9 @@ export async function getExtensionStorage(
     },
     keys
   );
+
+  await page.close();
+  return result;
 }
 
 /**
@@ -188,19 +241,13 @@ export async function getExtensionStorage(
  */
 export async function setExtensionStorage(
   context: BrowserContext,
+  extensionId: string,
   items: Record<string, any>
 ): Promise<void> {
   const page = await context.newPage();
 
   // Navigate to extension page to get chrome API access
-  let [background] = context.serviceWorkers();
-  if (!background) {
-    background = await context.waitForEvent('serviceworker');
-  }
-  const extensionId = background?.url().split('/')[2];
-  if (extensionId) {
-    await page.goto(`chrome-extension://${extensionId}/src/canvas/index.html`);
-  }
+  await page.goto(`chrome-extension://${extensionId}/src/canvas/index.html`);
 
   await page.evaluate(
     async (data) => {
@@ -212,25 +259,21 @@ export async function setExtensionStorage(
     },
     items
   );
+
+  await page.close();
 }
 
 /**
  * Helper: Clear extension storage
  */
 export async function clearExtensionStorage(
-  context: BrowserContext
+  context: BrowserContext,
+  extensionId: string
 ): Promise<void> {
   const page = await context.newPage();
 
   // Navigate to extension page to get chrome API access
-  let [background] = context.serviceWorkers();
-  if (!background) {
-    background = await context.waitForEvent('serviceworker');
-  }
-  const extensionId = background?.url().split('/')[2];
-  if (extensionId) {
-    await page.goto(`chrome-extension://${extensionId}/src/canvas/index.html`);
-  }
+  await page.goto(`chrome-extension://${extensionId}/src/canvas/index.html`);
 
   await page.evaluate(
     async () => {
@@ -241,6 +284,8 @@ export async function clearExtensionStorage(
       });
     }
   );
+
+  await page.close();
 }
 
 /**
