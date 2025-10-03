@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { css } from '@emotion/react';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Rnd } from 'react-rnd';
 import type { PageContext } from '@/services/pageContextCapture';
 import type { ElementContext } from '@/services/elementContextCapture';
@@ -114,6 +114,46 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
     }
   };
 
+  // Drag event handlers for file drop
+  // Note: We don't use ImageUploadZone wrapper because react-rnd intercepts drag events.
+  // Direct handlers on content area ensure preventDefault() executes before browser default.
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    // Only handle file drags
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'copy';
+      setIsDraggingFile(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Only reset if leaving the content area entirely
+    if (e.currentTarget === e.target) {
+      setIsDraggingFile(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+
+    if (imageFiles.length === 0) {
+      console.warn('[InlineChatWindow] No image files found in drop');
+      return;
+    }
+
+    // Process first image file
+    await handleImageDrop(imageFiles[0]);
+  }, [handleImageDrop]);
+
   const handleSendMessage = async () => {
     if ((!inputValue.trim() && pendingImages.length === 0) || isStreaming) return;
 
@@ -168,6 +208,7 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
         }));
 
         console.log('[InlineChatWindow] Sending multimodal message with', userMessage.images?.length, 'images');
+        console.log('[InlineChatWindow] Message format:', JSON.stringify(claudeMessages, null, 2));
 
         const response = await claudeAPIService.sendMessage(
           claudeMessages,
@@ -238,7 +279,6 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
     : { x: window.innerWidth - 450, y: 50 };
 
   return (
-    <ImageUploadZone onImageUpload={handleImageDrop}>
       <Rnd
         default={{
           x: defaultPosition.x,
@@ -313,8 +353,25 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
           </div>
         </div>
 
-        {/* Messages */}
+        {/* Content Area - File Drop Zone */}
         {!collapsed && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}
+        >
+          {/* Drag Overlay */}
+          {isDraggingFile && (
+            <div css={dragOverlayStyles}>
+              <div css={dragOverlayContentStyles}>
+                <div style={{ fontSize: 48 }}>📁</div>
+                <div>Drop image to upload</div>
+              </div>
+            </div>
+          )}
+
+          {/* Messages */}
         <div css={messagesContainerStyles}>
           {messages.length === 0 && (
             <div css={emptyStateStyles}>
@@ -393,10 +450,9 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
 
           <div ref={messagesEndRef} />
         </div>
-        )}
 
         {/* Pending Images Preview */}
-        {!collapsed && pendingImages.length > 0 && (
+        {pendingImages.length > 0 && (
           <div css={imagePreviewContainerStyles}>
             {pendingImages.map((img, idx) => (
               <div key={idx} css={imagePreviewStyles}>
@@ -416,7 +472,6 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
         )}
 
         {/* Input */}
-        {!collapsed && (
         <div css={inputContainerStyles}>
           <textarea
             ref={inputRef}
@@ -436,10 +491,10 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
             {isStreaming ? '⏸' : '➤'}
           </button>
         </div>
+        </div>
         )}
       </div>
       </Rnd>
-    </ImageUploadZone>
   );
 };
 
@@ -811,4 +866,35 @@ const messageImageStyles = css`
   border-radius: 4px;
   border: 1px solid rgba(139, 0, 0, 0.2);
   background: rgba(255, 255, 255, 0.5);
+`;
+
+// ============================================================================
+// Drag Overlay Styles
+// ============================================================================
+
+const dragOverlayStyles = css`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(44, 62, 80, 0.95);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  pointer-events: none;
+  border-radius: 0 0 6px 6px;
+`;
+
+const dragOverlayContentStyles = css`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #FFD700;
+  font-size: 20px;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 `;

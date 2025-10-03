@@ -11,6 +11,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Rnd } from 'react-rnd';
 import type { ElementChatSession, ChatMessage } from '@/types/elementChat';
 import type { ElementDescriptor } from '@/services/elementIdService';
+import type { Card } from '@/types/card';
 import { ImageUploadZone } from '@/shared/components/ImageUpload/ImageUploadZone';
 import { fileToBase64, getImageDimensions, isImageFile } from '@/utils/imageUpload';
 
@@ -25,6 +26,8 @@ export interface ElementChatWindowProps {
   onClose: () => void;
   /** Initial position (if creating new window) */
   initialPosition?: { x: number; y: number };
+  /** Selected text for text-contextual chat */
+  selectedText?: string;
 }
 
 /**
@@ -35,7 +38,8 @@ export const ElementChatWindow: React.FC<ElementChatWindowProps> = ({
   elementDescriptor,
   existingSession,
   onClose,
-  initialPosition
+  initialPosition,
+  selectedText
 }) => {
   // Load initial messages from existing session
   const [messages, setMessages] = useState<ChatMessage[]>(
@@ -181,7 +185,22 @@ export const ElementChatWindow: React.FC<ElementChatWindowProps> = ({
       const { chatWithPage } = await import('@/services/claudeAPIService');
 
       // Create system prompt with element context
-      const systemPrompt = `You are chatting about a specific element on a web page.
+      let systemPrompt: string;
+
+      if (selectedText) {
+        // Text-contextual chat mode
+        systemPrompt = `You are helping the user understand and discuss a specific text selection from a web page.
+
+Selected text:
+"${selectedText}"
+
+Page: ${window.location.href}
+Page title: ${document.title}
+
+Answer questions about this text, explain concepts, provide context, or help the user understand its meaning.`;
+      } else {
+        // Element-contextual chat mode
+        systemPrompt = `You are chatting about a specific element on a web page.
 
 Element: <${elementDescriptor.tagName}>${elementDescriptor.id ? ` id="${elementDescriptor.id}"` : ''}${elementDescriptor.classes.length > 0 ? ` class="${elementDescriptor.classes.join(' ')}"` : ''}
 Text content: ${elementDescriptor.textPreview}
@@ -190,6 +209,7 @@ Page: ${window.location.href}
 Page title: ${document.title}
 
 Answer questions about this element, its purpose, or how it works.`;
+      }
 
       let assistantContent = '';
       const stream = await chatWithPage(
@@ -336,6 +356,149 @@ Answer questions about this element, its purpose, or how it works.`;
     setCollapsed(!collapsed);
   };
 
+  /**
+   * Save conversation to Stash
+   */
+  const handleSaveToStash = async () => {
+    try {
+      console.log('[ElementChatWindow] Saving conversation to Stash...');
+
+      // Create card from conversation
+      const card = await createCardFromConversation(true);
+
+      console.log('[ElementChatWindow] Conversation saved to Stash successfully');
+
+      // Show success message (could use a toast notification here)
+      alert('💾 Conversation saved to Stash!');
+
+    } catch (error) {
+      console.error('[ElementChatWindow] Error saving to Stash:', error);
+      alert('❌ Failed to save conversation to Stash');
+    }
+  };
+
+  /**
+   * Save conversation to Canvas
+   */
+  const handleSaveToCanvas = async () => {
+    try {
+      console.log('[ElementChatWindow] Saving conversation to Canvas...');
+
+      // Create card from conversation
+      const card = await createCardFromConversation(false);
+
+      console.log('[ElementChatWindow] Conversation saved to Canvas successfully');
+
+      // Show success message
+      alert('🎨 Conversation saved to Canvas!');
+
+    } catch (error) {
+      console.error('[ElementChatWindow] Error saving to Canvas:', error);
+      alert('❌ Failed to save conversation to Canvas');
+    }
+  };
+
+  /**
+   * Creates a Card from the current conversation
+   */
+  const createCardFromConversation = async (stashed: boolean) => {
+    const { generateId } = await import('@/utils/storage');
+    const { upsertCard } = await import('@/shared/services/cardService');
+
+    // Build conversation HTML
+    let conversationHTML = '<div class="element-chat-conversation">';
+
+    // Add selected text banner if present
+    if (selectedText) {
+      conversationHTML += `
+        <div style="background: linear-gradient(135deg, rgba(123, 44, 191, 0.1), rgba(199, 125, 255, 0.15));
+                    padding: 12px;
+                    border-left: 4px solid #9D4EDD;
+                    margin-bottom: 16px;
+                    border-radius: 4px;">
+          <div style="font-weight: 600; color: #7B2CBF; font-size: 11px; text-transform: uppercase; margin-bottom: 8px;">
+            📝 Selected Text
+          </div>
+          <div style="font-style: italic; color: #333; line-height: 1.5;">
+            "${selectedText}"
+          </div>
+        </div>
+      `;
+    } else {
+      // Add element info
+      conversationHTML += `
+        <div style="background: rgba(123, 44, 191, 0.05);
+                    padding: 12px;
+                    border-left: 4px solid #7B2CBF;
+                    margin-bottom: 16px;
+                    border-radius: 4px;">
+          <div style="font-weight: 600; color: #7B2CBF; font-size: 11px; text-transform: uppercase; margin-bottom: 8px;">
+            💬 Element Context
+          </div>
+          <div style="font-family: monospace; font-size: 12px; margin-bottom: 4px;">
+            ${elementLabel}
+          </div>
+          <div style="color: #666; font-size: 12px;">
+            ${elementDescriptor.textPreview || 'No text content'}
+          </div>
+        </div>
+      `;
+    }
+
+    // Add messages
+    for (const message of messages) {
+      const isUser = message.role === 'user';
+      conversationHTML += `
+        <div style="margin-bottom: 16px;">
+          <div style="font-weight: 600;
+                      color: ${isUser ? '#7B2CBF' : '#9D4EDD'};
+                      font-size: 11px;
+                      text-transform: uppercase;
+                      margin-bottom: 6px;">
+            ${isUser ? 'You' : 'Assistant'}
+          </div>
+          <div style="background: ${isUser ? 'rgba(123, 44, 191, 0.08)' : 'rgba(157, 78, 221, 0.08)'};
+                      padding: 10px;
+                      border-radius: 6px;
+                      line-height: 1.5;
+                      color: #333;">
+            ${message.content}
+          </div>
+        </div>
+      `;
+    }
+
+    conversationHTML += '</div>';
+
+    // Create card
+    const card: Card = {
+      id: generateId(),
+      content: conversationHTML,
+      metadata: {
+        url: window.location.href,
+        title: selectedText
+          ? `Chat: "${selectedText.substring(0, 50)}${selectedText.length > 50 ? '...' : ''}"`
+          : `Element Chat: ${elementLabel}`,
+        domain: window.location.hostname,
+        favicon: '',
+        timestamp: Date.now(),
+        selector: elementDescriptor.id ? `#${elementDescriptor.id}` : elementDescriptor.tagName,
+        selectedText: selectedText
+      },
+      starred: false,
+      tags: ['element-chat'],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      cardType: 'note' as const,
+      stashed: stashed
+    };
+
+    // Save card
+    await upsertCard(card);
+
+    return card;
+  };
+
   // Element context info
   const elementLabel = `<${elementDescriptor.tagName}>${elementDescriptor.id ? `#${elementDescriptor.id}` : ''}`;
   const hasHistory = messages.length > 0;
@@ -379,6 +542,26 @@ Answer questions about this element, its purpose, or how it works.`;
             {hasHistory && <span css={messageCountStyles}>{messages.length}</span>}
           </div>
           <div css={headerActionsStyles}>
+            {hasHistory && (
+              <>
+                <button
+                  css={saveButtonStyles}
+                  onClick={handleSaveToStash}
+                  title="Save conversation to Stash"
+                  disabled={isStreaming}
+                >
+                  📥
+                </button>
+                <button
+                  css={saveButtonStyles}
+                  onClick={handleSaveToCanvas}
+                  title="Save conversation to Canvas"
+                  disabled={isStreaming}
+                >
+                  🎨
+                </button>
+              </>
+            )}
             <button
               css={headerButtonStyles}
               onClick={handleToggleCollapse}
@@ -398,22 +581,44 @@ Answer questions about this element, its purpose, or how it works.`;
           </div>
         </div>
 
+        {/* Selected Text Banner (for text-contextual chat) */}
+        {!collapsed && selectedText && (
+          <div css={selectedTextBannerStyles}>
+            <div css={selectedTextLabelStyles}>
+              <span css={selectedTextIconStyles}>📝</span>
+              <span>Selected Text</span>
+            </div>
+            <div css={selectedTextContentStyles}>
+              "{selectedText.length > 200 ? selectedText.substring(0, 200) + '...' : selectedText}"
+            </div>
+          </div>
+        )}
+
         {/* Messages */}
         {!collapsed && (
           <div css={messagesContainerStyles}>
             {messages.length === 0 && (
               <div css={emptyStateStyles}>
-                <div css={emptyIconStyles}>💬</div>
-                <div css={emptyTitleStyles}>Chat with this element</div>
+                <div css={emptyIconStyles}>{selectedText ? '📝' : '💬'}</div>
+                <div css={emptyTitleStyles}>
+                  {selectedText ? 'Discuss selected text' : 'Chat with this element'}
+                </div>
                 <div css={emptyDescStyles}>
-                  Ask questions about this element, its purpose, or how it works.
+                  {selectedText
+                    ? 'Ask questions about the selected text, get explanations, or explore its meaning.'
+                    : 'Ask questions about this element, its purpose, or how it works.'
+                  }
                 </div>
-                <div css={emptyHintStyles}>
-                  <strong>Element:</strong> {elementLabel}
-                </div>
-                <div css={emptyHintStyles} style={{ marginTop: '8px' }}>
-                  <strong>Text:</strong> {elementDescriptor.textPreview || 'No text content'}
-                </div>
+                {!selectedText && (
+                  <>
+                    <div css={emptyHintStyles}>
+                      <strong>Element:</strong> {elementLabel}
+                    </div>
+                    <div css={emptyHintStyles} style={{ marginTop: '8px' }}>
+                      <strong>Text:</strong> {elementDescriptor.textPreview || 'No text content'}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -625,6 +830,77 @@ const headerButtonStyles = css`
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+`;
+
+const saveButtonStyles = css`
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(224, 170, 255, 0.4);
+  border-radius: 3px;
+  padding: 3px 8px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.4);
+    border-color: rgba(224, 170, 255, 0.6);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const selectedTextBannerStyles = css`
+  background: linear-gradient(135deg, rgba(123, 44, 191, 0.05), rgba(199, 125, 255, 0.08));
+  border-bottom: 2px solid rgba(123, 44, 191, 0.2);
+  padding: 10px 12px;
+  flex-shrink: 0;
+`;
+
+const selectedTextLabelStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 11px;
+  color: #7B2CBF;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+`;
+
+const selectedTextIconStyles = css`
+  font-size: 14px;
+`;
+
+const selectedTextContentStyles = css`
+  font-size: 13px;
+  color: #333;
+  line-height: 1.5;
+  font-style: italic;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  border-left: 3px solid #9D4EDD;
+  border-radius: 4px;
+  max-height: 100px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(123, 44, 191, 0.3);
+    border-radius: 2px;
   }
 `;
 

@@ -11,6 +11,8 @@ import { useImageUpload } from '@/shared/hooks/useImageUpload';
 import { ImageUploadZone, FilePickerButton } from '@/shared/components/ImageUpload';
 import { useFontSize } from '@/shared/hooks/useFontSize';
 import { FontSizeSelector } from '@/components/FontSizeSelector';
+import { SidePanelChat } from './SidePanelChat';
+import { saveCard } from '@/utils/storage';
 
 export const SidePanel: React.FC = () => {
   // Use shared hooks
@@ -83,6 +85,34 @@ export const SidePanel: React.FC = () => {
     });
   };
 
+  // Handle save conversation to canvas
+  const handleSaveToCanvas = async (card: Card) => {
+    try {
+      await saveCard(card);
+      console.log('[SidePanel] Conversation saved to canvas:', card.id);
+      // Broadcast update event for canvas to refresh
+      window.dispatchEvent(new CustomEvent('nabokov:cards-updated'));
+      refreshCards();
+    } catch (error) {
+      console.error('[SidePanel] Error saving to canvas:', error);
+      throw error;
+    }
+  };
+
+  // Handle save conversation to stash
+  const handleSaveToStash = async (card: Card) => {
+    try {
+      await saveCard(card);
+      console.log('[SidePanel] Conversation saved to stash:', card.id);
+      // Broadcast stash update event
+      window.dispatchEvent(new CustomEvent('nabokov:stash-updated'));
+      refreshCards();
+    } catch (error) {
+      console.error('[SidePanel] Error saving to stash:', error);
+      throw error;
+    }
+  };
+
   // Filter cards by search query
   const filteredCards = stashedCards.filter((card) => {
     if (!searchQuery.trim()) return true;
@@ -146,6 +176,12 @@ export const SidePanel: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Chat Section */}
+        <SidePanelChat
+          onSaveToCanvas={handleSaveToCanvas}
+          onSaveToStash={handleSaveToStash}
+        />
 
         {/* Upload Button */}
         <div css={uploadSectionStyles}>

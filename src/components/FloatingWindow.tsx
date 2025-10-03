@@ -45,7 +45,8 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
   };
 
   // Handle send message
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = async () => {
+    const message = windowState.chatInput;
     console.log('[FloatingWindow] Sending message:', message);
     console.log('[FloatingWindow] Current messages before send:', windowState.conversationMessages);
 
@@ -339,6 +340,7 @@ export const FloatingWindow: React.FC<FloatingWindowProps> = ({
                 messages={windowState.conversationMessages}
                 currentInput={windowState.chatInput}
                 isStreaming={windowState.isStreaming}
+                streamingContent={streamingContent}
                 autoSaveOnClose={autoSaveOnClose}
                 onSendMessage={handleSendMessage}
                 onInputChange={handleInputChange}

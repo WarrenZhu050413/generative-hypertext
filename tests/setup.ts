@@ -280,6 +280,11 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 } as any;
 
+/**
+ * Mock scrollIntoView for auto-scroll tests
+ */
+Element.prototype.scrollIntoView = vi.fn();
+
 // ============================================================================
 // Test Lifecycle Hooks
 // ============================================================================

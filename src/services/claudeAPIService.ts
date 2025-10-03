@@ -88,9 +88,13 @@ export class ClaudeAPIService {
           console.log('[ClaudeAPI] ✓ Backend success (subscription auth)');
           return data.content;
         }
+      } else if (backendResponse.status === 501) {
+        // Backend doesn't support multimodal - fallback to direct API
+        const data = await backendResponse.json().catch(() => ({}));
+        console.log('[ClaudeAPI] Backend returned 501 (multimodal not supported), using direct API:', data.error);
+      } else {
+        console.log('[ClaudeAPI] Backend returned status', backendResponse.status, '- trying direct API...');
       }
-
-      console.log('[ClaudeAPI] Backend unavailable, trying direct API...');
     } catch (backendError) {
       console.log('[ClaudeAPI] Backend not running, trying direct API...');
     }
@@ -109,11 +113,24 @@ export class ClaudeAPIService {
       request.system = options.system;
     }
 
+    // Log multimodal message details
+    const hasMultimodal = messages.some(m => Array.isArray(m.content));
+    if (hasMultimodal) {
+      console.log('[ClaudeAPI] Multimodal message detected');
+      const multimodalMsg = messages.find(m => Array.isArray(m.content));
+      if (multimodalMsg && Array.isArray(multimodalMsg.content)) {
+        const imageBlocks = multimodalMsg.content.filter(b => b.type === 'image');
+        console.log('[ClaudeAPI] Image blocks:', imageBlocks.length);
+        console.log('[ClaudeAPI] Sample image block:', imageBlocks[0]);
+      }
+    }
+
     console.log('[ClaudeAPI] Trying direct API:', {
       model: request.model,
       messageCount: messages.length,
       hasSystem: !!request.system,
       hasAPIKey: !!apiKey,
+      hasMultimodal,
     });
 
     try {

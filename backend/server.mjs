@@ -61,8 +61,20 @@ app.post('/api/message', async (req, res) => {
       });
     }
 
-    // Build prompt from messages
-    // For simplicity, we'll concatenate the conversation
+    // Check if any message has multimodal content (array format)
+    const hasMultimodal = messages.some(m => Array.isArray(m.content));
+
+    if (hasMultimodal) {
+      console.log('[Backend] Multimodal message detected - using direct API');
+      // For multimodal messages, the Agent SDK query() doesn't support them yet
+      // Return a specific error so the frontend can fallback to direct API
+      return res.status(501).json({
+        error: 'Multimodal messages not supported by Agent SDK query()',
+        fallbackToDirect: true
+      });
+    }
+
+    // Build prompt from messages (text-only)
     const conversationText = messages
       .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
       .join('\n\n');
@@ -72,7 +84,7 @@ app.post('/api/message', async (req, res) => {
       ? `${systemPrompt}\n\n${conversationText}`
       : conversationText;
 
-    console.log('[Backend] Creating Agent SDK query...');
+    console.log('[Backend] Creating Agent SDK query (text-only)...');
 
     // Create Agent SDK query
     const agentQuery = query({

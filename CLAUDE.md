@@ -102,6 +102,7 @@ User presses Cmd+Shift+E
   - Key: `'nabokov_connections'` → `Connection[]` (card relationships/arrows)
   - Key: `'nabokov_claude_api_key'` → `string` (Claude API key for LLM features)
   - Key: `'nabokov_custom_buttons'` → `CustomButton[]` (user-defined action buttons)
+  - Key: `'nabokov_font_size'` → `FontSize` ('small' | 'medium' | 'large')
 
 ### Core Type: Card
 
@@ -165,6 +166,7 @@ src/shared/
     useFilters.ts        - Filtering state management with optional persistence
     useImageUpload.ts    - Image upload handling with validation
     useCardOperations.ts - Card operations (stash/restore/delete/update/duplicate)
+    useFontSize.ts       - Font size state management with cross-context sync
 
   components/
     FilterBar/           - Unified filtering UI (search, domains, tags, dates)
@@ -282,6 +284,24 @@ Mode indicators replaced the old checkbox approach with prominent banners at the
 - Types: `'loading'`, `'success'`, `'error'`, `'info'`
 - Auto-dismiss with configurable duration (0 = no auto-dismiss)
 - Used for API calls, card generation, beautification feedback
+
+**FontSizeSelector** (`src/components/FontSizeSelector.tsx`)
+
+- UI component for adjusting card text size
+- Three size options: Small (A⁻), Medium (A), Large (A⁺)
+- **Font Size Values**:
+  - Small: 11-12px (content, headings, code)
+  - Medium: 13-14px (default)
+  - Large: 15-16px
+- **Integration**: Used in both Canvas Toolbar and Side Panel header
+- **State Management**: Uses `useFontSize` hook for cross-context synchronization
+- **Storage**: User preference persists in `chrome.storage.local` under `'nabokov_font_size'`
+- **Cross-Context Sync**: Changes in Canvas or Side Panel sync in real-time via `chrome.storage.onChanged`
+- **Implementation Details**:
+  - CardNode: Dynamic styles via function wrapper accepting `fontSizeValues`
+  - SidePanel: Emotion CSS with function wrappers for dynamic font sizes
+  - All text elements (titles, content, markdown, code) adjust proportionally
+- **Service Layer**: `fontSizeService.ts` provides get/set/getFontSizeValues functions
 
 **Card Generation System**
 
@@ -687,6 +707,7 @@ npm run type-check
 - cardService.ts ✅ 24 tests
 - filterService.ts ✅ 37 tests
 - imageService.ts ✅ 21 tests
+- fontSizeService.ts ✅ 18 tests
 
 **Shared Hooks**: 80%+ coverage (target)
 - useCards.ts
@@ -701,7 +722,7 @@ npm run type-check
 
 ### E2E Test Organization
 
-**Comprehensive Test Coverage** (206 total tests across 15 files):
+**Comprehensive Test Coverage** (215 total tests across 16 files):
 
 **Core Feature Tests** (130 new tests):
 ```
@@ -756,12 +777,13 @@ tests/e2e/
     └── Button management (edit, delete, reorder)
 ```
 
-**Existing Feature Tests** (76 tests):
+**Existing Feature Tests** (85 tests):
 ```
 tests/e2e/
 ├── element-capture.spec.ts       # 15 tests - Element selector and capture
 ├── image-upload.spec.ts          # 5 tests  - Drag-drop image upload
 ├── phase-1-2-refinements.spec.ts # 19 tests - FilePickerButton, sync, etc.
+├── font-size-controls.spec.ts    # 9 tests  - Font size selector and text size adjustments
 ├── keyboard-shortcuts.spec.ts    # 8 tests  - Keyboard shortcuts (Cmd+Shift+E, Ctrl+Shift+E, Ctrl+Shift+C)
 ├── context-input.spec.ts         # 8 tests  - Context input modal
 ├── floating-windows.spec.ts      # 7 tests  - Floating chat windows
@@ -865,6 +887,7 @@ npm run test:e2e:headed tests/e2e/stash-operations.spec.ts      # Stash system
 npm run test:e2e:headed tests/e2e/filtering.spec.ts             # Search/filters
 npm run test:e2e:headed tests/e2e/beautification.spec.ts        # AI enhancement
 npm run test:e2e:headed tests/e2e/custom-buttons.spec.ts        # Action buttons
+npm run test:e2e:headed tests/e2e/font-size-controls.spec.ts    # Font size controls
 
 # Watch mode for development
 npm run test:watch
@@ -923,6 +946,15 @@ npm run test:watch
 - **Connections**: Auto-create connections with configured type
 - **Default Buttons**: Test Learn More, Summarize, Critique, ELI5, Expand
 - **Management**: Edit, delete, reorder buttons
+
+**font-size-controls.spec.ts** (9 tests):
+- **Canvas Selector**: Display in toolbar, three size buttons (A⁻ A A⁺), default medium
+- **Side Panel Selector**: Display in header, sync with Canvas settings
+- **Active State**: Visual indicators for selected size, state changes on click
+- **Font Size Application**: Verify font size changes in card content (small < medium < large)
+- **Persistence**: Font size selection persists across page reloads
+- **Cross-Context Sync**: Changes in Canvas reflect in Side Panel and vice versa
+- **Accessibility**: Tooltips on buttons, keyboard accessible (focus + Enter)
 
 ### Known Testing Limitations
 

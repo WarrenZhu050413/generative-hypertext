@@ -897,6 +897,102 @@ function closeElementChatWindow(elementId: string): void {
 }
 
 /**
+ * Opens a text-contextual chat window for selected text
+ */
+async function openTextContextChat(selectedText: string, selection: Selection | null): Promise<void> {
+  try {
+    console.log('[content] Opening text-contextual chat for:', selectedText.substring(0, 50) + '...');
+
+    // Import services
+    const { generateElementDescriptor } = await import('@/services/elementIdService');
+
+    // Get the anchor element for positioning
+    const anchorElement = selection?.anchorNode?.parentElement || document.body;
+
+    // Generate a unique chat ID for this text selection
+    const textHash = selectedText.split('').reduce((acc, char) => {
+      return ((acc << 5) - acc) + char.charCodeAt(0);
+    }, 0);
+    const elementId = `text-selection-${Math.abs(textHash).toString(36)}-${Date.now()}`;
+
+    // Check if window already open for this selection
+    if (elementChatWindows.has(elementId)) {
+      console.log('[content] Chat window already open for this text selection');
+      return;
+    }
+
+    // Create synthetic element descriptor for text selection
+    const elementDescriptor = generateElementDescriptor(anchorElement);
+    // Override with text-specific data
+    elementDescriptor.tagName = 'text-selection';
+    elementDescriptor.textPreview = selectedText;
+
+    // Create container for chat window
+    const container = document.createElement('div');
+    container.id = `nabokov-element-chat-${elementId}`;
+    container.setAttribute('data-nabokov-element-chat', elementId);
+    container.setAttribute('data-text-selection', 'true');
+
+    container.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2147483645;
+      pointer-events: none;
+    `;
+
+    document.body.appendChild(container);
+
+    // Create shadow root
+    const { shadowRoot, styleCache } = createShadowRoot(container, {
+      injectBaseStyles: true,
+    });
+
+    // Calculate initial position near the selection
+    const range = selection?.getRangeAt(0);
+    const selectionRect = range?.getBoundingClientRect() || anchorElement.getBoundingClientRect();
+    const initialPosition = {
+      x: Math.min(selectionRect.right + 20, window.innerWidth - 450),
+      y: Math.max(20, selectionRect.top)
+    };
+
+    // Handle close
+    const handleClose = () => {
+      console.log('[content] Text-contextual chat window closed:', elementId);
+      closeElementChatWindow(elementId);
+    };
+
+    // Mount ElementChatWindow with selectedText prop
+    const cleanup = mountReactInShadow(
+      shadowRoot,
+      <ElementChatWindow
+        elementId={elementId}
+        elementDescriptor={elementDescriptor}
+        existingSession={null}
+        onClose={handleClose}
+        initialPosition={initialPosition}
+        selectedText={selectedText}
+      />,
+      { styleCache }
+    );
+
+    // Track window
+    elementChatWindows.set(elementId, {
+      elementId,
+      containerElement: container,
+      cleanup
+    });
+
+    console.log('[content] Text-contextual chat window opened successfully:', elementId);
+
+  } catch (error) {
+    console.error('[content] Error opening text-contextual chat window:', error);
+  }
+}
+
+/**
  * Closes all element chat windows
  */
 function closeAllElementChatWindows(): void {
