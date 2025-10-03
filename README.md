@@ -199,9 +199,7 @@ Comprehensive documentation is available in the `docs/` directory:
 
 ## 🎓 Research Citation
 
-This project is inspired by research on LLM-powered visual canvas for web content organization:
-
-> Zhu, F. W., Agrawala, M., & Mysore, G. J. (2024). Nabokov: Organize Web Content with LLM-Powered Visual Canvas. UIST '24 Companion, Article 42, 1-3. https://doi.org/10.1145/3698061.3726916
+This project is inspired by [Nabokov's Cards](https://dl.acm.org/doi/abs/10.1145/3698061.3726916). I kindly thank the authors for their correspondence. 
 
 ## 📄 License
 
