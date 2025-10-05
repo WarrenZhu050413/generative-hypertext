@@ -1,12 +1,15 @@
 /** @jsxImportSource @emotion/react */
 import { css } from '@emotion/react';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { Rnd } from 'react-rnd';
+import type { DraggableData } from 'react-rnd';
 import type { PageContext } from '@/services/pageContextCapture';
 import type { ElementContext } from '@/services/elementContextCapture';
 import { formatPageContextAsPrompt, capturePageContext } from '@/services/pageContextCapture';
 import { formatElementContextAsPrompt } from '@/services/elementContextCapture';
 import { fileToBase64, getImageDimensions, isImageFile } from '@/utils/imageUpload';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -23,6 +26,7 @@ export interface InlineChatWindowProps {
   initialContext: PageContext | ElementContext;
   elementPosition?: { x: number; y: number }; // For positioning near element
   onSaveToCanvas?: (messages: Message[]) => Promise<void>;
+  anchorElements?: HTMLElement[];
 }
 
 /**
@@ -40,8 +44,16 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
   onClose,
   initialContext,
   elementPosition,
-  onSaveToCanvas
+  onSaveToCanvas,
+  anchorElements = []
 }) => {
+  const defaultPosition = elementPosition
+    ? {
+        x: Math.min(elementPosition.x + 20, window.innerWidth - 450),
+        y: Math.max(20, Math.min(elementPosition.y - 100, window.innerHeight - 600))
+      }
+    : { x: window.innerWidth - 450, y: 50 };
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -54,8 +66,19 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
     height: number;
   }>>([]);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [windowPosition, setWindowPosition] = useState(defaultPosition);
+  const [anchorOffset, setAnchorOffset] = useState<{ x: number; y: number } | null>(null);
+  const [activeAnchorIndex, setActiveAnchorIndex] = useState(0);
+  const [anchorElementMissing, setAnchorElementMissing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const positionRef = useRef(windowPosition);
+  const anchorOffsetRef = useRef<{ x: number; y: number } | null>(null);
+  const anchorElementsRef = useRef<HTMLElement[]>(anchorElements);
+  const anchorElementRef = useRef<HTMLElement | null>(anchorElements[0] ?? null);
+  const activeAnchorIndexRef = useRef(0);
+  const isDraggingWindowRef = useRef(false);
+  const animationFrameRef = useRef<number | null>(null);
 
   // Determine context type
   const isElement = isElementContext(initialContext);
@@ -84,6 +107,155 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  useEffect(() => {
+    positionRef.current = windowPosition;
+  }, [windowPosition]);
+
+  useEffect(() => {
+    anchorOffsetRef.current = anchorOffset;
+  }, [anchorOffset]);
+
+  useEffect(() => {
+    anchorElementsRef.current = anchorElements;
+    if (anchorElements.length > 0) {
+      anchorElementRef.current = anchorElements[activeAnchorIndexRef.current] ?? anchorElements[0];
+    }
+  }, [anchorElements]);
+
+  useEffect(() => {
+    activeAnchorIndexRef.current = activeAnchorIndex;
+  }, [activeAnchorIndex]);
+
+  const ensureAnchorPosition = useCallback(() => {
+    if (anchorElementsRef.current.length === 0) {
+      anchorElementRef.current = null;
+      if (anchorElementMissing) {
+        setAnchorElementMissing(false);
+      }
+      return;
+    }
+
+    const anchors = anchorElementsRef.current.filter(
+      (element): element is HTMLElement => element instanceof HTMLElement && document.body.contains(element)
+    );
+
+    if (anchors.length === 0) {
+      anchorElementRef.current = null;
+      if (!anchorElementMissing) {
+        setAnchorElementMissing(true);
+      }
+      return;
+    }
+
+    if (anchorElementMissing) {
+      setAnchorElementMissing(false);
+    }
+
+    let index = activeAnchorIndexRef.current;
+    let element = anchors[index];
+
+    if (!element) {
+      index = 0;
+      element = anchors[0];
+    }
+
+    if (!element) {
+      return;
+    }
+
+    if (anchorElementRef.current !== element) {
+      anchorElementRef.current = element;
+      if (activeAnchorIndexRef.current !== index) {
+        setActiveAnchorIndex(index);
+        activeAnchorIndexRef.current = index;
+      }
+    }
+
+    const rect = element.getBoundingClientRect();
+
+    if (!anchorOffsetRef.current) {
+      const offset = {
+        x: positionRef.current.x - rect.left,
+        y: positionRef.current.y - rect.top
+      };
+      setAnchorOffset(offset);
+      anchorOffsetRef.current = offset;
+    }
+
+    if (anchorOffsetRef.current && !isDraggingWindowRef.current) {
+      const nextPosition = {
+        x: rect.left + anchorOffsetRef.current.x,
+        y: rect.top + anchorOffsetRef.current.y
+      };
+
+      if (
+        Math.abs(nextPosition.x - positionRef.current.x) > 0.5 ||
+        Math.abs(nextPosition.y - positionRef.current.y) > 0.5
+      ) {
+        setWindowPosition(nextPosition);
+      }
+    }
+  }, [anchorElementMissing]);
+
+  useLayoutEffect(() => {
+    if (anchorElementsRef.current.length === 0) {
+      return;
+    }
+
+    ensureAnchorPosition();
+
+    const handleUpdate = () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      animationFrameRef.current = requestAnimationFrame(() => {
+        ensureAnchorPosition();
+      });
+    };
+
+    window.addEventListener('scroll', handleUpdate, true);
+    window.addEventListener('resize', handleUpdate);
+
+    const mutationObserver = new MutationObserver(handleUpdate);
+    mutationObserver.observe(document.body, {
+      attributes: true,
+      childList: true,
+      subtree: true
+    });
+
+    return () => {
+      window.removeEventListener('scroll', handleUpdate, true);
+      window.removeEventListener('resize', handleUpdate);
+      mutationObserver.disconnect();
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
+  }, [ensureAnchorPosition]);
+
+  useEffect(() => {
+    if (anchorElementsRef.current.length > 0) {
+      ensureAnchorPosition();
+    }
+  }, [ensureAnchorPosition]);
+
+  const renderMarkdown = useCallback(
+    (content: string) => (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ node, ...props }) => (
+            <a {...props} target="_blank" rel="noreferrer" />
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    ),
+    []
+  );
 
   const handleImageDrop = async (file: File) => {
     try {
@@ -269,54 +441,106 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
     }
   };
 
-  // Calculate initial position
-  const defaultPosition = elementPosition
-    ? {
-        // Position near element, but ensure it fits on screen
-        x: Math.min(elementPosition.x + 20, window.innerWidth - 450),
-        y: Math.max(20, Math.min(elementPosition.y - 100, window.innerHeight - 600))
-      }
-    : { x: window.innerWidth - 450, y: 50 };
+  const handleDragStart = () => {
+    isDraggingWindowRef.current = true;
+  };
+
+  const handleDragStop = (_event: unknown, data: DraggableData) => {
+    isDraggingWindowRef.current = false;
+    setWindowPosition({ x: data.x, y: data.y });
+
+    if (anchorElementRef.current) {
+      const rect = anchorElementRef.current.getBoundingClientRect();
+      const offset = {
+        x: data.x - rect.left,
+        y: data.y - rect.top,
+      };
+      setAnchorOffset(offset);
+      anchorOffsetRef.current = offset;
+    } else {
+      setAnchorOffset(null);
+      anchorOffsetRef.current = null;
+    }
+  };
+
+  const handleResizeStart = () => {
+    isDraggingWindowRef.current = true;
+  };
+
+  const handleResizeStop = (
+    _event: unknown,
+    _direction: unknown,
+    ref: HTMLElement,
+    _delta: { width: number; height: number },
+    position: { x: number; y: number }
+  ) => {
+    isDraggingWindowRef.current = false;
+    setWindowSize({
+      width: parseInt(ref.style.width, 10),
+      height: parseInt(ref.style.height, 10),
+    });
+    setWindowPosition(position);
+
+    if (anchorElementRef.current) {
+      const rect = anchorElementRef.current.getBoundingClientRect();
+      const offset = {
+        x: position.x - rect.left,
+        y: position.y - rect.top,
+      };
+      setAnchorOffset(offset);
+      anchorOffsetRef.current = offset;
+    }
+  };
+
+  const headerOnlyHeight = 52;
+
+  const primaryContextLabel = isElement
+    ? `<${initialContext.element.tagName}>${initialContext.element.id ? `#${initialContext.element.id}` : ''}`
+    : initialContext.title;
+
+  const secondaryContextLabel = isElement && initialContext.element.classes.length > 0
+    ? `.${initialContext.element.classes.slice(0, 2).join('.')}${initialContext.element.classes.length > 2 ? '…' : ''}`
+    : '';
 
   return (
-      <Rnd
-        default={{
-          x: defaultPosition.x,
-          y: defaultPosition.y,
-          width: windowSize.width,
-          height: windowSize.height
-        }}
-        size={{
-          width: windowSize.width,
-          height: collapsed ? 40 : windowSize.height
-        }}
-        onResizeStop={(_e, _dir, ref, _delta, position) => {
-          setWindowSize({
-            width: parseInt(ref.style.width),
-            height: parseInt(ref.style.height)
-          });
-        }}
-        minWidth={300}
-        minHeight={200}
-        bounds="parent"
-        dragHandleClassName="drag-handle"
-        enableResizing={!collapsed && {
-          bottom: true,
-          bottomRight: true,
-          bottomLeft: true,
-          right: true,
-          left: true,
-          top: false,
-          topRight: false,
-          topLeft: false
-        }}
-      >
+    <Rnd
+      position={windowPosition}
+      size={{
+        width: windowSize.width,
+        height: collapsed ? headerOnlyHeight : windowSize.height
+      }}
+      onDragStart={handleDragStart}
+      onDragStop={handleDragStop}
+      onResizeStart={handleResizeStart}
+      onResizeStop={handleResizeStop}
+      minWidth={320}
+      minHeight={220}
+      bounds="window"
+      dragHandleClassName="drag-handle"
+      enableResizing={!collapsed && {
+        bottom: true,
+        bottomRight: true,
+        bottomLeft: true,
+        right: true,
+        left: true,
+        top: false,
+        topRight: false,
+        topLeft: false
+      }}
+    >
       <div css={containerStyles(collapsed, windowSize.width, windowSize.height)}>
-        {/* Header */}
         <div css={headerStyles} className="drag-handle">
           <div css={headerTitleStyles}>
             <span css={iconStyles}>{isElement ? '🎯' : '💬'}</span>
-            <span>{isElement ? 'Chat with Element' : 'Chat with Page'}</span>
+            <div css={headerTextGroupStyles}>
+              <span css={headerPrimaryTextStyles}>{isElement ? 'Element Chat' : 'Page Chat'}</span>
+              <span css={headerContextStyles}>
+                {primaryContextLabel}
+                {secondaryContextLabel && (
+                  <span css={headerContextSecondaryStyles}>{secondaryContextLabel}</span>
+                )}
+              </span>
+            </div>
           </div>
           <div css={headerActionsStyles}>
             <button
@@ -339,7 +563,7 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
             <button
               css={headerButtonStyles}
               onClick={() => setCollapsed(!collapsed)}
-              title={collapsed ? "Expand" : "Collapse to header"}
+              title={collapsed ? 'Expand' : 'Collapse to header'}
             >
               {collapsed ? '▼' : '▲'}
             </button>
@@ -352,149 +576,135 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
             </button>
           </div>
         </div>
-
-        {/* Content Area - File Drop Zone */}
         {!collapsed && (
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column' }}
-        >
-          {/* Drag Overlay */}
-          {isDraggingFile && (
-            <div css={dragOverlayStyles}>
-              <div css={dragOverlayContentStyles}>
-                <div style={{ fontSize: 48 }}>📁</div>
-                <div>Drop image to upload</div>
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            css={contentWrapperStyles}
+          >
+            {anchorElementMissing && (
+              <div css={anchorWarningStyles}>
+                📍 Element moved off-screen. Drag the window to reposition.
               </div>
-            </div>
-          )}
-
-          {/* Messages */}
-        <div css={messagesContainerStyles}>
-          {messages.length === 0 && (
-            <div css={emptyStateStyles}>
-              <div css={emptyIconStyles}>{isElement ? '🎯' : '💬'}</div>
-              <div css={emptyTitleStyles}>
-                {isElement ? 'Chat about this element' : 'Chat with this page'}
-              </div>
-              <div css={emptyDescStyles}>
-                {isElement
-                  ? 'Ask questions about this element, its purpose, or how it works.'
-                  : 'Ask questions, request summaries, or discuss the content on this page.'}
-              </div>
-              <div css={emptyHintStyles}>
-                <strong>{isElement ? 'Element' : 'Page'}:</strong> {contextTitle}
-              </div>
-              {isElement && initialContext.element.text && (
-                <div css={emptyHintStyles} style={{ marginTop: '8px' }}>
-                  <strong>Text:</strong> {initialContext.element.text.substring(0, 100)}
-                  {initialContext.element.text.length > 100 ? '...' : ''}
+            )}
+            {isDraggingFile && (
+              <div css={dragOverlayStyles}>
+                <div css={dragOverlayContentStyles}>
+                  <div style={{ fontSize: 48 }}>📁</div>
+                  <div>Drop image to upload</div>
                 </div>
-              )}
-            </div>
-          )}
-
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              css={messageStyles(message.role)}
-            >
-              <div css={messageRoleStyles}>
-                {message.role === 'user' ? 'You' : 'Assistant'}
               </div>
-
-              {/* Display attached images */}
-              {message.images && message.images.length > 0 && (
-                <div css={messageImagesStyles}>
-                  {message.images.map((img, idx) => (
-                    <img
-                      key={idx}
-                      src={img.dataURL}
-                      css={messageImageStyles}
-                      alt={`Attached image ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
-
-              <div css={messageContentStyles}>
-                {message.content}
-              </div>
-            </div>
-          ))}
-
-          {/* Streaming message */}
-          {isStreaming && streamingContent && (
-            <div css={messageStyles('assistant')}>
-              <div css={messageRoleStyles}>Assistant</div>
-              <div css={messageContentStyles}>
-                {streamingContent}
-                <span css={cursorStyles}>▊</span>
-              </div>
-            </div>
-          )}
-
-          {/* Loading indicator */}
-          {isStreaming && !streamingContent && (
-            <div css={messageStyles('assistant')}>
-              <div css={messageRoleStyles}>Assistant</div>
-              <div css={loadingDotsStyles}>
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Pending Images Preview */}
-        {pendingImages.length > 0 && (
-          <div css={imagePreviewContainerStyles}>
-            {pendingImages.map((img, idx) => (
-              <div key={idx} css={imagePreviewStyles}>
-                <img src={img.dataURL} css={thumbnailStyles} alt={`Pending image ${idx + 1}`} />
-                <button
-                  onClick={() => setPendingImages(prev =>
-                    prev.filter((_, i) => i !== idx)
+            )}
+            <div css={messagesContainerStyles}>
+              {messages.length === 0 ? (
+                <div css={emptyStateStyles}>
+                  <div css={emptyIconStyles}>{isElement ? '🎯' : '💬'}</div>
+                  <div css={emptyTitleStyles}>
+                    {isElement ? 'Chat about this element' : 'Chat with this page'}
+                  </div>
+                  <div css={emptyDescStyles}>
+                    {isElement
+                      ? 'Ask questions about this element, its purpose, or how it works.'
+                      : 'Ask questions, request summaries, or discuss the content on this page.'}
+                  </div>
+                  <div css={emptyHintStyles}>
+                    <strong>{isElement ? 'Element' : 'Page'}:</strong> {contextTitle}
+                  </div>
+                  {isElement && initialContext.element.text && (
+                    <div css={emptyHintStyles} style={{ marginTop: '8px' }}>
+                      <strong>Text:</strong>{' '}
+                      {initialContext.element.text.substring(0, 120)}
+                      {initialContext.element.text.length > 120 ? '…' : ''}
+                    </div>
                   )}
-                  css={removeImageButtonStyles}
-                  title="Remove image"
-                >
-                  ✕
-                </button>
+                </div>
+              ) : (
+                messages.map((message, index) => (
+                  <div key={index} css={messageStyles(message.role)}>
+                    <div css={messageRoleStyles}>
+                      {message.role === 'user' ? 'You' : 'Assistant'}
+                    </div>
+                    {message.images && message.images.length > 0 && (
+                      <div css={messageImagesStyles}>
+                        {message.images.map((img, idx) => (
+                          <img
+                            key={idx}
+                            src={img.dataURL}
+                            css={messageImageStyles}
+                            alt={`Attached image ${idx + 1}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <div css={messageContentStyles}>
+                      {renderMarkdown(message.content)}
+                    </div>
+                  </div>
+                ))
+              )}
+              {isStreaming && streamingContent && (
+                <div css={messageStyles('assistant')}>
+                  <div css={messageRoleStyles}>Assistant</div>
+                  <div css={messageContentStyles}>
+                    {renderMarkdown(streamingContent)}
+                    <span css={cursorStyles}>▊</span>
+                  </div>
+                </div>
+              )}
+              {isStreaming && !streamingContent && (
+                <div css={messageStyles('assistant')}>
+                  <div css={messageRoleStyles}>Assistant</div>
+                  <div css={loadingDotsStyles}>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            {pendingImages.length > 0 && (
+              <div css={imagePreviewContainerStyles}>
+                {pendingImages.map((img, idx) => (
+                  <div key={idx} css={imagePreviewStyles}>
+                    <img src={img.dataURL} css={thumbnailStyles} alt={`Pending image ${idx + 1}`} />
+                    <button
+                      onClick={() =>
+                        setPendingImages(prev => prev.filter((_, i) => i !== idx))
+                      }
+                      css={removeImageButtonStyles}
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+            <div css={inputContainerStyles}>
+              <textarea
+                ref={inputRef}
+                css={textareaStyles}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                placeholder={isElement ? 'Ask about this element…' : 'Ask about this page…'}
+                disabled={isStreaming}
+                rows={2}
+              />
+              <button
+                css={sendButtonStyles}
+                onClick={handleSendMessage}
+                disabled={isStreaming || (!inputValue.trim() && pendingImages.length === 0)}
+              >
+                {isStreaming ? '⏸' : '➤'}
+              </button>
+            </div>
           </div>
         )}
-
-        {/* Input */}
-        <div css={inputContainerStyles}>
-          <textarea
-            ref={inputRef}
-            css={textareaStyles}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleInputKeyDown}
-            placeholder="Ask about this page..."
-            disabled={isStreaming}
-            rows={2}
-          />
-          <button
-            css={sendButtonStyles}
-            onClick={handleSendMessage}
-            disabled={!inputValue.trim() || isStreaming}
-          >
-            {isStreaming ? '⏸' : '➤'}
-          </button>
-        </div>
-        </div>
-        )}
       </div>
-      </Rnd>
+    </Rnd>
   );
 };
 
@@ -505,23 +715,22 @@ export const InlineChatWindow: React.FC<InlineChatWindowProps> = ({
 const containerStyles = (collapsed: boolean, width: number, height: number) => css`
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 215, 0, 0.02));
-  border: 2px solid #8B0000;
-  border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  background: #fdf8f6;
+  border: 1px solid rgba(178, 60, 60, 0.55);
+  border-radius: 12px;
+  box-shadow: 0 18px 38px rgba(170, 34, 34, 0.16);
   display: flex;
   flex-direction: column;
-  z-index: 999999;
-  pointer-events: auto; /* Override parent's pointer-events: none */
+  pointer-events: auto;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  transition: height 0.3s ease;
+  transition: height 0.25s ease;
+  overflow: hidden;
 `;
 
 const headerStyles = css`
-  background: linear-gradient(135deg, #8B0000, #CD5C5C);
-  color: white;
-  padding: 10px 12px;
-  border-radius: 6px 6px 0 0;
+  background: linear-gradient(135deg, #b23232, #a32020);
+  color: #fff8f6;
+  padding: 12px 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -531,63 +740,113 @@ const headerStyles = css`
 `;
 
 const headerTitleStyles = css`
-  font-weight: 600;
-  font-size: 14px;
   display: flex;
   align-items: center;
+  gap: 10px;
+`;
+
+const headerTextGroupStyles = css`
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+`;
+
+const headerPrimaryTextStyles = css`
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.15px;
+`;
+
+const headerContextStyles = css`
+  font-size: 11px;
+  color: rgba(255, 240, 240, 0.85);
+  display: flex;
+  align-items: baseline;
   gap: 6px;
 `;
 
+const headerContextSecondaryStyles = css`
+  font-size: 10px;
+  color: rgba(255, 240, 240, 0.65);
+`;
+
 const iconStyles = css`
-  font-size: 16px;
+  font-size: 18px;
 `;
 
 const headerActionsStyles = css`
   display: flex;
-  gap: 4px;
+  gap: 8px;
 `;
 
 const headerButtonStyles = css`
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  border-radius: 3px;
-  padding: 3px 8px;
-  color: white;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 230, 230, 0.35);
+  border-radius: 6px;
+  padding: 4px 10px;
+  color: #fff6f4;
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(255, 215, 0, 0.5);
+    background: rgba(255, 255, 255, 0.26);
+    border-color: rgba(255, 255, 255, 0.45);
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.55;
     cursor: not-allowed;
   }
+`;
+
+const contentWrapperStyles = css`
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: #f7efed;
+`;
+
+const anchorWarningStyles = css`
+  background: rgba(198, 70, 70, 0.12);
+  border: 1px solid rgba(198, 70, 70, 0.38);
+  color: #9b2e2e;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 `;
 
 const messagesContainerStyles = css`
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
-  background: white;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid rgba(177, 60, 60, 0.2);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 
   &::-webkit-scrollbar {
     width: 6px;
   }
 
   &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(177, 60, 60, 0.08);
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(139, 0, 0, 0.3);
+    background: rgba(177, 60, 60, 0.35);
     border-radius: 3px;
 
     &:hover {
-      background: rgba(139, 0, 0, 0.5);
+      background: rgba(177, 60, 60, 0.48);
     }
   }
 `;
@@ -599,35 +858,35 @@ const emptyStateStyles = css`
   justify-content: center;
   height: 100%;
   text-align: center;
-  padding: 20px;
-  color: #666;
+  padding: 24px;
+  color: #7a4d4d;
 `;
 
 const emptyIconStyles = css`
   font-size: 48px;
-  margin-bottom: 12px;
-  opacity: 0.7;
+  margin-bottom: 14px;
+  opacity: 0.75;
 `;
 
 const emptyTitleStyles = css`
   font-size: 18px;
   font-weight: 600;
-  color: #8B0000;
+  color: #a32020;
   margin-bottom: 8px;
 `;
 
 const emptyDescStyles = css`
   font-size: 13px;
-  line-height: 1.5;
-  margin-bottom: 12px;
+  line-height: 1.6;
+  margin-bottom: 14px;
 `;
 
 const emptyHintStyles = css`
   font-size: 12px;
-  color: #999;
+  color: #8a5b5b;
   padding: 8px 12px;
-  background: rgba(139, 0, 0, 0.05);
-  border-radius: 4px;
+  background: rgba(177, 60, 60, 0.08);
+  border-radius: 8px;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -635,53 +894,74 @@ const emptyHintStyles = css`
 `;
 
 const messageStyles = (role: 'user' | 'assistant') => css`
-  margin: 8px 0;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 13px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
   line-height: 1.5;
-  animation: slideIn 0.2s ease-out;
-
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  ${role === 'user' ? css`
-    background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
-    border-left: 3px solid #8B0000;
-    margin-left: 20px;
-  ` : css`
-    background: rgba(0, 0, 0, 0.03);
-    border-left: 3px solid #FFD700;
-    margin-right: 20px;
-  `}
+  border: 1px solid ${role === 'user' ? 'rgba(177, 50, 50, 0.35)' : 'rgba(161, 44, 44, 0.22)'};
+  background: ${role === 'user'
+    ? 'linear-gradient(135deg, rgba(177, 50, 50, 0.12), rgba(177, 50, 50, 0.04))'
+    : 'rgba(161, 44, 44, 0.06)'};
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-self: ${role === 'user' ? 'flex-end' : 'flex-start'};
+  max-width: 100%;
+  width: fit-content;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 `;
 
 const messageRoleStyles = css`
   font-weight: 600;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #8B0000;
-  margin-bottom: 4px;
+  letter-spacing: 0.45px;
+  color: #a12323;
 `;
 
 const messageContentStyles = css`
-  color: #333;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  color: #2c1f1f;
+  word-break: break-word;
+
+  p {
+    margin: 0 0 8px 0;
+  }
+
+  ul,
+  ol {
+    margin: 0 0 8px 20px;
+    padding: 0;
+  }
+
+  li {
+    margin-bottom: 4px;
+  }
+
+  code {
+    background: rgba(161, 44, 44, 0.12);
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 12px;
+  }
+
+  pre {
+    background: rgba(177, 50, 50, 0.08);
+    padding: 10px;
+    border-radius: 8px;
+    overflow-x: auto;
+    border: 1px solid rgba(177, 50, 50, 0.18);
+  }
+
+  a {
+    color: #a32020;
+    text-decoration: underline;
+  }
 `;
 
 const cursorStyles = css`
   animation: blink 1s infinite;
-  color: #8B0000;
+  color: #b23232;
 
   @keyframes blink {
     0%, 50% { opacity: 1; }
@@ -697,7 +977,7 @@ const loadingDotsStyles = css`
   span {
     width: 6px;
     height: 6px;
-    background: #8B0000;
+    background: #b13232;
     border-radius: 50%;
     animation: bounce 1.4s infinite ease-in-out both;
 
@@ -721,52 +1001,57 @@ const loadingDotsStyles = css`
 `;
 
 const inputContainerStyles = css`
-  border-top: 1px solid rgba(139, 0, 0, 0.2);
-  padding: 10px;
   display: flex;
-  gap: 8px;
-  background: rgba(245, 245, 220, 0.3);
+  gap: 10px;
+  background: #f1f1f1;
+  border: 1px solid rgba(177, 60, 60, 0.18);
+  border-radius: 10px;
+  padding: 10px 12px;
   flex-shrink: 0;
 `;
 
 const textareaStyles = css`
   flex: 1;
-  border: 1px solid rgba(139, 0, 0, 0.2);
-  border-radius: 4px;
-  padding: 8px 10px;
+  border: 1px solid rgba(150, 70, 70, 0.35);
+  border-radius: 8px;
+  padding: 8px 12px;
   font-size: 13px;
   font-family: inherit;
   resize: none;
-  line-height: 1.4;
+  line-height: 1.45;
+  background: #f7f6f5;
+  color: #2c1f1f;
 
   &:focus {
     outline: none;
-    border-color: #8B0000;
-    box-shadow: 0 0 0 2px rgba(139, 0, 0, 0.1);
+    border-color: #b23232;
+    box-shadow: 0 0 0 2px rgba(178, 50, 50, 0.15);
   }
 
   &:disabled {
     background: rgba(0, 0, 0, 0.05);
     cursor: not-allowed;
+    color: rgba(0, 0, 0, 0.35);
   }
 `;
 
 const sendButtonStyles = css`
-  background: linear-gradient(135deg, #8B0000, #CD5C5C);
-  color: white;
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  border-radius: 4px;
-  padding: 8px 16px;
+  background: linear-gradient(135deg, #b23232, #a32020);
+  color: #fff8f6;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
-    border-color: #FFD700;
+    box-shadow: 0 4px 12px rgba(178, 50, 50, 0.32);
   }
 
   &:active:not(:disabled) {
@@ -774,7 +1059,7 @@ const sendButtonStyles = css`
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.55;
     cursor: not-allowed;
   }
 `;
@@ -785,10 +1070,11 @@ const sendButtonStyles = css`
 
 const imagePreviewContainerStyles = css`
   display: flex;
-  gap: 8px;
+  gap: 10px;
   padding: 8px;
-  background: rgba(255, 215, 0, 0.05);
-  border-top: 1px solid rgba(139, 0, 0, 0.1);
+  background: rgba(177, 60, 60, 0.08);
+  border: 1px solid rgba(177, 60, 60, 0.18);
+  border-radius: 10px;
   flex-wrap: wrap;
   max-height: 120px;
   overflow-y: auto;
@@ -800,15 +1086,15 @@ const imagePreviewContainerStyles = css`
   }
 
   &::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.05);
+    background: rgba(177, 60, 60, 0.08);
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(139, 0, 0, 0.3);
+    background: rgba(177, 60, 60, 0.35);
     border-radius: 2px;
 
     &:hover {
-      background: rgba(139, 0, 0, 0.5);
+      background: rgba(177, 60, 60, 0.48);
     }
   }
 `;
@@ -818,14 +1104,15 @@ const imagePreviewStyles = css`
   width: 80px;
   height: 80px;
   flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(177, 60, 60, 0.25);
 `;
 
 const thumbnailStyles = css`
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 4px;
-  border: 2px solid rgba(139, 0, 0, 0.2);
 `;
 
 const removeImageButtonStyles = css`
@@ -835,7 +1122,7 @@ const removeImageButtonStyles = css`
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #8B0000;
+  background: #b23232;
   color: white;
   border: none;
   cursor: pointer;
@@ -844,11 +1131,12 @@ const removeImageButtonStyles = css`
   align-items: center;
   justify-content: center;
   padding: 0;
+  box-shadow: 0 4px 8px rgba(178, 50, 50, 0.2);
   transition: all 0.2s ease;
 
   &:hover {
-    background: #CD5C5C;
-    transform: scale(1.1);
+    background: #c74646;
+    transform: scale(1.08);
   }
 `;
 
@@ -863,9 +1151,10 @@ const messageImageStyles = css`
   max-width: 200px;
   max-height: 200px;
   object-fit: contain;
-  border-radius: 4px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
-  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(177, 60, 60, 0.25);
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(177, 60, 60, 0.15);
 `;
 
 // ============================================================================
@@ -874,18 +1163,15 @@ const messageImageStyles = css`
 
 const dragOverlayStyles = css`
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(44, 62, 80, 0.95);
+  inset: 0;
+  background: rgba(177, 50, 50, 0.88);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 999;
   pointer-events: none;
-  border-radius: 0 0 6px 6px;
+  border-radius: 10px;
 `;
 
 const dragOverlayContentStyles = css`
@@ -893,8 +1179,8 @@ const dragOverlayContentStyles = css`
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  color: #FFD700;
+  color: #fff6f4;
   font-size: 20px;
   font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 2px 8px rgba(120, 16, 16, 0.4);
 `;

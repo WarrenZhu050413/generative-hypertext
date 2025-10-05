@@ -24,6 +24,7 @@ import { capturePageContext } from '../services/pageContextCapture';
 import { captureElementContext } from '../services/elementContextCapture';
 import { Card } from '../types';
 import { saveCard, generateId } from '../utils/storage';
+import type { ElementDescriptor } from '@/services/elementIdService';
 
 // ============================================================================
 // State Management
@@ -619,6 +620,7 @@ function openElementChat(): void {
         initialContext={elementContext}
         elementPosition={lastRightClickPosition}
         onSaveToCanvas={handleSaveToCanvas}
+        anchorElements={[lastRightClickedElement]}
       />,
       { styleCache }
     );
@@ -678,18 +680,23 @@ function activateChatSelector(): void {
     });
 
     // Handle element selection for chat
-    const handleChatSelect = async (element: HTMLElement, existingChatId: string | null) => {
-      console.log('[content] Element selected for chat:', {
-        element,
-        existingChatId,
-        hasExisting: existingChatId !== null
+    const handleChatSelect = async (payload: {
+      elements: HTMLElement[];
+      descriptors: ElementDescriptor[];
+      chatId: string;
+      existingChatIds: Array<string | null>;
+    }) => {
+      console.log('[content] Elements selected for chat:', {
+        chatId: payload.chatId,
+        elementCount: payload.elements.length,
+        existingChatIds: payload.existingChatIds.filter(id => id !== null),
       });
 
       // Close the selector
       deactivateChatSelector();
 
-      // Open chat window for this element
-      await openElementChatWindow(element, existingChatId);
+      // Open chat window for these elements
+      await openElementChatWindow(payload.elements, payload.descriptors, payload.chatId);
     };
 
     // Handle selector close
@@ -768,40 +775,70 @@ function deactivateChatSelector(): void {
  * Opens an element chat window
  */
 async function openElementChatWindow(
-  element: HTMLElement,
-  existingChatId: string | null
+  elements: HTMLElement[],
+  descriptors: ElementDescriptor[],
+  chatId: string
 ): Promise<void> {
   try {
-    // Import services
-    const { assignElementChatId, generateElementDescriptor, getElementChatId } =
-      await import('@/services/elementIdService');
-    const { loadElementChat } = await import('@/services/elementChatService');
-
-    // Assign chat ID if needed
-    const elementId = existingChatId || assignElementChatId(element);
-
-    // Check if window already open for this element
-    if (elementChatWindows.has(elementId)) {
-      console.log('[content] Chat window already open for element:', elementId);
+    if (!elements || elements.length === 0) {
+      console.warn('[content] No elements provided for chat window');
       return;
     }
 
-    // Get element descriptor
-    const elementDescriptor = generateElementDescriptor(element);
+    const uniqueElements = Array.from(new Set(elements));
+
+    const { setElementChatId, generateElementDescriptor } = await import('@/services/elementIdService');
+    const { loadElementChat } = await import('@/services/elementChatService');
+
+    // Ensure all elements share the chat ID attribute
+    uniqueElements.forEach(el => setElementChatId(el, chatId));
+
+    let descriptorList = descriptors;
+    if (!descriptorList || descriptorList.length === 0) {
+      descriptorList = uniqueElements.map(el => generateElementDescriptor(el));
+    }
+
+    const primaryDescriptor = descriptorList[0];
+    const primaryElement = uniqueElements[0];
+
+    if (!primaryDescriptor || !primaryElement) {
+      console.error('[content] Unable to resolve primary descriptor/element for chat window');
+      return;
+    }
+
+    // Avoid opening duplicate windows
+    if (elementChatWindows.has(chatId)) {
+      console.log('[content] Chat window already open for chatId:', chatId);
+      return;
+    }
 
     // Load existing session if available
-    const existingSession = await loadElementChat(elementId, window.location.href);
+    const existingSession = await loadElementChat(chatId, window.location.href);
 
-    console.log('[content] Opening chat window for element:', {
-      elementId,
+    // Merge descriptors with any stored in session
+    let mergedDescriptors = descriptorList;
+    if (existingSession?.elementDescriptors && existingSession.elementDescriptors.length > 0) {
+      const descriptorMap = new Map<string, ElementDescriptor>();
+      existingSession.elementDescriptors.forEach(descriptor => {
+        descriptorMap.set(descriptor.chatId, descriptor);
+      });
+      descriptorList.forEach(descriptor => {
+        descriptorMap.set(descriptor.chatId, descriptor);
+      });
+      mergedDescriptors = Array.from(descriptorMap.values());
+    }
+
+    console.log('[content] Opening chat window:', {
+      chatId,
+      anchorCount: mergedDescriptors.length,
       hasExistingSession: existingSession !== null,
       messageCount: existingSession?.messages.length || 0
     });
 
     // Create container for chat window
     const container = document.createElement('div');
-    container.id = `nabokov-element-chat-${elementId}`;
-    container.setAttribute('data-nabokov-element-chat', elementId);
+    container.id = `nabokov-element-chat-${chatId}`;
+    container.setAttribute('data-nabokov-element-chat', chatId);
 
     container.style.cssText = `
       position: fixed;
@@ -820,8 +857,8 @@ async function openElementChatWindow(
       injectBaseStyles: true,
     });
 
-    // Calculate initial position
-    const rect = element.getBoundingClientRect();
+    // Calculate initial position near the primary element
+    const rect = primaryElement.getBoundingClientRect();
     const initialPosition = {
       x: Math.min(rect.right + 20, window.innerWidth - 450),
       y: Math.max(20, rect.top)
@@ -829,16 +866,16 @@ async function openElementChatWindow(
 
     // Handle close
     const handleClose = () => {
-      console.log('[content] Element chat window closed:', elementId);
-      closeElementChatWindow(elementId);
+      console.log('[content] Element chat window closed:', chatId);
+      closeElementChatWindow(chatId);
     };
 
     // Mount ElementChatWindow
     const cleanup = mountReactInShadow(
       shadowRoot,
       <ElementChatWindow
-        elementId={elementId}
-        elementDescriptor={elementDescriptor}
+        elementId={chatId}
+        elementDescriptors={mergedDescriptors}
         existingSession={existingSession}
         onClose={handleClose}
         initialPosition={initialPosition}
@@ -847,13 +884,13 @@ async function openElementChatWindow(
     );
 
     // Track window
-    elementChatWindows.set(elementId, {
-      elementId,
+    elementChatWindows.set(chatId, {
+      elementId: chatId,
       containerElement: container,
       cleanup
     });
 
-    console.log('[content] Element chat window opened successfully:', elementId);
+    console.log('[content] Element chat window opened successfully:', chatId);
 
   } catch (error) {
     console.error('[content] Error opening element chat window:', error);
@@ -969,7 +1006,7 @@ async function openTextContextChat(selectedText: string, selection: Selection | 
       shadowRoot,
       <ElementChatWindow
         elementId={elementId}
-        elementDescriptor={elementDescriptor}
+        elementDescriptors={[elementDescriptor]}
         existingSession={null}
         onClose={handleClose}
         initialPosition={initialPosition}

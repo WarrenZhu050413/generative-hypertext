@@ -49,6 +49,12 @@ export const test = base.extend<ExtensionFixtures>({
   context: async ({}, use) => {
     const extensionPath = getExtensionPath();
 
+    const defaultViewport = { width: 1280, height: 720 };
+    const scaledViewport = {
+      width: Math.floor(defaultViewport.width * 0.3),
+      height: Math.floor(defaultViewport.height * 0.3),
+    };
+
     const context = await chromium.launchPersistentContext('', {
       headless: false, // Extensions require headed mode
       args: [
@@ -57,7 +63,7 @@ export const test = base.extend<ExtensionFixtures>({
         '--no-sandbox',
         '--disable-setuid-sandbox',
       ],
-      viewport: { width: 1280, height: 720 },
+      viewport: scaledViewport,
     });
 
     // Wait for extension to initialize before running tests
@@ -213,9 +219,27 @@ export async function sendExtensionMessage(
  */
 export async function getExtensionStorage(
   context: BrowserContext,
-  extensionId: string,
-  keys?: string | string[] | null
+  extensionIdOrKeys?: string | string[] | null,
+  maybeKeys?: string | string[] | null
 ): Promise<any> {
+  let extensionId: string;
+  let keys: string | string[] | null | undefined;
+
+  if (maybeKeys !== undefined) {
+    extensionId = extensionIdOrKeys as string;
+    keys = maybeKeys ?? null;
+  } else if (Array.isArray(extensionIdOrKeys) || extensionIdOrKeys === null) {
+    extensionId = await getExtensionId(context);
+    keys = extensionIdOrKeys ?? null;
+  } else if (typeof extensionIdOrKeys === 'string') {
+    // Ambiguous string: assume caller omitted extensionId and provided a key
+    extensionId = await getExtensionId(context);
+    keys = extensionIdOrKeys;
+  } else {
+    extensionId = await getExtensionId(context);
+    keys = null;
+  }
+
   const page = await context.newPage();
 
   // Navigate to extension page to get chrome API access
@@ -241,9 +265,23 @@ export async function getExtensionStorage(
  */
 export async function setExtensionStorage(
   context: BrowserContext,
-  extensionId: string,
-  items: Record<string, any>
+  extensionIdOrItems: string | Record<string, any>,
+  maybeItems?: Record<string, any>
 ): Promise<void> {
+  let extensionId: string;
+  let items: Record<string, any>;
+
+  if (typeof extensionIdOrItems === 'string') {
+    extensionId = extensionIdOrItems;
+    if (!maybeItems) {
+      throw new Error('setExtensionStorage: items payload is required when extensionId is provided explicitly.');
+    }
+    items = maybeItems;
+  } else {
+    items = extensionIdOrItems;
+    extensionId = await getExtensionId(context);
+  }
+
   const page = await context.newPage();
 
   // Navigate to extension page to get chrome API access
@@ -268,12 +306,13 @@ export async function setExtensionStorage(
  */
 export async function clearExtensionStorage(
   context: BrowserContext,
-  extensionId: string
+  extensionIdOrUndefined?: string
 ): Promise<void> {
+  const resolvedExtensionId = extensionIdOrUndefined ?? await getExtensionId(context);
   const page = await context.newPage();
 
   // Navigate to extension page to get chrome API access
-  await page.goto(`chrome-extension://${extensionId}/src/canvas/index.html`);
+  await page.goto(`chrome-extension://${resolvedExtensionId}/src/canvas/index.html`);
 
   await page.evaluate(
     async () => {

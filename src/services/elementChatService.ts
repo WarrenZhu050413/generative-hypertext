@@ -13,6 +13,36 @@ import type {
 } from '@/types/elementChat';
 import type { ElementDescriptor } from './elementIdService';
 
+function normalizeSession(session: ElementChatSession): ElementChatSession {
+  if (!session.elementDescriptors || session.elementDescriptors.length === 0) {
+    session.elementDescriptors = [session.elementDescriptor];
+  }
+
+  if (!session.elementIds || session.elementIds.length === 0) {
+    session.elementIds = session.elementDescriptors.map(descriptor => descriptor.chatId);
+  }
+
+  // Ensure primary descriptor is first element in descriptors array
+  if (session.elementDescriptors[0].chatId !== session.elementDescriptor.chatId) {
+    const primaryIndex = session.elementDescriptors.findIndex(
+      descriptor => descriptor.chatId === session.elementDescriptor.chatId
+    );
+
+    if (primaryIndex >= 0) {
+      const [primary] = session.elementDescriptors.splice(primaryIndex, 1);
+      session.elementDescriptors.unshift(primary);
+    } else {
+      session.elementDescriptors.unshift(session.elementDescriptor);
+    }
+  }
+
+  if (!session.elementIds.includes(session.elementDescriptor.chatId)) {
+    session.elementIds.unshift(session.elementDescriptor.chatId);
+  }
+
+  return session;
+}
+
 /**
  * Generate a unique chat session ID
  */
@@ -101,7 +131,7 @@ export async function loadElementChat(
 
   if (session) {
     console.log(`[elementChatService] Loaded chat for element ${elementId} with ${session.messages.length} messages`);
-    return session;
+    return normalizeSession(session);
   }
 
   console.log(`[elementChatService] No existing chat for element ${elementId}`);
@@ -113,6 +143,7 @@ export async function loadElementChat(
  */
 export async function saveElementChat(session: ElementChatSession): Promise<void> {
   session.lastActive = Date.now();
+  normalizeSession(session);
 
   const storage = await loadElementChatsForPage(session.pageUrl);
   storage.sessions[session.elementId] = session;
@@ -129,13 +160,16 @@ export function createElementChatSession(
   elementId: string,
   pageUrl: string,
   elementDescriptor: ElementDescriptor,
-  initialWindowState?: ChatWindowState
+  initialWindowState?: ChatWindowState,
+  allDescriptors: ElementDescriptor[] = [elementDescriptor]
 ): ElementChatSession {
   const session: ElementChatSession = {
     chatId: generateChatId(),
     elementId,
     pageUrl,
     elementDescriptor,
+    elementDescriptors: allDescriptors,
+    elementIds: allDescriptors.map(descriptor => descriptor.chatId),
     messages: [],
     windowState: initialWindowState,
     createdAt: Date.now(),
@@ -143,7 +177,7 @@ export function createElementChatSession(
   };
 
   console.log(`[elementChatService] Created new chat session for element ${elementId}`);
-  return session;
+  return normalizeSession(session);
 }
 
 /**
@@ -186,6 +220,20 @@ export async function updateChatWindowState(
 }
 
 /**
+ * Clear all messages from a chat session while preserving window state
+ */
+export async function clearElementChatHistory(
+  session: ElementChatSession
+): Promise<ElementChatSession> {
+  session.messages = [];
+  session.lastActive = Date.now();
+
+  await saveElementChat(session);
+  console.log(`[elementChatService] Cleared history for chat ${session.chatId}`);
+  return session;
+}
+
+/**
  * Delete an element chat session
  */
 export async function deleteElementChat(elementId: string, pageUrl: string): Promise<void> {
@@ -203,7 +251,7 @@ export async function deleteElementChat(elementId: string, pageUrl: string): Pro
  */
 export async function getAllElementChats(pageUrl: string): Promise<ElementChatSession[]> {
   const storage = await loadElementChatsForPage(pageUrl);
-  return Object.values(storage.sessions);
+  return Object.values(storage.sessions).map(normalizeSession);
 }
 
 /**

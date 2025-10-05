@@ -151,6 +151,35 @@ export function assignElementChatId(element: HTMLElement): string {
 }
 
 /**
+ * Explicitly set a chat ID on an element (used for multi-element groups)
+ */
+export function setElementChatId(element: HTMLElement, chatId: string): void {
+  element.setAttribute('data-nabokov-chat-id', chatId);
+  console.log('[elementIdService] Bound existing chat ID to element:', {
+    chatId,
+    tag: element.tagName.toLowerCase(),
+  });
+}
+
+/**
+ * Assign the same chat ID to a group of elements and return the ID.
+ */
+export function assignGroupChatId(elements: HTMLElement[]): string {
+  if (elements.length === 0) {
+    throw new Error('[elementIdService] Cannot assign group chat ID to empty element list');
+  }
+
+  const primary = elements[0];
+  const chatId = assignElementChatId(primary);
+
+  for (let i = 1; i < elements.length; i++) {
+    setElementChatId(elements[i], chatId);
+  }
+
+  return chatId;
+}
+
+/**
  * Find element by chat ID
  * Returns null if element not found
  */

@@ -7,19 +7,24 @@
  */
 
 import { css } from '@emotion/react';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { Rnd } from 'react-rnd';
 import type { ElementChatSession, ChatMessage } from '@/types/elementChat';
 import type { ElementDescriptor } from '@/services/elementIdService';
 import type { Card } from '@/types/card';
 import { ImageUploadZone } from '@/shared/components/ImageUpload/ImageUploadZone';
 import { fileToBase64, getImageDimensions, isImageFile } from '@/utils/imageUpload';
+import { findElementByDescriptor } from '@/services/elementIdService';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export interface ElementChatWindowProps {
   /** Element's chat ID */
   elementId: string;
-  /** Element descriptor for positioning and context */
-  elementDescriptor: ElementDescriptor;
+  /** Element descriptors for positioning and context */
+  elementDescriptors?: ElementDescriptor[];
+  /** Primary element descriptor (fallback for legacy calls) */
+  elementDescriptor?: ElementDescriptor;
   /** Existing chat session (if reopening) */
   existingSession?: ElementChatSession | null;
   /** Callback when window is closed */
@@ -30,17 +35,68 @@ export interface ElementChatWindowProps {
   selectedText?: string;
 }
 
+type PendingImage = {
+  dataURL: string;
+  width: number;
+  height: number;
+};
+
+interface QueuedMessage {
+  id: string;
+  content: string;
+  images?: PendingImage[];
+  createdAt: number;
+}
+
 /**
  * ElementChatWindow Component
  */
 export const ElementChatWindow: React.FC<ElementChatWindowProps> = ({
   elementId,
+  elementDescriptors,
   elementDescriptor,
   existingSession,
   onClose,
   initialPosition,
   selectedText
 }) => {
+  const descriptorCandidates = useMemo(() => {
+    if (existingSession?.elementDescriptors && existingSession.elementDescriptors.length > 0) {
+      return existingSession.elementDescriptors;
+    }
+    if (elementDescriptors && elementDescriptors.length > 0) {
+      return elementDescriptors;
+    }
+    if (existingSession?.elementDescriptor) {
+      return [existingSession.elementDescriptor];
+    }
+    if (elementDescriptor) {
+      return [elementDescriptor];
+    }
+    return [] as ElementDescriptor[];
+  }, [existingSession, elementDescriptors, elementDescriptor]);
+
+  const primaryDescriptor = descriptorCandidates[0];
+
+  if (!primaryDescriptor) {
+    console.error('[ElementChatWindow] Missing element descriptor for chat window');
+    return null;
+  }
+
+  const descriptorList = useMemo(() => {
+    if (descriptorCandidates.length === 0) {
+      return [primaryDescriptor];
+    }
+    return descriptorCandidates;
+  }, [descriptorCandidates, primaryDescriptor]);
+
+  const descriptorMap = useMemo(() => {
+    const map = new Map<string, ElementDescriptor>();
+    descriptorList.forEach(descriptor => {
+      map.set(descriptor.chatId, descriptor);
+    });
+    return map;
+  }, [descriptorList]);
   // Load initial messages from existing session
   const [messages, setMessages] = useState<ChatMessage[]>(
     existingSession?.messages || []
@@ -57,26 +113,240 @@ export const ElementChatWindow: React.FC<ElementChatWindowProps> = ({
   const [position, setPosition] = useState(
     existingSession?.windowState?.position || initialPosition || { x: 100, y: 100 }
   );
+  const [anchorOffset, setAnchorOffset] = useState<{ x: number; y: number } | null>(
+    existingSession?.windowState?.anchorOffset || null
+  );
+  const [queueExpanded, setQueueExpanded] = useState(
+    existingSession?.windowState?.queueExpanded ?? false
+  );
+  const [clearPreviousAssistant, setClearPreviousAssistant] = useState(
+    existingSession?.windowState?.clearPreviousAssistant ?? false
+  );
+  const [activeAnchorChatId, setActiveAnchorChatId] = useState(
+    existingSession?.windowState?.activeAnchorChatId ?? primaryDescriptor.chatId
+  );
 
   // Message queue for queueing messages sent during streaming
-  const [messageQueue, setMessageQueue] = useState<string[]>([]);
+  const [messageQueue, setMessageQueue] = useState<QueuedMessage[]>([]);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+  const [activeQueuedId, setActiveQueuedId] = useState<string | null>(null);
+  const [anchorElementMissing, setAnchorElementMissing] = useState(false);
 
   // Image upload support
-  const [pendingImages, setPendingImages] = useState<Array<{
-    dataURL: string;
-    width: number;
-    height: number;
-  }>>([]);
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionRef = useRef<ElementChatSession | null>(existingSession || null);
+  const isMountedRef = useRef(true);
+  const anchorElementRef = useRef<HTMLElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const messagesRef = useRef<ChatMessage[]>(messages);
+  const positionRef = useRef(position);
+  const windowSizeRef = useRef(windowSize);
+  const collapsedRef = useRef(collapsed);
+  const anchorOffsetRef = useRef<{ x: number; y: number } | null>(anchorOffset);
+  const queueExpandedRef = useRef(queueExpanded);
+  const clearPreviousAssistantRef = useRef(clearPreviousAssistant);
+  const messageQueueRef = useRef<QueuedMessage[]>(messageQueue);
+  const isProcessingQueueRef = useRef(isProcessingQueue);
+  const isDraggingRef = useRef(false);
+  const processQueueRef = useRef<(() => void) | null>(null);
+  const activeAnchorChatIdRef = useRef(activeAnchorChatId);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingContent]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    positionRef.current = position;
+  }, [position]);
+
+  useEffect(() => {
+    windowSizeRef.current = windowSize;
+  }, [windowSize]);
+
+  useEffect(() => {
+    collapsedRef.current = collapsed;
+  }, [collapsed]);
+
+  useEffect(() => {
+    anchorOffsetRef.current = anchorOffset;
+  }, [anchorOffset]);
+
+  useEffect(() => {
+    queueExpandedRef.current = queueExpanded;
+  }, [queueExpanded]);
+
+  useEffect(() => {
+    clearPreviousAssistantRef.current = clearPreviousAssistant;
+  }, [clearPreviousAssistant]);
+
+  useEffect(() => {
+    messageQueueRef.current = messageQueue;
+  }, [messageQueue]);
+
+  useEffect(() => {
+    isProcessingQueueRef.current = isProcessingQueue;
+  }, [isProcessingQueue]);
+
+  const renderMarkdown = useCallback(
+    (content: string) => (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ node, ...props }) => (
+            <a {...props} target="_blank" rel="noreferrer" />
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    ),
+    []
+  );
+
+  useEffect(() => {
+    activeAnchorChatIdRef.current = activeAnchorChatId;
+  }, [activeAnchorChatId]);
+
+  const ensureAnchorPosition = useCallback(() => {
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    const priorityDescriptors: ElementDescriptor[] = [];
+    if (activeAnchorChatIdRef.current) {
+      const preferred = descriptorMap.get(activeAnchorChatIdRef.current);
+      if (preferred) {
+        priorityDescriptors.push(preferred);
+      }
+    }
+
+    descriptorList.forEach(descriptor => {
+      if (!priorityDescriptors.includes(descriptor)) {
+        priorityDescriptors.push(descriptor);
+      }
+    });
+
+    let resolvedDescriptor: ElementDescriptor | null = null;
+    let element: HTMLElement | null = null;
+
+    for (const descriptor of priorityDescriptors) {
+      if (!descriptor) {
+        continue;
+      }
+      const candidate = findElementByDescriptor(descriptor);
+      if (candidate) {
+        resolvedDescriptor = descriptor;
+        element = candidate;
+        break;
+      }
+    }
+
+    if (!element) {
+      anchorElementRef.current = null;
+      if (!anchorElementMissing) {
+        setAnchorElementMissing(true);
+      }
+      return;
+    }
+
+    anchorElementRef.current = element;
+
+    if (anchorElementMissing) {
+      setAnchorElementMissing(false);
+    }
+
+    if (resolvedDescriptor && resolvedDescriptor.chatId !== activeAnchorChatIdRef.current) {
+      setActiveAnchorChatId(resolvedDescriptor.chatId);
+    }
+
+    const rect = element.getBoundingClientRect();
+
+    if (!anchorOffsetRef.current) {
+      const inferredOffset = {
+        x: positionRef.current.x - rect.left,
+        y: positionRef.current.y - rect.top
+      };
+      setAnchorOffset(inferredOffset);
+      anchorOffsetRef.current = inferredOffset;
+    }
+
+    if (anchorOffsetRef.current && !isDraggingRef.current) {
+      const nextPosition = {
+        x: rect.left + anchorOffsetRef.current.x,
+        y: rect.top + anchorOffsetRef.current.y
+      };
+
+      if (
+        Math.abs(nextPosition.x - positionRef.current.x) > 0.5 ||
+        Math.abs(nextPosition.y - positionRef.current.y) > 0.5
+      ) {
+        setPosition(nextPosition);
+      }
+    }
+  }, [anchorElementMissing, descriptorList, descriptorMap]);
+
+  useLayoutEffect(() => {
+    ensureAnchorPosition();
+
+    const handleUpdate = () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      animationFrameRef.current = requestAnimationFrame(() => {
+        ensureAnchorPosition();
+      });
+    };
+
+    window.addEventListener('scroll', handleUpdate, true);
+    window.addEventListener('resize', handleUpdate);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && anchorElementRef.current) {
+      resizeObserver = new ResizeObserver(handleUpdate);
+      resizeObserver.observe(anchorElementRef.current);
+    }
+
+    const mutationObserver = new MutationObserver(handleUpdate);
+    mutationObserver.observe(document.body, {
+      attributes: true,
+      childList: true,
+      subtree: true
+    });
+
+    return () => {
+      window.removeEventListener('scroll', handleUpdate, true);
+      window.removeEventListener('resize', handleUpdate);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      mutationObserver.disconnect();
+    };
+  }, [ensureAnchorPosition]);
+
+  useEffect(() => {
+    ensureAnchorPosition();
+  }, [anchorOffset, ensureAnchorPosition]);
 
   // Focus input on mount
   useEffect(() => {
@@ -86,197 +356,249 @@ export const ElementChatWindow: React.FC<ElementChatWindowProps> = ({
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isStreaming) {
+      if (e.key === 'Escape') {
         onClose();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, isStreaming]);
+  }, [onClose]);
 
   /**
    * Save chat session (debounced)
    */
-  const saveSession = async (updatedMessages?: ChatMessage[]) => {
-    // Clear existing timeout
+  const saveSession = useCallback((updatedMessages?: ChatMessage[]) => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    // Debounce save by 500ms
     saveTimeoutRef.current = setTimeout(async () => {
       try {
         const { saveElementChat, createElementChatSession } = await import('@/services/elementChatService');
-        const { updateChatWindowState } = await import('@/services/elementChatService');
 
-        // Get or create session
-        let session = existingSession;
+        let session = sessionRef.current;
         if (!session) {
           session = createElementChatSession(
             elementId,
             window.location.href,
-            elementDescriptor,
+            primaryDescriptor,
             {
-              position,
-              size: windowSize,
-              collapsed
-            }
+              position: positionRef.current,
+              size: windowSizeRef.current,
+              collapsed: collapsedRef.current,
+              anchorOffset: anchorOffsetRef.current || undefined,
+              queueExpanded: queueExpandedRef.current,
+              clearPreviousAssistant: clearPreviousAssistantRef.current,
+              activeAnchorChatId: activeAnchorChatIdRef.current
+            },
+            descriptorList
           );
+          sessionRef.current = session;
         }
 
-        // Update session
-        session.messages = updatedMessages || messages;
+        session.messages = updatedMessages || messagesRef.current;
         session.windowState = {
-          position,
-          size: windowSize,
-          collapsed
+          position: positionRef.current,
+          size: windowSizeRef.current,
+          collapsed: collapsedRef.current,
+          anchorOffset: anchorOffsetRef.current || undefined,
+          queueExpanded: queueExpandedRef.current,
+          clearPreviousAssistant: clearPreviousAssistantRef.current,
+          activeAnchorChatId: activeAnchorChatIdRef.current
         };
 
-        // Save to storage
         await saveElementChat(session);
         console.log('[ElementChatWindow] Session saved:', elementId);
       } catch (error) {
         console.error('[ElementChatWindow] Failed to save session:', error);
       }
     }, 500);
-  };
+  }, [primaryDescriptor, descriptorList, elementId]);
 
   // Save when messages, position, size, or collapsed state changes
   useEffect(() => {
-    if (messages.length > 0 || collapsed !== (existingSession?.windowState?.collapsed || false)) {
+    if (messages.length > 0 || sessionRef.current) {
       saveSession();
     }
-  }, [messages, position, windowSize, collapsed]);
+  }, [messages, position, windowSize, collapsed, anchorOffset, queueExpanded, clearPreviousAssistant, saveSession]);
 
-  const sendMessageToAPI = async (userMessage: string, images: Array<{ dataURL: string; width: number; height: number }> = []) => {
-    const currentMessages = messages;
+  const sendMessageToAPI = useCallback(
+    async (userMessage: string, images: PendingImage[] = []) => {
+      const trimmedMessage = userMessage.trim();
+      const contentForStorage = trimmedMessage || (images.length > 0 ? '(Image attached)' : '');
 
-    try {
-      // Add user message to chat
-      const { addMessageToChat } = await import('@/services/elementChatService');
-      let session = existingSession;
-      if (!session) {
-        const { createElementChatSession } = await import('@/services/elementChatService');
-        session = createElementChatSession(
-          elementId,
-          window.location.href,
-          elementDescriptor
+      try {
+        const { addMessageToChat, createElementChatSession } = await import('@/services/elementChatService');
+
+        let session = sessionRef.current;
+        if (!session) {
+          session = createElementChatSession(
+            elementId,
+            window.location.href,
+            primaryDescriptor,
+            {
+              position: positionRef.current,
+              size: windowSizeRef.current,
+              collapsed: collapsedRef.current,
+              anchorOffset: anchorOffsetRef.current || undefined,
+              queueExpanded: queueExpandedRef.current,
+              clearPreviousAssistant: clearPreviousAssistantRef.current,
+              activeAnchorChatId: activeAnchorChatIdRef.current
+            },
+            descriptorList
+          );
+          sessionRef.current = session;
+        }
+
+        await addMessageToChat(session, 'user', contentForStorage);
+
+        const newMessage: ChatMessage = {
+          id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          role: 'user',
+          content: contentForStorage,
+          timestamp: Date.now(),
+          images: images.length > 0 ? images : undefined
+        };
+
+        const newMessages: ChatMessage[] = [...messagesRef.current, newMessage];
+        setMessages(newMessages);
+        messagesRef.current = newMessages;
+        setIsStreaming(true);
+
+        const { chatWithPage } = await import('@/services/claudeAPIService');
+
+        let systemPrompt: string;
+
+        if (selectedText) {
+          systemPrompt = `You are helping the user understand and discuss a specific text selection from a web page.\n\nSelected text:\n"${selectedText}"\n\nPage: ${window.location.href}\nPage title: ${document.title}\n\nAnswer questions about this text, explain concepts, provide context, or help the user understand its meaning.`;
+        } else {
+          systemPrompt = `You are chatting about page elements.\n\nPrimary element: <${primaryDescriptor.tagName}>${primaryDescriptor.id ? ` id="${primaryDescriptor.id}"` : ''}${primaryDescriptor.classes.length > 0 ? ` class="${primaryDescriptor.classes.join(' ')}"` : ''}\nText content: ${primaryDescriptor.textPreview}\nAttached elements (${descriptorList.length} total): ${descriptorList
+            .map(descriptor => `<${descriptor.tagName}>${descriptor.id ? `#${descriptor.id}` : ''}`)
+            .join(', ')}\n\nPage: ${window.location.href}\nPage title: ${document.title}\n\nAnswer questions about these elements, their purpose, or how they work.`;
+        }
+
+        let assistantContent = '';
+        const stream = await chatWithPage(
+          systemPrompt,
+          [...newMessages].map(m => ({
+            role: m.role,
+            content: m.content,
+            images: m.images
+          }))
         );
-      }
 
-      // Add user message
-      await addMessageToChat(session, 'user', userMessage);
+        for await (const chunk of stream) {
+          assistantContent += chunk;
+          if (!isMountedRef.current) {
+            return;
+          }
+          setStreamingContent(assistantContent);
+        }
 
-      // Update local state
-      const newMessage: ChatMessage = {
-        id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        role: 'user',
-        content: userMessage,
-        timestamp: Date.now(),
-        images: images.length > 0 ? images : undefined
-      };
+        if (!isMountedRef.current) {
+          return;
+        }
 
-      const newMessages: ChatMessage[] = [...messages, newMessage];
-      setMessages(newMessages);
-      setIsStreaming(true);
+        if (clearPreviousAssistantRef.current && session.messages.length > 0) {
+          for (let i = session.messages.length - 1; i >= 0; i--) {
+            if (session.messages[i].role === 'assistant') {
+              session.messages.splice(i, 1);
+              break;
+            }
+          }
+        }
 
-      // Call Claude API
-      const { chatWithPage } = await import('@/services/claudeAPIService');
+        await addMessageToChat(session, 'assistant', assistantContent);
 
-      // Create system prompt with element context
-      let systemPrompt: string;
+        const baseMessages = clearPreviousAssistantRef.current
+          ? (() => {
+              const cloned = [...newMessages];
+              for (let i = cloned.length - 1; i >= 0; i--) {
+                if (cloned[i].role === 'assistant') {
+                  cloned.splice(i, 1);
+                  break;
+                }
+              }
+              return cloned;
+            })()
+          : newMessages;
 
-      if (selectedText) {
-        // Text-contextual chat mode
-        systemPrompt = `You are helping the user understand and discuss a specific text selection from a web page.
+        const finalMessages: ChatMessage[] = [
+          ...baseMessages,
+          {
+            id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            role: 'assistant',
+            content: assistantContent,
+            timestamp: Date.now()
+          }
+        ];
 
-Selected text:
-"${selectedText}"
+        setMessages(finalMessages);
+        messagesRef.current = finalMessages;
+        setStreamingContent('');
 
-Page: ${window.location.href}
-Page title: ${document.title}
-
-Answer questions about this text, explain concepts, provide context, or help the user understand its meaning.`;
-      } else {
-        // Element-contextual chat mode
-        systemPrompt = `You are chatting about a specific element on a web page.
-
-Element: <${elementDescriptor.tagName}>${elementDescriptor.id ? ` id="${elementDescriptor.id}"` : ''}${elementDescriptor.classes.length > 0 ? ` class="${elementDescriptor.classes.join(' ')}"` : ''}
-Text content: ${elementDescriptor.textPreview}
-
-Page: ${window.location.href}
-Page title: ${document.title}
-
-Answer questions about this element, its purpose, or how it works.`;
-      }
-
-      let assistantContent = '';
-      const stream = await chatWithPage(
-        systemPrompt,
-        newMessages.map(m => ({
-          role: m.role,
-          content: m.content,
-          images: m.images // Include images if present
-        }))
-      );
-
-      // Stream response
-      for await (const chunk of stream) {
-        assistantContent += chunk;
-        setStreamingContent(assistantContent);
-      }
-
-      // Add assistant message to chat
-      await addMessageToChat(session, 'assistant', assistantContent);
-
-      // Update local state
-      const finalMessages: ChatMessage[] = [
-        ...newMessages,
-        {
+      } catch (error) {
+        console.error('[ElementChatWindow] Error sending message:', error);
+        if (!isMountedRef.current) {
+          return;
+        }
+        const errorMessage: ChatMessage = {
           id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           role: 'assistant',
-          content: assistantContent,
+          content: '❌ Error: Could not connect to API. Please check your backend is running or API key is configured.',
           timestamp: Date.now()
+        };
+        setMessages(prev => {
+          const next = [...prev, errorMessage];
+          messagesRef.current = next;
+          return next;
+        });
+      } finally {
+        if (!isMountedRef.current) {
+          return;
         }
-      ];
-      setMessages(finalMessages);
-      setStreamingContent('');
-
-    } catch (error) {
-      console.error('[ElementChatWindow] Error sending message:', error);
-      const errorMessage: ChatMessage = {
-        id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        role: 'assistant',
-        content: '❌ Error: Could not connect to API. Please check your backend is running or API key is configured.',
-        timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsStreaming(false);
-
-      // Process queue if any messages waiting
-      if (messageQueue.length > 0 && !isProcessingQueue) {
-        setTimeout(() => processQueue(), 100); // Small delay before processing next
+        setIsStreaming(false);
+        if (messageQueueRef.current.length > 0 && !isProcessingQueueRef.current && processQueueRef.current) {
+          processQueueRef.current();
+        }
       }
-    }
-  };
+    }, [primaryDescriptor, descriptorList, elementId, selectedText]);
 
-  const processQueue = async () => {
-    if (messageQueue.length === 0 || isProcessingQueue) return;
+const processQueue = useCallback(async () => {
+  if (!isMountedRef.current) {
+    return;
+  }
+  if (messageQueueRef.current.length === 0 || isProcessingQueueRef.current) {
+    return;
+  }
 
-    console.log('[ElementChatWindow] Processing message queue, length:', messageQueue.length);
-    setIsProcessingQueue(true);
+  const [nextMessage, ...rest] = messageQueueRef.current;
+  setMessageQueue(rest);
+  messageQueueRef.current = rest;
 
-    // Get next message from queue
-    const nextMessage = messageQueue[0];
-    setMessageQueue(prev => prev.slice(1));
+  setIsProcessingQueue(true);
+  isProcessingQueueRef.current = true;
+  setActiveQueuedId(nextMessage.id);
 
-    // Send it
-    await sendMessageToAPI(nextMessage);
+  await sendMessageToAPI(nextMessage.content, nextMessage.images || []);
 
-    setIsProcessingQueue(false);
-  };
+  setActiveQueuedId(null);
+  setIsProcessingQueue(false);
+  isProcessingQueueRef.current = false;
+
+  if (messageQueueRef.current.length > 0) {
+    setTimeout(() => {
+      void processQueue();
+    }, 100);
+  }
+}, [sendMessageToAPI]);
+
+  useEffect(() => {
+    processQueueRef.current = () => {
+      void processQueue();
+    };
+  }, [processQueue]);
 
   const handleImageDrop = async (file: File) => {
     try {
@@ -307,24 +629,50 @@ Answer questions about this element, its purpose, or how it works.`;
     }
   };
 
+  const handleRemoveQueuedMessage = (id: string) => {
+    setMessageQueue(prev => {
+      const next = prev.filter(message => message.id !== id);
+      messageQueueRef.current = next;
+      return next;
+    });
+  };
+
+  const handleClearQueue = () => {
+    setMessageQueue([]);
+    messageQueueRef.current = [];
+    setActiveQueuedId(null);
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() && pendingImages.length === 0) return;
 
-    const userMessage = inputValue.trim() || (pendingImages.length > 0 ? '(Image attached)' : '');
+    const content = inputValue.trim() || (pendingImages.length > 0 ? '(Image attached)' : '');
     const imagesToSend = [...pendingImages];
+    const queuedMessage: QueuedMessage = {
+      id: `queued-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      content,
+      images: imagesToSend.length > 0 ? imagesToSend : undefined,
+      createdAt: Date.now()
+    };
 
     setInputValue('');
-    setPendingImages([]); // Clear pending images
+    setPendingImages([]);
 
-    // If currently streaming, add to queue (for now, queue text only - TODO: enhance for images)
-    if (isStreaming) {
-      console.log('[ElementChatWindow] Queueing message (currently streaming):', userMessage);
-      setMessageQueue(prev => [...prev, userMessage]);
-      return; // Don't send immediately
+    if (isStreaming || isProcessingQueueRef.current) {
+      console.log('[ElementChatWindow] Queueing message (busy):', queuedMessage.content);
+      setMessageQueue(prev => {
+        const next = [...prev, queuedMessage];
+        messageQueueRef.current = next;
+        return next;
+      });
+      setQueueExpanded(true);
+      return;
     }
 
-    // Otherwise send normally
-    await sendMessageToAPI(userMessage, imagesToSend);
+    await sendMessageToAPI(queuedMessage.content, queuedMessage.images || []);
+    if (messageQueueRef.current.length > 0) {
+      void processQueue();
+    }
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -334,8 +682,24 @@ Answer questions about this element, its purpose, or how it works.`;
     }
   };
 
+  const handleDragStart = () => {
+    isDraggingRef.current = true;
+  };
+
   const handleDragStop = (_e: any, data: { x: number; y: number }) => {
-    setPosition({ x: data.x, y: data.y });
+    isDraggingRef.current = false;
+    const nextPosition = { x: data.x, y: data.y };
+    setPosition(nextPosition);
+
+    if (anchorElementRef.current) {
+      const rect = anchorElementRef.current.getBoundingClientRect();
+      const offset = {
+        x: nextPosition.x - rect.left,
+        y: nextPosition.y - rect.top
+      };
+      setAnchorOffset(offset);
+      anchorOffsetRef.current = offset;
+    }
   };
 
   const handleResizeStop = (
@@ -350,10 +714,45 @@ Answer questions about this element, its purpose, or how it works.`;
       height: parseInt(ref.style.height)
     });
     setPosition(newPosition);
+
+    if (anchorElementRef.current) {
+      const rect = anchorElementRef.current.getBoundingClientRect();
+      const offset = {
+        x: newPosition.x - rect.left,
+        y: newPosition.y - rect.top
+      };
+      setAnchorOffset(offset);
+      anchorOffsetRef.current = offset;
+    }
   };
 
   const handleToggleCollapse = () => {
     setCollapsed(!collapsed);
+  };
+
+  const handleClearHistory = async () => {
+    if (messagesRef.current.length === 0 && messageQueueRef.current.length === 0) {
+      return;
+    }
+
+    const confirmed = window.confirm('Clear chat history for this element?');
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      if (sessionRef.current) {
+        const { clearElementChatHistory } = await import('@/services/elementChatService');
+        sessionRef.current = await clearElementChatHistory(sessionRef.current);
+      }
+
+      setMessages([]);
+      messagesRef.current = [];
+      setStreamingContent('');
+      handleClearQueue();
+    } catch (error) {
+      console.error('[ElementChatWindow] Failed to clear history:', error);
+    }
   };
 
   /**
@@ -436,11 +835,21 @@ Answer questions about this element, its purpose, or how it works.`;
             💬 Element Context
           </div>
           <div style="font-family: monospace; font-size: 12px; margin-bottom: 4px;">
-            ${elementLabel}
+            Primary: ${elementLabel}
           </div>
-          <div style="color: #666; font-size: 12px;">
-            ${elementDescriptor.textPreview || 'No text content'}
+          <div style="color: #666; font-size: 12px; margin-bottom: ${descriptorList.length > 1 ? '8px' : '0'};">
+            ${elementSummary}
           </div>
+          ${descriptorList.length > 1 ? `
+            <div style="font-size: 12px; color: #555;">
+              <strong>Attached:</strong>
+              <ul style="margin: 6px 0 0 16px; padding: 0;">
+                ${descriptorList.slice(1).map(descriptor => `
+                  <li style="line-height: 1.4;">&lt;${descriptor.tagName}${descriptor.id ? `#${descriptor.id}` : ''}${descriptor.classes.length ? '.' + descriptor.classes.slice(0, 2).join('.') : ''}&gt;</li>
+                `).join('')}
+              </ul>
+            </div>
+          ` : ''}
         </div>
       `;
     }
@@ -478,11 +887,11 @@ Answer questions about this element, its purpose, or how it works.`;
         url: window.location.href,
         title: selectedText
           ? `Chat: "${selectedText.substring(0, 50)}${selectedText.length > 50 ? '...' : ''}"`
-          : `Element Chat: ${elementLabel}`,
+          : `Element Chat: ${elementLabel} – ${elementSummary}`,
         domain: window.location.hostname,
         favicon: '',
         timestamp: Date.now(),
-        selector: elementDescriptor.id ? `#${elementDescriptor.id}` : elementDescriptor.tagName,
+        selector: primaryDescriptor.id ? `#${primaryDescriptor.id}` : primaryDescriptor.tagName,
         selectedText: selectedText
       },
       starred: false,
@@ -500,7 +909,33 @@ Answer questions about this element, its purpose, or how it works.`;
   };
 
   // Element context info
-  const elementLabel = `<${elementDescriptor.tagName}>${elementDescriptor.id ? `#${elementDescriptor.id}` : ''}`;
+  const elementLabel = useMemo(() => {
+    const parts: string[] = [`<${primaryDescriptor.tagName}`];
+    if (primaryDescriptor.id) {
+      parts.push(`#${primaryDescriptor.id}`);
+    }
+    if (primaryDescriptor.classes.length > 0) {
+      const classes = primaryDescriptor.classes.slice(0, 3).join('.');
+      parts.push(`.${classes}`);
+      if (primaryDescriptor.classes.length > 3) {
+        parts.push('…');
+      }
+    }
+    return `${parts.join('')}>`;
+  }, [primaryDescriptor]);
+
+  const elementSummary = useMemo(() => {
+    if (selectedText) {
+      return selectedText.length > 60 ? `${selectedText.substring(0, 57)}...` : selectedText;
+    }
+    if (primaryDescriptor.textPreview) {
+      return primaryDescriptor.textPreview.length > 60
+        ? `${primaryDescriptor.textPreview.substring(0, 57)}...`
+        : primaryDescriptor.textPreview;
+    }
+    return 'No text content';
+  }, [primaryDescriptor.textPreview, selectedText]);
+
   const hasHistory = messages.length > 0;
 
   // Calculate header-only height (header padding + content + border)
@@ -536,9 +971,12 @@ Answer questions about this element, its purpose, or how it works.`;
       >
         {/* Header */}
         <div css={headerStyles} className="drag-handle">
-          <div css={headerTitleStyles}>
+          <div css={headerTitleStyles} title={primaryDescriptor.cssSelector}>
             <span css={iconStyles}>💬</span>
-            <span css={elementLabelStyles}>{elementLabel}</span>
+            <div css={elementInfoStyles}>
+              <span css={elementLabelStyles}>{elementLabel}</span>
+              <span css={elementSummaryStyles}>{elementSummary}</span>
+            </div>
             {hasHistory && <span css={messageCountStyles}>{messages.length}</span>}
           </div>
           <div css={headerActionsStyles}>
@@ -564,6 +1002,15 @@ Answer questions about this element, its purpose, or how it works.`;
             )}
             <button
               css={headerButtonStyles}
+              onClick={handleClearHistory}
+              title="Clear chat history"
+              disabled={messages.length === 0 && messageQueue.length === 0}
+              data-test-id="clear-history"
+            >
+              🧹
+            </button>
+            <button
+              css={headerButtonStyles}
               onClick={handleToggleCollapse}
               title={collapsed ? "Expand" : "Collapse"}
               data-test-id="collapse-button"
@@ -574,12 +1021,32 @@ Answer questions about this element, its purpose, or how it works.`;
               css={headerButtonStyles}
               onClick={onClose}
               title="Close"
-              disabled={isStreaming}
             >
               ✕
             </button>
           </div>
         </div>
+
+        {!collapsed && (
+          <div css={anchorChipRowStyles} data-test-id="element-anchor-list">
+            {descriptorList.map((descriptor, index) => (
+              <button
+                key={descriptor.chatId}
+                css={anchorChipStyles(descriptor.chatId === activeAnchorChatId)}
+                onClick={() => {
+                  activeAnchorChatIdRef.current = descriptor.chatId;
+                  setActiveAnchorChatId(descriptor.chatId);
+                  anchorOffsetRef.current = null;
+                  setAnchorOffset(null);
+                  ensureAnchorPosition();
+                }}
+                type="button"
+              >
+                #{index + 1} · &lt;{descriptor.tagName}{descriptor.id ? `#${descriptor.id}` : ''}&gt;
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Selected Text Banner (for text-contextual chat) */}
         {!collapsed && selectedText && (
@@ -615,7 +1082,7 @@ Answer questions about this element, its purpose, or how it works.`;
                       <strong>Element:</strong> {elementLabel}
                     </div>
                     <div css={emptyHintStyles} style={{ marginTop: '8px' }}>
-                      <strong>Text:</strong> {elementDescriptor.textPreview || 'No text content'}
+                      <strong>Text:</strong> {elementSummary}
                     </div>
                   </>
                 )}
@@ -644,7 +1111,7 @@ Answer questions about this element, its purpose, or how it works.`;
                   </div>
                 )}
                 <div css={messageContentStyles}>
-                  {message.content}
+                  {renderMarkdown(message.content)}
                 </div>
               </div>
             ))}
@@ -653,10 +1120,10 @@ Answer questions about this element, its purpose, or how it works.`;
             {isStreaming && streamingContent && (
               <div css={messageStyles('assistant')}>
                 <div css={messageRoleStyles}>Assistant</div>
-                <div css={messageContentStyles}>
-                  {streamingContent}
-                  <span css={cursorStyles}>▊</span>
-                </div>
+              <div css={messageContentStyles}>
+                {renderMarkdown(streamingContent)}
+                <span css={cursorStyles}>▊</span>
+              </div>
               </div>
             )}
 
@@ -679,22 +1146,68 @@ Answer questions about this element, its purpose, or how it works.`;
         {/* Input */}
         {!collapsed && (
           <>
-            {/* Queue indicator */}
-            {messageQueue.length > 0 && (
-              <div css={queueIndicatorStyles}>
-                <span css={queueIconStyles}>📬</span>
-                <span css={queueTextStyles}>
-                  {messageQueue.length} message{messageQueue.length > 1 ? 's' : ''} queued
-                </span>
-                <button
-                  css={clearQueueButtonStyles}
-                  onClick={() => setMessageQueue([])}
-                  title="Clear queue"
-                >
-                  Clear
-                </button>
+            {(messageQueue.length > 0 || isProcessingQueue) && (
+              <div css={queueContainerStyles} data-expanded={queueExpanded ? 'true' : 'false'}>
+                <div css={queueHeaderStyles}>
+                  <button
+                    css={queueToggleButtonStyles}
+                    onClick={() => setQueueExpanded(prev => !prev)}
+                    data-test-id="toggle-queue"
+                  >
+                    {queueExpanded ? `Hide queue (${messageQueue.length})` : `Show queue (${messageQueue.length})`}
+                  </button>
+                  <div css={queueHeaderActionsStyles}>
+                    {isProcessingQueue && <span css={queueStatusStyles}>Processing…</span>}
+                    {messageQueue.length > 0 && (
+                      <button
+                        css={queueClearButtonStyles}
+                        onClick={handleClearQueue}
+                        title="Clear queued messages"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {queueExpanded && messageQueue.length > 0 && (
+                  <div css={queueListStyles} data-test-id="element-chat-queue-list">
+                    {messageQueue.map(message => (
+                      <div
+                        key={message.id}
+                        css={queueItemStyles}
+                        data-active={message.id === activeQueuedId ? 'true' : 'false'}
+                      >
+                        <span css={queueItemTextStyles}>
+                          {message.content}
+                        </span>
+                        <div css={queueItemActionsStyles}>
+                          {message.images && message.images.length > 0 && (
+                            <span css={queueBadgeStyles}>🖼️ {message.images.length}</span>
+                          )}
+                          <button
+                            css={queueRemoveButtonStyles}
+                            onClick={() => handleRemoveQueuedMessage(message.id)}
+                            title="Remove from queue"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
+
+            <label css={queuePreferenceStyles}>
+              <input
+                type="checkbox"
+                checked={clearPreviousAssistant}
+                onChange={(e) => setClearPreviousAssistant(e.target.checked)}
+              />
+              <span>Replace last assistant reply when queue sends</span>
+            </label>
 
             <div css={inputContainerStyles}>
             <ImageUploadZone onImageUpload={handleImageDrop}>
@@ -786,13 +1299,33 @@ const headerTitleStyles = css`
   font-size: 13px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex: 1;
+  overflow: hidden;
+`;
+
+const elementInfoStyles = css`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 240px;
 `;
 
 const elementLabelStyles = css`
   font-family: 'Courier New', monospace;
   font-size: 12px;
   opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const elementSummaryStyles = css`
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const messageCountStyles = css`
@@ -1010,14 +1543,48 @@ const messageRoleStyles = css`
 `;
 
 const messageContentStyles = css`
-  color: #333;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  color: #311c1c;
+  word-break: break-word;
+
+  p {
+    margin: 0 0 8px 0;
+  }
+
+  ul,
+  ol {
+    margin: 0 0 8px 18px;
+    padding: 0;
+  }
+
+  li {
+    margin-bottom: 4px;
+  }
+
+  code {
+    background: rgba(177, 60, 60, 0.12);
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 12px;
+  }
+
+  pre {
+    background: rgba(177, 60, 60, 0.08);
+    padding: 10px;
+    border-radius: 8px;
+    overflow-x: auto;
+    border: 1px solid rgba(177, 60, 60, 0.2);
+  }
+
+  a {
+    color: #b02a2a;
+    text-decoration: underline;
+  }
 `;
 
 const cursorStyles = css`
   animation: blink 1s infinite;
-  color: #7B2CBF;
+  color: #b23232;
 
   @keyframes blink {
     0%, 50% { opacity: 1; }
@@ -1033,7 +1600,7 @@ const loadingDotsStyles = css`
   span {
     width: 6px;
     height: 6px;
-    background: #7B2CBF;
+    background: #b23232;
     border-radius: 50%;
     animation: bounce 1.4s infinite ease-in-out both;
 
@@ -1115,52 +1682,144 @@ const sendButtonStyles = css`
   }
 `;
 
-const queueIndicatorStyles = css`
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(123, 44, 191, 0.05));
-  border-top: 1px solid rgba(123, 44, 191, 0.2);
-  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
-  padding: 6px 10px;
+const queueContainerStyles = css`
+  background: #f7efed;
+  border: 1px solid rgba(177, 60, 60, 0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const queueHeaderStyles = css`
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 8px;
+`;
+
+const queueToggleButtonStyles = css`
+  background: rgba(177, 60, 60, 0.16);
+  border: 1px solid rgba(177, 60, 60, 0.32);
+  border-radius: 6px;
+  padding: 4px 12px;
   font-size: 12px;
-  animation: slideDown 0.3s ease-out;
-
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-`;
-
-const queueIconStyles = css`
-  font-size: 14px;
-`;
-
-const queueTextStyles = css`
-  flex: 1;
-  color: #7B2CBF;
-  font-weight: 500;
-`;
-
-const clearQueueButtonStyles = css`
-  background: rgba(139, 0, 0, 0.1);
-  border: 1px solid rgba(139, 0, 0, 0.2);
-  border-radius: 3px;
-  padding: 2px 8px;
-  font-size: 11px;
-  color: #8B0000;
+  color: #7a2f2f;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(139, 0, 0, 0.2);
-    border-color: rgba(139, 0, 0, 0.4);
+    background: rgba(177, 60, 60, 0.25);
+  }
+`;
+
+const queueHeaderActionsStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const queueStatusStyles = css`
+  font-size: 11px;
+  color: #a32020;
+`;
+
+const queueClearButtonStyles = css`
+  background: rgba(177, 60, 60, 0.12);
+  border: 1px solid rgba(177, 60, 60, 0.32);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: #7a2f2f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(177, 60, 60, 0.22);
+  }
+`;
+
+const queueListStyles = css`
+  max-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(177, 60, 60, 0.35);
+    border-radius: 4px;
+  }
+`;
+
+const queueItemStyles = css`
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 8px;
+  border: 1px solid rgba(177, 60, 60, 0.28);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 12px;
+
+  &[data-active='true'] {
+    border-color: rgba(177, 60, 60, 0.55);
+    box-shadow: 0 0 0 1px rgba(177, 60, 60, 0.3);
+  }
+`;
+
+const queueItemTextStyles = css`
+  flex: 1;
+  color: #7a3b3b;
+  white-space: pre-wrap;
+  word-break: break-word;
+`;
+
+const queueItemActionsStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const queueBadgeStyles = css`
+  background: rgba(177, 60, 60, 0.16);
+  color: #7a2f2f;
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 11px;
+`;
+
+const queueRemoveButtonStyles = css`
+  background: rgba(177, 60, 60, 0.1);
+  border: 1px solid rgba(177, 60, 60, 0.3);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #912d2d;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(177, 60, 60, 0.18);
+  }
+`;
+
+const queuePreferenceStyles = css`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #7a2f2f;
+  margin: 4px 0 8px;
+
+  input {
+    margin: 0;
   }
 `;
 
@@ -1232,4 +1891,29 @@ const messageImageStyles = css`
   border: 1px solid rgba(123, 44, 191, 0.2);
   object-fit: contain;
   background: rgba(0, 0, 0, 0.02);
+`;
+const anchorChipRowStyles = css`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 16px 0 16px;
+`;
+
+const anchorChipStyles = (active: boolean) => css`
+  border: 1px solid ${active ? 'rgba(177, 50, 50, 0.55)' : 'rgba(177, 50, 50, 0.28)'};
+  background: ${active ? 'rgba(177, 50, 50, 0.16)' : 'rgba(177, 50, 50, 0.08)'};
+  color: #752525;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: rgba(177, 50, 50, 0.55);
+    background: rgba(177, 50, 50, 0.2);
+  }
 `;

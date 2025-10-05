@@ -26,6 +26,10 @@ export interface ChatWindowState {
   position: { x: number; y: number };
   size: { width: number; height: number };
   collapsed: boolean;
+  anchorOffset?: { x: number; y: number };
+  queueExpanded?: boolean;
+  clearPreviousAssistant?: boolean;
+  activeAnchorChatId?: string;
 }
 
 /**
@@ -43,6 +47,12 @@ export interface ElementChatSession {
 
   /** Element descriptor for relocating element */
   elementDescriptor: ElementDescriptor;
+
+  /** Additional descriptors when chat is attached to multiple elements */
+  elementDescriptors?: ElementDescriptor[];
+
+  /** Chat IDs for all attached anchors */
+  elementIds?: string[];
 
   /** Chat message history */
   messages: ChatMessage[];

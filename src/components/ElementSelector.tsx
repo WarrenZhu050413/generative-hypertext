@@ -20,6 +20,7 @@ import { CHINESE_AESTHETIC_COLORS } from '../utils/shadowDOM';
 import { sanitizeHTML, extractRelevantStyles, generateSelector } from '../utils/sanitization';
 import { saveCard, generateId } from '../utils/storage';
 import type { Card } from '@/types';
+import type { ElementDescriptor } from '@/services/elementIdService';
 
 /**
  * Props for ElementSelector component
@@ -30,7 +31,12 @@ export interface ElementSelectorProps {
   /** Callback fired when an element is successfully captured */
   onCapture?: (card: Card) => void;
   /** Callback fired when an element is selected for chat */
-  onChatSelect?: (element: HTMLElement, existingChatId: string | null) => void;
+  onChatSelect?: (payload: {
+    elements: HTMLElement[];
+    descriptors: ElementDescriptor[];
+    chatId: string;
+    existingChatIds: Array<string | null>;
+  }) => void | Promise<void>;
   /** Callback fired when selector is closed/deactivated */
   onClose?: () => void;
   /** Initial state of the stash immediately checkbox */
@@ -77,6 +83,7 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
   initialStashState = false,
 }) => {
   // State management
+  const isChatMode = mode === 'chat';
   const [isActive, setIsActive] = useState(true);
   const [hoveredElement, setHoveredElement] = useState<HTMLElement | null>(null);
   const [selectedElement, setSelectedElement] = useState<HTMLElement | null>(null);
@@ -302,6 +309,68 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
   }, [selections, stashImmediately, clearSelections, onClose]);
 
   /**
+   * Start chat for a provided list of elements (chat mode helper)
+   */
+  const startChatForElements = useCallback(async (elements: HTMLElement[]) => {
+    if (!isChatMode || !onChatSelect || elements.length === 0) {
+      return;
+    }
+
+    try {
+      const { assignGroupChatId, assignElementChatId, setElementChatId, getElementChatId, generateElementDescriptor } =
+        await import('@/services/elementIdService');
+
+      const existingChatIds = elements.map(el => getElementChatId(el));
+
+      // Determine chat ID to use
+      let chatId: string;
+      if (elements.length === 1) {
+        chatId = existingChatIds[0] ?? assignElementChatId(elements[0]);
+      } else {
+        const uniqueExisting = new Set(existingChatIds.filter((id): id is string => Boolean(id)));
+
+        if (uniqueExisting.size === 1) {
+          chatId = uniqueExisting.values().next().value as string;
+          elements.forEach(el => setElementChatId(el, chatId));
+        } else {
+          chatId = assignGroupChatId(elements);
+        }
+      }
+
+      // Ensure all elements share the chat ID before generating descriptors
+      elements.forEach(el => setElementChatId(el, chatId));
+
+      const descriptors: ElementDescriptor[] = elements.map(el => generateElementDescriptor(el));
+
+      await Promise.resolve(
+        onChatSelect({
+          elements,
+          descriptors,
+          chatId,
+          existingChatIds: existingChatIds.map(id => id ?? null)
+        })
+      );
+    } catch (error) {
+      console.error('[ElementSelector] Failed to start chat for elements:', error);
+      alert('Failed to start chat for selected elements. Please try again.');
+    }
+  }, [isChatMode, onChatSelect]);
+
+  /**
+   * Launch chat for selected elements (chat mode)
+   */
+  const launchChatFromSelections = useCallback(async () => {
+    if (!isChatMode || selections.length === 0) {
+      return;
+    }
+
+    const elements = selections.map(sel => sel.element);
+    await startChatForElements(elements);
+    clearSelections();
+    deactivate();
+  }, [isChatMode, selections, startChatForElements, clearSelections, deactivate]);
+
+  /**
    * Handles page scroll - triggers re-render to update overlay positions
    */
   const handleScroll = useCallback(() => {
@@ -325,10 +394,14 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
         }
       } else if (e.key === 'Enter' && selections.length > 0) {
         e.preventDefault();
-        combineAndCapture();
+        if (isChatMode) {
+          void launchChatFromSelections();
+        } else {
+          void combineAndCapture();
+        }
       }
     },
-    [deactivate, clearSelections, selections, combineAndCapture]
+    [deactivate, clearSelections, selections, isChatMode, launchChatFromSelections, combineAndCapture]
   );
 
   /**
@@ -396,37 +469,28 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
         return;
       }
 
-      // CHAT MODE: Attach chat to element
-      if (mode === 'chat') {
-        try {
-          const { assignElementChatId, getElementChatId } = await import('@/services/elementIdService');
-
-          // Assign or get existing chat ID
-          const existingChatId = getElementChatId(target);
-          const chatId = existingChatId || assignElementChatId(target);
-
-          console.log('[ElementSelector] Element selected for chat:', {
-            chatId,
-            hasExistingChat: existingChatId !== null,
-            element: target
-          });
-
-          // Call onChatSelect callback
-          if (onChatSelect) {
-            onChatSelect(target, existingChatId);
-          }
-
-          // Close selector
-          setTimeout(() => {
-            if (onClose) {
-              onClose();
-            }
-          }, 100);
-
-        } catch (error) {
-          console.error('[ElementSelector] Error selecting element for chat:', error);
-          alert('Failed to select element for chat. Please try again.');
+      // CHAT MODE: Attach chat to element (supports multi-selection)
+      if (isChatMode) {
+        // Allow Cmd/Ctrl+Click to multi-select without closing
+        if (e.metaKey || e.ctrlKey) {
+          toggleSelection(target);
+          return;
         }
+
+        if (selections.length > 0) {
+          const alreadySelected = selections.some(sel => sel.element === target);
+          const elements = alreadySelected
+            ? selections.map(sel => sel.element)
+            : [...selections.map(sel => sel.element), target];
+
+          await startChatForElements(elements);
+          clearSelections();
+          deactivate();
+        } else {
+          await startChatForElements([target]);
+          deactivate();
+        }
+
         return;
       }
 
@@ -573,7 +637,7 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
         setIsCapturing(false);
       }
     },
-    [mode, onCapture, onChatSelect, onClose, stashImmediately, selections, toggleSelection]
+    [mode, onCapture, onChatSelect, onClose, stashImmediately, selections, toggleSelection, isChatMode, startChatForElements, clearSelections, deactivate]
   );
 
   /**
@@ -641,8 +705,9 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
       {selections.length > 0 && !showFloatingChat && (
         <MultiSelectActionPanel
           selections={selections}
-          onCapture={combineAndCapture}
+          onPrimaryAction={isChatMode ? () => { void launchChatFromSelections(); } : () => { void combineAndCapture(); }}
           onClear={clearSelections}
+          mode={mode}
         />
       )}
 
@@ -682,8 +747,8 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
             {mode === 'chat' ? 'CHAT MODE' : (stashImmediately ? 'STASH MODE' : 'CANVAS MODE')}
           </div>
           <div css={modeDescStyles}>
-            {mode === 'chat'
-              ? 'Click element to attach chat window'
+            {isChatMode
+              ? 'Click to chat • Cmd/Ctrl+Click to multi-select • ESC to cancel'
               : (stashImmediately
                 ? 'Cards will be saved to Side Panel'
                 : 'Cards will appear on Canvas')}
@@ -695,8 +760,10 @@ export const ElementSelector: FC<ElementSelectorProps> = ({
       {!showFloatingChat && (
         <div css={instructionsStyles}>
           <p>
-            {mode === 'chat'
-              ? 'Hover to inspect • Click element to attach chat • ESC to cancel'
+            {isChatMode
+              ? (selections.length > 0
+                ? `${selections.length} selected • Enter or click to start chat • ESC to clear`
+                : 'Hover to inspect • Click to chat • Cmd/Ctrl+Click for multiple • ESC to cancel')
               : (selections.length > 0
                 ? `${selections.length} selected • Cmd/Ctrl+Click to add/remove • Enter to capture • ESC to clear`
                 : 'Hover to inspect • Click to capture • Cmd/Ctrl+Click for multiple • ESC to cancel')}
@@ -872,9 +939,12 @@ const SelectionOutline: FC<{ selection: SelectedElement }> = ({ selection }) => 
  */
 const MultiSelectActionPanel: FC<{
   selections: SelectedElement[];
-  onCapture: () => void;
+  onPrimaryAction: () => void;
   onClear: () => void;
-}> = ({ selections, onCapture, onClear }) => {
+  mode: 'capture' | 'chat';
+}> = ({ selections, onPrimaryAction, onClear, mode }) => {
+  const primaryLabel = mode === 'chat' ? '💬 Start Chat' : '📥 Capture All';
+
   return (
     <div css={actionPanelStyles}>
       <div css={actionPanelHeaderStyles}>
@@ -890,8 +960,8 @@ const MultiSelectActionPanel: FC<{
       </div>
 
       <div css={actionPanelButtonsStyles}>
-        <button css={captureButtonStyles} onClick={onCapture}>
-          📥 Capture All
+        <button css={captureButtonStyles} onClick={onPrimaryAction}>
+          {primaryLabel}
         </button>
         <button css={clearButtonStyles} onClick={onClear}>
           ✕ Clear

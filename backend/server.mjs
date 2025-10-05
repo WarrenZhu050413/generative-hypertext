@@ -3,26 +3,64 @@
 /**
  * Nabokov Backend Server
  *
- * Local Node.js server that uses Claude Agent SDK to proxy requests
- * from the Chrome extension. This allows the extension to use
- * subscription authentication instead of requiring a separate API key.
- *
- * The Agent SDK automatically handles authentication using:
- * - Claude.ai subscription (browser session)
- * - API key (if configured in environment)
- * - Other auth methods (Bedrock, Vertex AI)
+ * Local Node.js server that proxies requests from the Chrome extension to an
+ * LLM provider. Supports both the Claude Agent SDK and the Codex CLI, with a
+ * shared interface to keep routing logic identical across providers.
  */
 
 import express from 'express';
 import cors from 'cors';
-import { query } from '@anthropic-ai/claude-agent-sdk';
+import { createLLMService } from './lib/llm/index.js';
 
 const app = express();
 const PORT = process.env.PORT || 3100;
 
+let llmService;
+try {
+  llmService = createLLMService();
+  console.log(`[Backend] Using LLM provider: ${llmService.getProviderName()}`);
+} catch (error) {
+  console.error('[Backend] Failed to initialize LLM provider:', error);
+  process.exit(1);
+}
+
 // Middleware
-app.use(cors()); // Allow requests from Chrome extension
-app.use(express.json({ limit: '50mb' })); // Support large payloads (screenshots)
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+
+function handleMultimodalFallback(res) {
+  res.status(501).json({
+    error: 'Multimodal messages not supported by current provider',
+    fallbackToDirect: true,
+  });
+}
+
+function ensureSSEHeaders(res) {
+  if (res.headersSent) {
+    return;
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+}
+
+function handleRequestError(res, error) {
+  if (error?.code === 'INVALID_REQUEST') {
+    return res.status(400).json({ error: error.message });
+  }
+
+  if (error?.code === 'UNSUPPORTED_MULTIMODAL') {
+    return handleMultimodalFallback(res);
+  }
+
+  console.error('[Backend] Error processing request:', error);
+  return res.status(500).json({
+    error: error?.message || 'Internal server error',
+    details: error?.stack,
+  });
+}
 
 /**
  * Health check endpoint
@@ -31,214 +69,80 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: Date.now(),
-    message: 'Nabokov backend server is running'
+    message: 'Nabokov backend server is running',
+    provider: llmService.getProviderName(),
   });
 });
 
 /**
  * Text-based message endpoint
- *
- * POST /api/message
- * Body: {
- *   messages: [{ role: 'user' | 'assistant', content: string }],
- *   options?: {
- *     system?: string,
- *     maxTokens?: number,
- *     temperature?: number,
- *     model?: string
- *   }
- * }
  */
 app.post('/api/message', async (req, res) => {
   try {
     console.log('[Backend] Received /api/message request');
+    const { messages, options = {} } = req.body ?? {};
 
-    const { messages, options = {} } = req.body;
+    const response = await llmService.sendMessage({ messages, options });
 
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({
-        error: 'Invalid request: messages array is required'
-      });
-    }
-
-    // Check if any message has multimodal content (array format)
-    const hasMultimodal = messages.some(m => Array.isArray(m.content));
-
-    if (hasMultimodal) {
-      console.log('[Backend] Multimodal message detected - using direct API');
-      // For multimodal messages, the Agent SDK query() doesn't support them yet
-      // Return a specific error so the frontend can fallback to direct API
-      return res.status(501).json({
-        error: 'Multimodal messages not supported by Agent SDK query()',
-        fallbackToDirect: true
-      });
-    }
-
-    // Build prompt from messages (text-only)
-    const conversationText = messages
-      .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-      .join('\n\n');
-
-    const systemPrompt = options.system || '';
-    const fullPrompt = systemPrompt
-      ? `${systemPrompt}\n\n${conversationText}`
-      : conversationText;
-
-    console.log('[Backend] Creating Agent SDK query (text-only)...');
-
-    // Create Agent SDK query
-    const agentQuery = query({
-      prompt: fullPrompt,
-      options: {
-        permissionMode: 'bypassPermissions', // Auto-approve all tool uses
-        settingSources: [], // Don't load filesystem settings
-        allowedTools: [], // No tools needed for simple text generation
-      }
-    });
-
-    console.log('[Backend] Waiting for Agent SDK response...');
-
-    let responseText = '';
-    let isComplete = false;
-
-    // Iterate through Agent SDK messages
-    for await (const message of agentQuery) {
-      console.log(`[Backend] Agent message: ${message.type}`);
-
-      if (message.type === 'assistant') {
-        // Extract text from assistant message
-        const textBlocks = message.message.content.filter(
-          block => block.type === 'text'
-        );
-        for (const block of textBlocks) {
-          responseText += block.text;
-        }
-      }
-
-      if (message.type === 'result') {
-        isComplete = true;
-        if (message.subtype === 'success') {
-          console.log('[Backend] ✓ Agent SDK success');
-          responseText = message.result;
-        } else if (message.subtype === 'error') {
-          console.error('[Backend] ✗ Agent SDK error:', message.error);
-          return res.status(500).json({
-            error: message.error || 'Agent SDK returned an error'
-          });
-        }
-        break;
-      }
-    }
-
-    if (!isComplete) {
-      throw new Error('Agent SDK query did not complete');
-    }
-
-    console.log('[Backend] Response length:', responseText.length);
-
-    res.json({
-      content: responseText,
-      metadata: {
-        timestamp: Date.now(),
-        source: 'agent-sdk'
-      }
-    });
-
+    res.json(response);
   } catch (error) {
-    console.error('[Backend] Error processing request:', error);
-    res.status(500).json({
-      error: error.message || 'Internal server error',
-      details: error.stack
-    });
+    handleRequestError(res, error);
   }
 });
 
 /**
- * Streaming message endpoint (for inline chat)
- *
- * POST /api/stream
- * Body: {
- *   messages: [{ role: 'user' | 'assistant', content: string }],
- *   options?: {
- *     system?: string,
- *     maxTokens?: number,
- *     temperature?: number,
- *     model?: string
- *   }
- * }
- * Response: Server-Sent Events (SSE) stream
+ * Streaming message endpoint (Server-Sent Events)
  */
 app.post('/api/stream', async (req, res) => {
-  try {
-    console.log('[Backend] Received /api/stream request');
+  console.log('[Backend] Received /api/stream request');
+  const { messages, options = {} } = req.body ?? {};
 
-    const { messages, options = {} } = req.body;
-
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({
-        error: 'Invalid request: messages array is required'
-      });
-    }
-
-    // Set headers for SSE
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-
-    // Build prompt from messages
-    const conversationText = messages
-      .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-      .join('\n\n');
-
-    const systemPrompt = options.system || '';
-    const fullPrompt = systemPrompt
-      ? `${systemPrompt}\n\n${conversationText}`
-      : conversationText;
-
-    console.log('[Backend] Creating streaming Agent SDK query...');
-
-    // Create Agent SDK query
-    const agentQuery = query({
-      prompt: fullPrompt,
-      options: {
-        permissionMode: 'bypassPermissions',
-        settingSources: [],
-        allowedTools: [],
-      }
-    });
-
-    // Stream responses
-    for await (const message of agentQuery) {
-      if (message.type === 'assistant') {
-        // Extract text from assistant message
-        const textBlocks = message.message.content.filter(
-          block => block.type === 'text'
-        );
-        for (const block of textBlocks) {
-          // Send SSE event
-          res.write(`data: ${JSON.stringify({ delta: { text: block.text } })}\n\n`);
-        }
-      }
-
-      if (message.type === 'result') {
-        if (message.subtype === 'success') {
-          console.log('[Backend] ✓ Streaming complete');
-          res.write('data: [DONE]\n\n');
-          res.end();
-        } else if (message.subtype === 'error') {
-          console.error('[Backend] ✗ Streaming error:', message.error);
-          res.write(`data: ${JSON.stringify({ error: message.error })}\n\n`);
-          res.end();
-        }
-        break;
-      }
-    }
-
-  } catch (error) {
-    console.error('[Backend] Error processing stream:', error);
-    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+  const sendErrorEvent = error => {
+    const payload = JSON.stringify({ error: error?.message || 'Stream error' });
+    ensureSSEHeaders(res);
+    res.write(`data: ${payload}\n\n`);
     res.end();
+  };
+
+  try {
+    // Start SSE headers only after validation passes
+    await llmService.streamMessage({
+      messages,
+      options,
+      onToken: token => {
+        ensureSSEHeaders(res);
+        res.write(`data: ${JSON.stringify({ delta: { text: token } })}\n\n`);
+      },
+      onDone: () => {
+        ensureSSEHeaders(res);
+        res.write('data: [DONE]\n\n');
+        res.end();
+      },
+      onError: error => {
+        console.error('[Backend] Streaming error:', error);
+        sendErrorEvent(error);
+      },
+    });
+  } catch (error) {
+    if (error?.code === 'UNSUPPORTED_MULTIMODAL') {
+      res.status(501).json({
+        error: 'Multimodal messages not supported by current provider',
+        fallbackToDirect: true,
+      });
+      return;
+    }
+
+    if (error?.code === 'INVALID_REQUEST') {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+
+    console.error('[Backend] Unexpected streaming error:', error);
+    if (res.headersSent) {
+      sendErrorEvent(error);
+    } else {
+      res.status(500).json({ error: error?.message || 'Internal server error' });
+    }
   }
 });
 
@@ -257,10 +161,14 @@ app.listen(PORT, () => {
   console.log('');
   console.log('  Endpoints:');
   console.log(`    POST http://localhost:${PORT}/api/message`);
+  console.log(`    POST http://localhost:${PORT}/api/stream`);
   console.log('');
-  console.log('  Authentication: Using Claude Agent SDK');
-  console.log('    ✅ Subscription (if logged into claude.ai)');
-  console.log('    ✅ API Key (if ANTHROPIC_API_KEY set)');
+  console.log('  Provider:');
+  console.log(`    Active: ${llmService.getProviderName()} (${llmService.getProviderKey()})`);
+  console.log('');
+  console.log('  Authentication / Execution:');
+  console.log('    - Claude Agent SDK (if provider = claude)');
+  console.log('    - Codex CLI (if provider = codex, default)');
   console.log('');
   console.log('═══════════════════════════════════════════════════════');
   console.log('');
