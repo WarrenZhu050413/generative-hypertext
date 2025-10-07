@@ -22,7 +22,7 @@ Generative Hypertext is a Chrome extension and JavaScript library that lets you 
 
 1. **Clone and build**:
    ```bash
-   git clone https://github.com/yourusername/generative-hypertext.git
+   git clone https://github.com/WarrenZhu050413/generative-hypertext.git
    cd generative-hypertext
    npm install
    npm run dev:symlinks  # For development
@@ -174,4 +174,4 @@ Inspired by concepts from hypertext research and modern note-taking tools
 
 - [Development Guide](DEVELOPMENT.md)
 - [Claude.md Guidelines](CLAUDE.md)
-- [Issue Tracker](https://github.com/yourusername/generative-hypertext/issues)
+- [Issue Tracker](https://github.com/WarrenZhu050413/generative-hypertext/issues)
