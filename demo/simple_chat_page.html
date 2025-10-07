@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hypertext Chat Page</title>
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --ink-soft: #444;
+      --paper: #fffef8;
+      --panel: #ffffff;
+      --accent: #8b0000;
+      --accent-soft: rgba(139, 0, 0, 0.15);
+      --border: rgba(139, 0, 0, 0.18);
+      --shadow: 0 20px 48px rgba(0, 0, 0, 0.18);
+      font-family: "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f4e4cf 0%, #fff6e6 100%);
+      color: var(--ink);
+      display: flex;
+      justify-content: center;
+      padding: 48px 32px;
+    }
+
+    .chat-shell {
+      width: min(960px, 100%);
+      background: var(--panel);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 28px 32px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 22px;
+      color: var(--accent);
+      letter-spacing: -0.3px;
+      flex: 1;
+    }
+
+    header button {
+      border: 0;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .summary-card {
+      margin: 0 32px;
+      background: rgba(139, 0, 0, 0.06);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 22px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .summary-card h2 {
+      margin: 0;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-soft);
+    }
+
+    .summary-card p {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .summary-card .meta {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .conversation {
+      margin: 24px 32px;
+      border-radius: 20px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: #fff;
+      padding: 24px;
+      overflow-y: auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .message {
+      display: grid;
+      gap: 6px;
+      max-width: 75%;
+    }
+
+    .message.assistant {
+      justify-self: start;
+    }
+
+    .message.assistant .bubble {
+      background: #fff9f2;
+      border: 1px solid var(--border);
+      border-radius: 18px 18px 18px 6px;
+      color: var(--ink);
+    }
+
+    .message.user {
+      justify-self: end;
+    }
+
+    .message.user .bubble {
+      background: var(--accent);
+      color: white;
+      border-radius: 18px 18px 6px 18px;
+    }
+
+    .bubble {
+      padding: 14px 18px;
+      font-size: 15px;
+      line-height: 1.55;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    .bubble small {
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .composer {
+      padding: 20px 32px 28px;
+      border-top: 1px solid var(--border);
+      display: grid;
+      gap: 12px;
+      background: #fffdfb;
+    }
+
+    .composer textarea {
+      min-height: 88px;
+      border-radius: 16px;
+      border: 1px solid rgba(0,0,0,0.12);
+      padding: 16px;
+      font-size: 15px;
+      resize: vertical;
+    }
+
+    .composer .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .composer .buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .composer button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 20px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .composer button.secondary {
+      background: rgba(139, 0, 0, 0.12);
+      color: var(--accent);
+    }
+
+    .composer button.primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 24px 12px;
+      }
+      .chat-shell {
+        border-radius: 16px;
+      }
+      header, .summary-card, .conversation, .composer {
+        margin: 0;
+        border-radius: 0;
+      }
+      .conversation {
+        max-height: 50vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="chat-shell" role="main">
+    <header>
+      <h1 id="chat-subject">Hypertext Chat</h1>
+      <button type="button" id="back-button">← Back to reading</button>
+    </header>
+    <section class="summary-card">
+      <h2>Summary</h2>
+      <p id="chat-summary">This page captures the context of your selected passage.</p>
+      <p class="meta" id="chat-meta">Context and timestamp will appear here.</p>
+    </section>
+    <section class="conversation" id="conversation" aria-live="polite"></section>
+    <footer class="composer">
+      <textarea placeholder="Ask a follow-up or give new guidance…"></textarea>
+      <div class="controls">
+        <span>Shift+Enter for newline · Enter to send (prototype only)</span>
+        <div class="buttons">
+          <button class="secondary" type="button" id="copy-summary">Copy summary</button>
+          <button class="primary" type="button">Send</button>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'hypertext:pendingChat';
+
+    function loadPayload() {
+      try {
+        const cached = sessionStorage.getItem(STORAGE_KEY);
+        if (!cached) return null;
+        return JSON.parse(cached);
+      } catch (error) {
+        console.warn('Failed to parse cached payload:', error);
+        return null;
+      }
+    }
+
+    function fallbackPayload() {
+      return {
+        subject: 'Kinbote\'s interventions',
+        summary: 'Kinbote commandeers Shade\'s poem by letting the footnotes exceed the source text, so we end up reading his story to understand the verses.',
+        context: 'Opened without tooltip context · Using fallback copy',
+        openedAt: new Date().toISOString(),
+        messages: [
+          { role: 'assistant', text: 'Fallback assistant insight: Nabokov weaponizes commentary to fracture authorship.' },
+          { role: 'user', text: 'Show me how often Kinbote interrupts the poem.' }
+        ]
+      };
+    }
+
+    function renderConversation(messages) {
+      const container = document.getElementById('conversation');
+      container.textContent = '';
+      messages.forEach((message, index) => {
+        const wrapper = document.createElement('article');
+        wrapper.className = `message ${message.role}`;
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = message.text;
+        if (message.url) {
+          const link = document.createElement('small');
+          link.textContent = `Source: ${message.url}`;
+          bubble.appendChild(link);
+        }
+        wrapper.appendChild(bubble);
+        container.appendChild(wrapper);
+      });
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function populatePage(data) {
+      document.getElementById('chat-subject').textContent = data.subject || 'Hypertext Chat';
+      document.getElementById('chat-summary').textContent = data.summary || 'No summary provided.';
+      const meta = data.context ? `${data.context} · Opened ${new Date(data.openedAt || Date.now()).toLocaleTimeString()}` : 'No extra context';
+      document.getElementById('chat-meta').textContent = meta;
+      renderConversation(data.messages || []);
+    }
+
+    document.getElementById('back-button').addEventListener('click', () => {
+      if (document.referrer) {
+        window.history.back();
+      } else {
+        window.location.href = 'simple_tooltip_redirect.html';
+      }
+    });
+
+    document.getElementById('copy-summary').addEventListener('click', async () => {
+      const summary = document.getElementById('chat-summary').textContent;
+      try {
+        await navigator.clipboard.writeText(summary);
+        alert('Summary copied to clipboard.');
+      } catch (error) {
+        alert('Copy failed. Select the text manually.');
+      }
+    });
+
+    const payload = loadPayload() || fallbackPayload();
+    populatePage(payload);
+  </script>
+</body>
+</html>

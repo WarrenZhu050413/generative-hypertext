@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Compact Hover Preview</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --paper: #fff9f2;
+    --accent: #8b0000;
+    --accent-soft: rgba(139, 0, 0, 0.08);
+    --shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f5eddd 0%, #fff5eb 100%);
+    font-family: "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+  }
+
+  .demo-container {
+    width: 560px;
+    max-width: 90vw;
+    background: white;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+
+  .demo-highlight {
+    background: var(--accent-soft);
+    border-radius: 6px;
+    padding: 16px;
+    line-height: 1.55;
+    font-size: 15px;
+  }
+
+  mark {
+    background: rgba(139, 0, 0, 0.12);
+    border-radius: 4px;
+    padding: 2px 4px;
+    color: var(--accent);
+  }
+
+  .tooltip-preview {
+    position: absolute;
+    top: 24px;
+    right: -12px;
+    width: 280px;
+    border-radius: 14px;
+    background: var(--paper);
+    border: 1px solid rgba(139, 0, 0, 0.18);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.22);
+    padding: 18px 20px;
+    display: grid;
+    gap: 14px;
+    transform: translateX(60px);
+  }
+
+  .pill-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pill {
+    background: rgba(139, 0, 0, 0.12);
+    color: var(--accent);
+    padding: 6px 10px;
+    font-weight: 600;
+    font-size: 13px;
+    border-radius: 999px;
+    letter-spacing: 0.01em;
+  }
+
+  .pill-row button {
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .pill-row button span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(139, 0, 0, 0.14);
+    font-size: 12px;
+  }
+
+  .tooltip-preview .summary {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .meta-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 10px;
+    background: rgba(139, 0, 0, 0.1);
+    font-size: 12px;
+  }
+
+  .meta-row strong {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .actions button {
+    flex: 1;
+    border: 0;
+    border-radius: 10px;
+    padding: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .actions button.primary {
+    background: var(--accent);
+    color: white;
+  }
+
+  .actions button.secondary {
+    background: white;
+    border: 1px solid rgba(139, 0, 0, 0.25);
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+  <div class="demo-container">
+    <div class="demo-highlight">
+      The narrator follows the erratic path of <mark>Kinbote's interjections</mark>, tracing how the commentary bleeds into the primary text until the borders dissolve.
+    </div>
+    <div class="tooltip-preview" aria-hidden="true">
+      <div class="pill-row">
+        <span class="pill">Inline recap</span>
+        <button>
+          <span>↗</span>
+          Expand
+        </button>
+      </div>
+      <p class="summary">Kinbote’s notes steadily overtake the poem, forcing the reader to negotiate two realities at once. The tension is intentional—Nabokov packs meaning into the overlaps.</p>
+      <div class="meta-row">
+        <strong>Next</strong>
+        <span>Ask for historical background →</span>
+      </div>
+      <div class="actions">
+        <button class="primary">Open Chat</button>
+        <button class="secondary">Copy summary</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

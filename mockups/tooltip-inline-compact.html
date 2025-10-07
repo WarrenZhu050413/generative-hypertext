@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Nabokov Inline Compact Tooltip</title>
+<style>
+  :root {
+    --deep-red-start: #b23232;
+    --deep-red-end: #a32020;
+    --paper: #fdf8f6;
+    --panel: #f7efed;
+    --border: rgba(178, 60, 60, 0.55);
+    --ink: #2c1f1f;
+    --muted: rgba(255, 240, 240, 0.75);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f0d4be 0%, #ffe9d7 100%);
+    color: var(--ink);
+  }
+
+  .context-card {
+    width: min(94vw, 820px);
+    background: white;
+    border-radius: 22px;
+    padding: 32px;
+    box-shadow: 0 22px 48px rgba(160, 30, 30, 0.16);
+    display: grid;
+    gap: 26px;
+  }
+
+  .context-card p {
+    margin: 0;
+    background: rgba(178, 50, 50, 0.08);
+    border-radius: 16px;
+    padding: 24px;
+    line-height: 1.65;
+    font-size: 15px;
+  }
+
+  mark {
+    background: rgba(178, 50, 50, 0.18);
+    color: #8b0000;
+    padding: 2px 4px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .tooltip-shell {
+    width: 360px;
+    min-height: 280px;
+    resize: both;
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 18px 38px rgba(170, 34, 34, 0.2);
+    border: 1px solid var(--border);
+    background: var(--paper);
+    display: flex;
+    flex-direction: column;
+    font-size: 13.5px;
+  }
+
+  .tooltip-shell[data-size="large"] {
+    font-size: 15.5px;
+  }
+
+  header {
+    background: linear-gradient(135deg, var(--deep-red-start), var(--deep-red-end));
+    color: #fff8f4;
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    line-height: 1.1;
+  }
+
+  .header-text strong {
+    font-size: 13px;
+    letter-spacing: -0.12px;
+  }
+
+  .header-text span {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .size-toggle {
+    border: 1px solid rgba(255, 230, 230, 0.4);
+    border-radius: 6px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff6f4;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .size-toggle:hover {
+    background: rgba(255, 255, 255, 0.26);
+  }
+
+  .content {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+    padding: 12px 12px 14px;
+    background: var(--panel);
+    height: 100%;
+  }
+
+  .meta-strip {
+    font-size: 11px;
+    color: #7b4545;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .messages {
+    background: #fff;
+    border: 1px solid rgba(177, 60, 60, 0.22);
+    border-radius: 9px;
+    padding: 10px 12px;
+    display: grid;
+    gap: 8px;
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-y: auto;
+  }
+
+  .messages ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .messages li {
+    display: grid;
+    gap: 2px;
+    border-bottom: 1px dashed rgba(177, 60, 60, 0.18);
+    padding-bottom: 6px;
+  }
+
+  .messages li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .role-line {
+    font-size: 11px;
+    color: #a12323;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .composer {
+    display: grid;
+    gap: 8px;
+  }
+
+  .composer textarea {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid rgba(150, 70, 70, 0.35);
+    border-radius: 8px;
+    padding: 7px 11px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    resize: none;
+    background: #f7f6f5;
+    color: var(--ink);
+  }
+
+  .composer textarea:focus {
+    outline: none;
+    border-color: var(--deep-red-start);
+    box-shadow: 0 0 0 2px rgba(178, 50, 50, 0.15);
+  }
+
+  .composer footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10.5px;
+    color: #7a4d4d;
+  }
+
+  .send-inline {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, var(--deep-red-start), var(--deep-red-end));
+    color: #fff8f6;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .send-inline:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(178, 50, 50, 0.28);
+  }
+
+  .hint {
+    font-size: 10px;
+    color: #906060;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+  }
+</style>
+</head>
+<body>
+  <section class="context-card">
+    <p>
+      With the inline chat style lifted into the tooltip, the prompt now matches Nabokov's Web compact textarea—smaller, pillowy, and framed in warm neutrals. Resize keeps the panel flexible while the default height exposes a richer snippet.
+      Click the <mark tabindex="0" id="highlight">inline commentary</mark> to open the dedicated chat.
+    </p>
+
+    <article class="tooltip-shell" id="tooltip" data-size="normal" role="dialog" aria-modal="true" aria-labelledby="tooltip-title" tabindex="-1">
+      <header>
+        <div class="header-text">
+          <strong id="tooltip-title">Inline Chat · Gradus trail</strong>
+          <span>Context refreshed 4s ago</span>
+        </div>
+        <div class="header-actions">
+          <button class="size-toggle" id="size-toggle" type="button" aria-label="Toggle text size" aria-pressed="false">A⇵</button>
+        </div>
+      </header>
+      <div class="content">
+        <div class="meta-strip">
+          <span>Focus: Canto Three marginalia</span>
+          <span id="timestamp">12:47 PM</span>
+        </div>
+        <div class="messages" id="message-list">
+          <ul>
+            <li>
+              <div class="role-line"><span>Assistant</span><span>12:46 PM</span></div>
+              <div>Kinbote’s aside stops the action long enough to restage the poem; note 246 stretches three pages beyond the verse.</div>
+            </li>
+            <li>
+              <div class="role-line"><span>You</span><span>12:45 PM</span></div>
+              <div>Document where the aside overtakes the primary narration.</div>
+            </li>
+            <li>
+              <div class="role-line"><span>Assistant</span><span>12:44 PM</span></div>
+              <div>Earlier, footnote 130 layers Zemblan history over Shade’s imagery; the commentary occupies more space than the canto.</div>
+            </li>
+          </ul>
+        </div>
+        <div class="composer">
+          <label class="sr-only" for="composer-input">Compose follow-up</label>
+          <textarea id="composer-input" placeholder="Continue Nabokov’s cadence…" aria-label="Compose follow-up"></textarea>
+          <footer>
+            <span class="hint">Enter send · Shift+Enter newline · Esc closes</span>
+            <button class="send-inline" type="button" id="send-button">Send</button>
+          </footer>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <script>
+    const SIZE_PREF_KEY = 'hypertext:inlineSize';
+    const PAYLOAD_KEY = 'hypertext:handoff';
+    const tooltip = document.getElementById('tooltip');
+    const toggle = document.getElementById('size-toggle');
+    const textarea = document.getElementById('composer-input');
+    const highlight = document.getElementById('highlight');
+    const messageList = document.getElementById('message-list').querySelector('ul');
+    const timestampEl = document.getElementById('timestamp');
+
+    function applySize() {
+      const stored = localStorage.getItem(SIZE_PREF_KEY) || 'normal';
+      tooltip.dataset.size = stored;
+      const isLarge = stored === 'large';
+      toggle.setAttribute('aria-pressed', String(isLarge));
+      toggle.textContent = isLarge ? 'A⇳' : 'A⇵';
+    }
+
+    applySize();
+
+    toggle.addEventListener('click', () => {
+      const isLarge = tooltip.dataset.size === 'large';
+      const next = isLarge ? 'normal' : 'large';
+      tooltip.dataset.size = next;
+      localStorage.setItem(SIZE_PREF_KEY, next);
+      toggle.setAttribute('aria-pressed', String(!isLarge));
+      toggle.textContent = isLarge ? 'A⇵' : 'A⇳';
+    });
+
+    function appendMessage(role, text) {
+      const li = document.createElement('li');
+      const roleLine = document.createElement('div');
+      roleLine.className = 'role-line';
+      roleLine.innerHTML = `<span>${role}</span><span>${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>`;
+      const body = document.createElement('div');
+      body.textContent = text;
+      li.appendChild(roleLine);
+      li.appendChild(body);
+      messageList.insertBefore(li, messageList.firstChild);
+    }
+
+    function inlineSend() {
+      const value = textarea.value.trim();
+      if (!value) return;
+      appendMessage('You', value);
+      textarea.value = '';
+      setTimeout(() => {
+        appendMessage('Assistant', 'Inline response: “Gradus is frozen so commentary may reshape the scene.”');
+      }, 600);
+      timestampEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    document.getElementById('send-button').addEventListener('click', inlineSend);
+
+    textarea.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        inlineSend();
+      }
+    });
+
+    function buildPayload() {
+      const rect = highlight.getBoundingClientRect();
+      return {
+        subject: document.getElementById('tooltip-title').textContent,
+        transcript: Array.from(messageList.querySelectorAll('li')).map(item => ({
+          role: item.querySelector('.role-line span')?.textContent || '',
+          content: item.lastElementChild?.textContent || ''
+        })),
+        textSize: tooltip.dataset.size,
+        sourceUrl: window.location.href,
+        timestamp: new Date().toISOString(),
+        viewport: { x: rect.left + window.scrollX, y: rect.top + window.scrollY }
+      };
+    }
+
+    function handoff(event) {
+      try {
+        sessionStorage.setItem(PAYLOAD_KEY, JSON.stringify(buildPayload()));
+      } catch (error) {
+        console.warn('Failed to store payload', error);
+      }
+      const target = event.shiftKey ? '_self' : '_blank';
+      window.open('chat-spec.html', target, 'noopener');
+    }
+
+    highlight.addEventListener('click', handoff);
+    highlight.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        handoff(event);
+      }
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        tooltip.setAttribute('hidden', '');
+        highlight.focus();
+      }
+    });
+
+    tooltip.focus();
+  </script>
+</body>
+</html>

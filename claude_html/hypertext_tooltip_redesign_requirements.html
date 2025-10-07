@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hypertext Tooltip Redesign — UI Requirements & Implementation</title>
+<style>
+:root {
+    --chinese-red: #8B0000;
+    --chinese-gold: #FFD700;
+    --ink-black: #1a1a1a;
+    --paper-beige: #F5F5DC;
+    --light-cream: #FFFEF0;
+    --level-1: #2c1810;
+    --level-2: #5a3020;
+    --level-3: #7a5040;
+    --level-4: #9a7060;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+    color: var(--ink-black);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.2;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    max-width: 100%;
+}
+
+.container {
+    width: 100%;
+    padding: 12px;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: 900;
+    margin: 4px 0 12px 0;
+    padding: 6px 4px;
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+}
+
+h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 12px 0 6px 0;
+    padding: 4px;
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.03);
+    color: var(--level-1);
+}
+
+h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 6px 0 3px 8px;
+    color: var(--level-2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.primary-section {
+    border: 2px solid var(--chinese-red);
+    background: white;
+    margin: 8px 0;
+    padding: 8px;
+}
+
+.card {
+    background: white;
+    border: 1px solid rgba(139, 0, 0, 0.2);
+    border-radius: 2px;
+    padding: 6px;
+    margin: 4px 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card.priority {
+    border: 2px solid var(--chinese-gold);
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+}
+
+.dense-list {
+    list-style: none;
+    padding: 0;
+    margin-left: 8px;
+}
+
+.dense-list li {
+    padding: 4px 0 4px 16px;
+    border-left: 2px solid transparent;
+    position: relative;
+    margin: 2px 0;
+}
+
+.dense-list li:before {
+    content: "▸";
+    position: absolute;
+    left: 4px;
+    color: var(--chinese-red);
+    font-size: 10px;
+    top: 4px;
+}
+
+.dense-list li strong {
+    color: var(--level-2);
+    font-weight: 600;
+}
+
+.checklist {
+    list-style: none;
+    padding: 0;
+    margin-left: 8px;
+}
+
+.checklist li {
+    padding: 4px 0 4px 24px;
+    position: relative;
+    margin: 3px 0;
+}
+
+.checklist li:before {
+    content: "☐";
+    position: absolute;
+    left: 4px;
+    color: var(--chinese-red);
+    font-size: 14px;
+    top: 3px;
+}
+
+code {
+    background: linear-gradient(135deg, rgba(245, 245, 220, 0.3), rgba(255, 255, 255, 0.5));
+    border: 1px solid rgba(139, 0, 0, 0.1);
+    padding: 2px 4px;
+    font-size: 12px;
+    border-radius: 2px;
+}
+
+.divider {
+    height: 1px;
+    background: linear-gradient(90deg, var(--chinese-red), transparent);
+    margin: 12px 0;
+}
+
+.indent-1 { margin-left: 12px; }
+.indent-2 { margin-left: 24px; }
+
+.important-note {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+    border: 2px solid var(--chinese-gold);
+    padding: 6px 8px;
+    margin: 8px 0;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.two-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 8px 0;
+}
+
+@media (max-width: 768px) {
+    .two-column {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Hypertext Tooltip Redesign — UI Requirements & Implementation</h1>
+
+<div class="primary-section">
+<h2>Core UI Requirements</h2>
+<ul class="dense-list">
+<li><strong>Compact Footprint:</strong> Tooltip maintains ≈300px width to avoid obscuring page content</li>
+<li><strong>Message Display:</strong> Shows only the most recent assistant message and most recent user prompt — no history scrolling</li>
+<li><strong>Typography Consistency:</strong> Prompt textarea uses identical font-size and line-height as chat output text</li>
+<li><strong>Text Size Toggle:</strong> Single button in tooltip header toggles between normal and large text sizes for both prompt and output</li>
+<li><strong>Primary Action:</strong> Clicking the tooltip body opens a dedicated chat page in a new window/tab</li>
+<li><strong>Persistence Mechanism:</strong> Dedicated chat page loads conversation state from <code>sessionStorage</code> payload saved when tooltip is clicked</li>
+<li><strong>Visual Identity:</strong> Nabokov-inspired palette with deep red accents (<code>#8B0000</code>), warm paper background (<code>#F5F5DC</code>), and gold highlights</li>
+<li><strong>Accessibility:</strong> All controls include <code>aria-label</code> attributes, button states, keyboard support (Enter to send, Esc to dismiss)</li>
+</ul>
+</div>
+
+<div class="divider"></div>
+
+<h2>Implementation Notes</h2>
+
+<div class="two-column">
+<div class="card">
+<h3>1. Tooltip Component Structure</h3>
+<ul class="checklist indent-1">
+<li>Create header with text-size toggle button (aria-label: "Toggle text size")</li>
+<li>Render most recent assistant message in scrollable output area</li>
+<li>Render textarea for user prompt with matching typography</li>
+<li>Add click handler to entire tooltip that saves state to <code>sessionStorage</code> and opens chat page</li>
+<li>Implement Esc key listener to dismiss tooltip</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>2. Text Size State Management</h3>
+<ul class="checklist indent-1">
+<li>Define two font-size presets (e.g., <code>14px</code> normal, <code>18px</code> large)</li>
+<li>Store text-size preference in <code>localStorage</code> or component state</li>
+<li>Apply font-size CSS variable to both output area and textarea</li>
+<li>Ensure line-height scales proportionally (e.g., <code>1.5</code> ratio)</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>3. Dedicated Chat Page</h3>
+<ul class="checklist indent-1">
+<li>Create standalone HTML page (<code>chat.html</code>) with full conversation UI</li>
+<li>On tooltip click, serialize conversation context to <code>sessionStorage</code> with unique key</li>
+<li>Chat page reads <code>sessionStorage</code> on load to restore conversation history</li>
+<li>Implement full chat features (message history, scroll, image upload) on dedicated page</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>4. Nabokov Palette Application</h3>
+<ul class="checklist indent-1">
+<li>Define CSS custom properties: <code>--nabokov-red: #8B0000</code>, <code>--nabokov-gold: #FFD700</code>, <code>--paper-bg: #F5F5DC</code></li>
+<li>Apply warm background gradient to tooltip body</li>
+<li>Use deep red for header, borders, and toggle button accents</li>
+<li>Apply gold highlights to hover states and active elements</li>
+</ul>
+</div>
+
+<div class="card priority" style="grid-column: span 2;">
+<h3>5. Accessibility & Keyboard Support</h3>
+<ul class="checklist indent-1">
+<li>Add <code>role="dialog"</code> and <code>aria-modal="true"</code> to tooltip container</li>
+<li>Label toggle button with <code>aria-label="Toggle between normal and large text size"</code></li>
+<li>Implement Enter key in textarea to submit message (with Shift+Enter for newline)</li>
+<li>Bind Esc key to dismiss tooltip and return focus to trigger element</li>
+<li>Ensure focus trap within tooltip when open, restore focus on close</li>
+<li>Use <code>aria-live="polite"</code> for assistant message updates</li>
+</ul>
+</div>
+</div>
+
+<div class="divider"></div>
+
+<div class="important-note">
+<strong>Key Engineering Constraint:</strong> The tooltip must remain stateless regarding conversation history — all message persistence happens via <code>sessionStorage</code> handoff to the dedicated chat page. This keeps the tooltip lightweight and avoids DOM bloat from long conversations.
+</div>
+
+</div>
+</body>
+</html>

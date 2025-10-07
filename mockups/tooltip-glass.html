@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Glass Tooltip Mockup</title>
+<style>
+  :root {
+    --ink: rgba(18, 18, 18, 0.9);
+    --accent: #8b0000;
+    --frost: rgba(255, 255, 255, 0.72);
+    --blur-bg: linear-gradient(140deg, rgba(255,239,229,0.8) 0%, rgba(255,255,255,0.9) 100%);
+    font-family: "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at top, #ffe7cf 0%, #f6dcbc 45%, #f0c79c 100%);
+    color: var(--ink);
+  }
+
+  .tooltip {
+    width: 280px;
+    border-radius: 18px;
+    padding: 18px;
+    background: var(--frost);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(139, 0, 0, 0.25);
+    box-shadow: 0 20px 48px rgba(0,0,0,0.2);
+    display: grid;
+    gap: 12px;
+    color: var(--ink);
+    font-size: 13.5px;
+    transition: font-size 0.2s ease;
+  }
+
+  .tooltip[data-size="large"] {
+    font-size: 15px;
+  }
+
+  .tooltip[data-size="large"] h2 {
+    font-size: 16.5px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  header h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  header small {
+    display: block;
+    font-size: 11px;
+    color: rgba(0,0,0,0.6);
+  }
+
+  .size-toggle {
+    border: 0;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(139, 0, 0, 0.18);
+    color: var(--accent);
+    cursor: pointer;
+  }
+
+  .chat-preview {
+    display: grid;
+    gap: 8px;
+  }
+
+  .bubble {
+    padding: 10px 12px;
+    border-radius: 12px;
+    line-height: 1.45;
+    background: var(--blur-bg);
+    border: 1px solid rgba(255,255,255,0.6);
+    color: var(--ink);
+  }
+
+  .bubble.user {
+    background: rgba(139, 0, 0, 0.16);
+    color: var(--accent);
+  }
+
+  .composer {
+    display: grid;
+    gap: 8px;
+  }
+
+  .composer textarea {
+    min-height: 52px;
+    border-radius: 12px;
+    border: 1px solid rgba(139, 0, 0, 0.28);
+    padding: 10px 12px;
+    font-size: 1em;
+    resize: vertical;
+    background: rgba(255,255,255,0.85);
+  }
+
+  .composer footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: rgba(0,0,0,0.6);
+  }
+
+  .composer button {
+    border: 0;
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 12.5px;
+    font-weight: 600;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <aside class="tooltip" id="glass-tooltip" data-size="normal">
+    <header>
+      <div>
+        <h2>Kinbote takeover</h2>
+        <small>Generated 6s ago</small>
+      </div>
+      <button class="size-toggle" id="glass-toggle" type="button">A⇵</button>
+    </header>
+    <section class="chat-preview">
+      <div class="bubble">Kinbote stretches each footnote so the poem becomes an excuse to narrate his own myth; the tooltip keeps the distilled insight within a sentence.</div>
+      <div class="bubble user">Add a reference from Shade's drafts.</div>
+    </section>
+    <section class="composer">
+      <textarea placeholder="Add guidance…"></textarea>
+      <footer>
+        <span>Shift+Enter for newline</span>
+        <button type="button">Send</button>
+      </footer>
+    </section>
+  </aside>
+
+  <script>
+    const glassTooltip = document.getElementById('glass-tooltip');
+    const glassToggle = document.getElementById('glass-toggle');
+    glassToggle.addEventListener('click', () => {
+      const isLarge = glassTooltip.getAttribute('data-size') === 'large';
+      glassTooltip.setAttribute('data-size', isLarge ? 'normal' : 'large');
+      glassToggle.textContent = isLarge ? 'A⇵' : 'A⇳';
+      glassToggle.setAttribute('aria-pressed', String(!isLarge));
+    });
+  </script>
+</body>
+</html>

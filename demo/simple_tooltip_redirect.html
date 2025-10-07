@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simplified Hypertext Tooltip Demo</title>
+  <style>
+    :root {
+      --ink: #1a1a1a;
+      --paper: #fffef4;
+      --accent: #8b0000;
+      --accent-soft: rgba(139, 0, 0, 0.15);
+      --shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
+      font-family: "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      background: linear-gradient(135deg, #f8edd8 0%, #fff7e8 100%);
+      color: var(--ink);
+    }
+
+    main {
+      background: white;
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 36px 44px;
+      width: min(760px, 92vw);
+      line-height: 1.6;
+      font-size: 16px;
+      position: relative;
+    }
+
+    mark[data-role="highlight"] {
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    mark[data-role="highlight"]:hover,
+    mark[data-role="highlight"]:focus {
+      background: rgba(139, 0, 0, 0.22);
+      outline: none;
+    }
+
+    .tooltip {
+      position: absolute;
+      min-width: 240px;
+      max-width: 320px;
+      border-radius: 16px;
+      padding: 18px 20px;
+      background: var(--paper);
+      border: 1px solid rgba(139, 0, 0, 0.2);
+      box-shadow: var(--shadow);
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 999;
+    }
+
+    .tooltip[data-visible="true"] {
+      display: flex;
+    }
+
+    .tooltip h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .tooltip p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.45;
+      color: #333;
+    }
+
+    .tooltip button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      background: var(--accent);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      align-self: flex-start;
+      transition: transform 0.18s ease;
+    }
+
+    .tooltip button:hover {
+      transform: translateY(-1px);
+    }
+
+    .tooltip .meta {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .toolbar {
+      margin-top: 24px;
+      font-size: 13px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p>
+      Nabokov lets <mark data-role="highlight" tabindex="0" data-summary="Kinbote keeps hijacking Shade\'s poem, so each annotation shifts the center of gravity toward his Zemblan fantasy." data-subject="Kinbote's interventions" data-context="URL: https://nabokovsweb.example/hypertext-demo">Kinbote's interventions</mark> steal focus until the reader is forced to chase footnotes faster than the lines they refer to.
+    </p>
+    <p class="toolbar">Hover to preview · Click to open the dedicated chat page.</p>
+
+    <div class="tooltip" id="tooltip" role="dialog" aria-hidden="true">
+      <div>
+        <h2 id="tooltip-title"></h2>
+        <p id="tooltip-summary"></p>
+      </div>
+      <p class="meta" id="tooltip-meta"></p>
+      <button type="button" id="open-chat">Open full chat ↗</button>
+    </div>
+  </main>
+
+  <script>
+    const HYPERTEXT_STORAGE_KEY = 'hypertext:pendingChat';
+
+    const highlight = document.querySelector('[data-role="highlight"]');
+    const tooltip = document.getElementById('tooltip');
+    const titleEl = document.getElementById('tooltip-title');
+    const summaryEl = document.getElementById('tooltip-summary');
+    const metaEl = document.getElementById('tooltip-meta');
+    const openChatButton = document.getElementById('open-chat');
+
+    const sampleConversation = [
+      { role: 'assistant', text: 'Kinbote inserts himself into Shade\'s poem so often that the footnotes become the main narrative.' },
+      { role: 'user', text: 'I want to trace where the commentary overpowers the poem.' },
+      { role: 'assistant', text: 'Start around Canto Two. The annotations extend longer than the lines themselves, forcing you to read Kinbote\'s story just to understand the footnote.' }
+    ];
+
+    function positionTooltip(anchor) {
+      const rect = anchor.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const top = rect.bottom + window.scrollY + 8;
+      const left = Math.min(
+        rect.left + window.scrollX,
+        window.scrollX + window.innerWidth - tooltipRect.width - 16
+      );
+      tooltip.style.top = `${top}px`;
+      tooltip.style.left = `${left}px`;
+    }
+
+    function showTooltip() {
+      titleEl.textContent = highlight.dataset.subject;
+      summaryEl.textContent = highlight.dataset.summary;
+      metaEl.textContent = highlight.dataset.context;
+      tooltip.setAttribute('data-visible', 'true');
+      tooltip.setAttribute('aria-hidden', 'false');
+      positionTooltip(highlight);
+    }
+
+    function hideTooltip() {
+      tooltip.setAttribute('data-visible', 'false');
+      tooltip.setAttribute('aria-hidden', 'true');
+    }
+
+    highlight.addEventListener('mouseenter', showTooltip);
+    highlight.addEventListener('focus', showTooltip);
+    highlight.addEventListener('mouseleave', () => {
+      setTimeout(() => {
+        if (!tooltip.matches(':hover')) {
+          hideTooltip();
+        }
+      }, 120);
+    });
+    highlight.addEventListener('blur', hideTooltip);
+
+    tooltip.addEventListener('mouseleave', hideTooltip);
+
+    function openChatPage() {
+      const payload = {
+        subject: highlight.dataset.subject,
+        summary: highlight.dataset.summary,
+        context: highlight.dataset.context,
+        messages: sampleConversation,
+        openedAt: new Date().toISOString()
+      };
+      try {
+        sessionStorage.setItem(HYPERTEXT_STORAGE_KEY, JSON.stringify(payload));
+      } catch (error) {
+        console.warn('Failed to cache chat payload:', error);
+      }
+      window.location.href = 'simple_chat_page.html';
+    }
+
+    openChatButton.addEventListener('click', openChatPage);
+    highlight.addEventListener('click', event => {
+      event.preventDefault();
+      openChatPage();
+    });
+  </script>
+</body>
+</html>
