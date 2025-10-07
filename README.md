@@ -4,8 +4,6 @@
 
 Generative Hypertext is a Chrome extension and JavaScript library that lets you select any text and instantly generate contextual explanations, references, or continue conversations—all inline without leaving the page.
 
-![Demo](docs/screenshots/demo.gif)
-
 ## Features
 
 ✨ **Inline AI Tooltips** - Hover over generated hyperlinks to see explanations
