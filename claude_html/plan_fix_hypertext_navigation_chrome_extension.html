@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fix Hypertext Navigation in Chrome Extension</title>
+<style>
+:root {
+    --chinese-red: #8B0000;
+    --chinese-gold: #FFD700;
+    --jade-green: #00A86B;
+    --ink-black: #2B2B2B;
+    --paper-beige: #F5F5DC;
+    --light-cream: #FAFAF0;
+    --level-1: #000;
+    --level-2: #333;
+    --level-3: #666;
+    --level-4: #999;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+    color: var(--ink-black);
+    width: 100vw;
+    max-width: 100%;
+    line-height: 1.2;
+    font-size: 14px;
+    font-family: "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.container { width: 100%; padding: 0; margin: 0; }
+
+h1 {
+    font-size: 24px; font-weight: 900; margin: 4px 0; padding: 6px 4px;
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+}
+
+h2 {
+    font-size: 18px; font-weight: 700; margin: 8px 0 4px 0; padding: 4px;
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.03); color: var(--level-1);
+}
+
+h3 {
+    font-size: 14px; font-weight: 600; margin: 4px 0 2px 8px;
+    color: var(--level-2); text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+h4 { font-size: 12px; font-weight: 500; margin: 2px 0 1px 16px; color: var(--level-3); }
+
+.primary-section {
+    border: 2px solid var(--chinese-red);
+    background: white; margin: 6px 0; padding: 6px;
+}
+
+.secondary-section {
+    border-left: 3px solid var(--chinese-gold);
+    background: rgba(255, 215, 0, 0.05);
+    margin: 4px 0 4px 8px; padding: 4px;
+}
+
+.card {
+    background: white;
+    border: 1px solid rgba(139, 0, 0, 0.2);
+    border-radius: 2px; padding: 6px; margin: 4px 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card.priority {
+    border: 2px solid var(--chinese-gold);
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+}
+
+pre, code {
+    background: linear-gradient(135deg, rgba(245, 245, 220, 0.3), rgba(255, 255, 255, 0.5));
+    border: 1px solid rgba(139, 0, 0, 0.15);
+    padding: 4px 6px; font-size: 12px; font-family: 'SF Mono', Monaco, monospace;
+    line-height: 1.3; overflow-x: auto; border-radius: 2px;
+}
+
+pre { padding: 8px; margin: 4px 0; }
+code { padding: 2px 4px; }
+
+.two-column {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin: 4px 0;
+}
+
+.dense-list { list-style: none; padding: 0; margin-left: 8px; }
+.dense-list li {
+    padding: 2px 0 2px 12px; border-left: 2px solid transparent; position: relative;
+}
+.dense-list li:before {
+    content: "▸"; position: absolute; left: 0;
+    color: var(--chinese-red); font-size: 10px;
+}
+
+.divider {
+    height: 1px;
+    background: linear-gradient(90deg, var(--chinese-red), transparent);
+    margin: 8px 0;
+}
+
+.collapsible { margin: 4px 0; width: 100%; }
+
+.collapsible-header {
+    cursor: pointer; padding: 6px 8px;
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+    border-left: 3px solid var(--chinese-gold);
+    display: flex; align-items: center; justify-content: space-between;
+    user-select: none; transition: all 0.2s ease;
+}
+
+.collapsible-header:hover {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+}
+
+.collapsible-header .arrow {
+    display: inline-block; transition: transform 0.3s ease;
+    color: var(--chinese-red); font-size: 10px;
+}
+
+.collapsible.open .arrow { transform: rotate(90deg); }
+
+.collapsible-content {
+    max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+    padding: 0 8px; margin-left: 12px;
+}
+
+.collapsible.open .collapsible-content {
+    max-height: 5000px; padding: 8px;
+}
+
+.mermaid-container {
+    background: white;
+    border: 2px solid var(--chinese-gold);
+    border-radius: 4px;
+    padding: 12px;
+    margin: 8px 0;
+}
+
+button {
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    color: white; border: 1px solid rgba(255, 215, 0, 0.3);
+    transition: all 0.2s ease; padding: 2px 6px;
+    margin: 1px; font-size: 12px; line-height: 1.1;
+    cursor: pointer; border-radius: 3px;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+    border-color: var(--chinese-gold);
+}
+
+.important-always-visible {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+    border: 2px solid var(--chinese-gold);
+    padding: 8px; margin: 8px 0; border-radius: 3px;
+}
+
+.important-always-visible h2 { color: var(--chinese-red); margin-top: 0; }
+
+table {
+    border-collapse: collapse; width: 100%; margin: 4px 0;
+    background: white; font-size: 12px;
+}
+
+th, td {
+    border: 1px solid rgba(139, 0, 0, 0.2);
+    padding: 4px 6px; text-align: left;
+}
+
+th {
+    background: rgba(139, 0, 0, 0.08);
+    font-weight: 600; color: var(--level-1);
+}
+
+.indent-1 { margin-left: 12px; }
+.indent-2 { margin-left: 24px; }
+.indent-3 { margin-left: 36px; }
+
+.status-good { color: var(--jade-green); font-weight: 600; }
+.status-bad { color: var(--chinese-red); font-weight: 600; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="container">
+
+<h1>Fix Hypertext Navigation in Chrome Extension</h1>
+
+<div class="important-always-visible">
+    <h2>Problem Summary</h2>
+    <p><strong>Current Issue:</strong> Clicking on hypertext links tries to navigate to <code>{original_url}/demo/simple_chat_page.html</code>, which doesn't exist because the extension is running on external websites.</p>
+    <p><strong>Root Cause:</strong> The <code>chatPageUrl</code> is being resolved relative to the current page's URL instead of the extension's internal URL.</p>
+    <p><strong>Location:</strong> <code>hypertext/hypertext-experience.js:1463</code></p>
+</div>
+
+<div class="divider"></div>
+
+<h2>Current Code Analysis</h2>
+
+<div class="card">
+    <h3>Problematic Code (hypertext-experience.js:1453-1474)</h3>
+    <pre>function openChatPageFromSession(session, event) {
+  const payload = buildChatPayload(session);
+  if (!payload) return;
+  try {
+    win.sessionStorage?.setItem('hypertext:handoff', JSON.stringify(payload));
+  } catch (error) {
+    console.warn('[Hypertext] Failed to persist chat payload:', error);
+  }
+  closeChat({ force: true });
+  const target = event?.shiftKey ? '_self' : '_blank';
+
+  // THIS IS THE PROBLEM: resolves relative to current page
+  let resolvedUrl = chatPageUrl; // defaults to 'demo/simple_chat_page.html'
+  try {
+    resolvedUrl = new URL(chatPageUrl, win.location.href).toString();
+    // If on https://example.com/page, becomes:
+    // https://example.com/demo/simple_chat_page.html ❌
+  } catch (error) {
+    /* ignore resolution errors */
+  }
+
+  try {
+    win.open(resolvedUrl, target, 'noopener');
+  } catch (error) {
+    console.warn('[Hypertext] Failed to open chat page:', error);
+  }
+}</pre>
+</div>
+
+<div class="mermaid-container">
+    <h3>Current URL Resolution Flow</h3>
+    <div class="mermaid">
+flowchart TD
+    A[User clicks hypertext link] --> B[openChatPageFromSession called]
+    B --> C{Resolve URL}
+    C --> D[new URL chatPageUrl, win.location.href]
+    D --> E{Current page URL}
+    E -->|https://example.com/page| F[Result: https://example.com/demo/simple_chat_page.html]
+    E -->|https://news.ycombinator.com| G[Result: https://news.ycombinator.com/demo/simple_chat_page.html]
+    F --> H[404 Not Found ❌]
+    G --> H
+    style H fill:#f99,stroke:#c00,stroke-width:2px
+    </div>
+</div>
+
+<div class="divider"></div>
+
+<h2>Solution Options</h2>
+
+<div class="collapsible">
+    <div class="collapsible-header">
+        <span><strong>Option 1: Use chrome.runtime.getURL() via Configuration</strong> (Recommended)</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <div class="secondary-section">
+            <h4>How it works</h4>
+            <ul class="dense-list">
+                <li>Pass a <code>resolveExtensionUrl</code> function to hypertext-experience.js options</li>
+                <li>The function uses <code>chrome.runtime.getURL()</code> to get the proper extension URL</li>
+                <li>Works with manifest v3's web_accessible_resources</li>
+                <li><strong>Minimal changes to hypertext-experience.js</strong></li>
+            </ul>
+        </div>
+
+        <div class="card priority">
+            <h4>Step 1: Update manifest.json</h4>
+            <pre>{
+  "manifest_version": 3,
+  "name": "Hypertext Navigator",
+  "description": "Inline hypertext annotations with floating chat tooltips.",
+  "version": "0.1.0",
+
+  <span class="status-good">// ADD THIS:</span>
+  "web_accessible_resources": [{
+    "resources": ["demo/simple_chat_page.html"],
+    "matches": ["&lt;all_urls&gt;"]
+  }],
+
+  "commands": { ... },
+  "permissions": ["storage"],
+  ...
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h4>Step 2: Modify hypertext-experience.js (line ~798)</h4>
+            <pre>function createHypertextExperience(options = {}) {
+  const {
+    document: customDocument,
+    backendUrl = 'http://localhost:3100',
+    contextProvider,
+    hotkey = defaultHotkey,
+    selectionValidator,
+    autoOpenTooltipOnHover = true,
+    registerExternalTrigger,
+    chatPageUrl = 'demo/simple_chat_page.html',
+    <span class="status-good">resolveExtensionUrl  // NEW: optional function to resolve extension URLs</span>
+  } = options;
+
+  // ... rest of code
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h4>Step 3: Update openChatPageFromSession (line ~1453)</h4>
+            <pre>function openChatPageFromSession(session, event) {
+  const payload = buildChatPayload(session);
+  if (!payload) return;
+
+  try {
+    win.sessionStorage?.setItem('hypertext:handoff', JSON.stringify(payload));
+  } catch (error) {
+    console.warn('[Hypertext] Failed to persist chat payload:', error);
+  }
+
+  closeChat({ force: true });
+  const target = event?.shiftKey ? '_self' : '_blank';
+
+  <span class="status-good">// NEW: Use resolveExtensionUrl if provided</span>
+  let resolvedUrl = chatPageUrl;
+  if (typeof resolveExtensionUrl === 'function') {
+    try {
+      resolvedUrl = resolveExtensionUrl(chatPageUrl);
+    } catch (error) {
+      console.warn('[Hypertext] resolveExtensionUrl failed:', error);
+    }
+  } else {
+    // Fallback to relative resolution for non-extension contexts
+    try {
+      resolvedUrl = new URL(chatPageUrl, win.location.href).toString();
+    } catch (error) {
+      /* ignore resolution errors */
+    }
+  }
+
+  try {
+    win.open(resolvedUrl, target, 'noopener');
+  } catch (error) {
+    console.warn('[Hypertext] Failed to open chat page:', error);
+  }
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h4>Step 4: Update extension/hypertext-loader.js</h4>
+            <pre>// extension/hypertext-loader.js
+
+window.createHypertextExperience({
+  backendUrl: 'http://localhost:3100',
+  chatPageUrl: 'demo/simple_chat_page.html',
+
+  <span class="status-good">// NEW: Provide URL resolver</span>
+  resolveExtensionUrl: (path) => {
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) {
+      return chrome.runtime.getURL(path);
+    }
+    // Fallback for non-extension contexts
+    return new URL(path, window.location.href).toString();
+  }
+});</pre>
+        </div>
+
+        <div class="mermaid-container">
+            <h3>Updated URL Resolution Flow</h3>
+            <div class="mermaid">
+flowchart TD
+    A[User clicks hypertext link] --> B[openChatPageFromSession called]
+    B --> C{resolveExtensionUrl provided?}
+    C -->|Yes| D[chrome.runtime.getURL demo/simple_chat_page.html]
+    C -->|No| E[Fallback: relative resolution]
+    D --> F[chrome-extension://abc123/demo/simple_chat_page.html ✓]
+    F --> G[Open in new tab]
+    G --> H[Chat page loads successfully ✓]
+    style H fill:#9f9,stroke:#0c0,stroke-width:2px
+    </div>
+        </div>
+
+        <div class="card">
+            <h4>✅ Advantages</h4>
+            <ul class="dense-list">
+                <li>Minimal changes to core hypertext-experience.js</li>
+                <li>Backward compatible with standalone demo pages</li>
+                <li>Clean separation of concerns (extension logic in loader)</li>
+                <li>Works with manifest v3</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h4>⚠️ Considerations</h4>
+            <ul class="dense-list">
+                <li>Requires web_accessible_resources declaration</li>
+                <li>Chat page is technically accessible to any website (security: minimal risk for this use case)</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="collapsible">
+    <div class="collapsible-header">
+        <span><strong>Option 2: Message Passing to Background Script</strong></span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <div class="secondary-section">
+            <h4>How it works</h4>
+            <ul class="dense-list">
+                <li>Content script sends message to background script with payload</li>
+                <li>Background script uses chrome.tabs.create() to open the chat page</li>
+                <li>No need for web_accessible_resources</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h4>Implementation: Background script (extension/background.js)</h4>
+            <pre>// extension/background.js
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'OPEN_CHAT_PAGE') {
+    const { payload, shiftKey } = message;
+
+    // Store payload with a unique key
+    const sessionKey = `hypertext:handoff-${Date.now()}`;
+    chrome.storage.session.set({ [sessionKey]: payload }).then(() => {
+      const chatUrl = chrome.runtime.getURL('demo/simple_chat_page.html');
+      const fullUrl = `${chatUrl}?session=${encodeURIComponent(sessionKey)}`;
+
+      chrome.tabs.create({ url: fullUrl, active: true });
+      sendResponse({ success: true });
+    });
+
+    return true; // Keep channel open for async response
+  }
+});</pre>
+        </div>
+
+        <div class="card">
+            <h4>Implementation: Update openChatPageFromSession</h4>
+            <pre>function openChatPageFromSession(session, event) {
+  const payload = buildChatPayload(session);
+  if (!payload) return;
+
+  closeChat({ force: true });
+
+  <span class="status-good">// NEW: Use message passing for Chrome extension</span>
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+    chrome.runtime.sendMessage({
+      type: 'OPEN_CHAT_PAGE',
+      payload,
+      shiftKey: event?.shiftKey
+    }, (response) => {
+      if (!response?.success) {
+        console.warn('[Hypertext] Failed to open chat page via background script');
+      }
+    });
+  } else {
+    // Fallback for standalone demo
+    try {
+      win.sessionStorage?.setItem('hypertext:handoff', JSON.stringify(payload));
+      const resolvedUrl = new URL(chatPageUrl, win.location.href).toString();
+      const target = event?.shiftKey ? '_self' : '_blank';
+      win.open(resolvedUrl, target, 'noopener');
+    } catch (error) {
+      console.warn('[Hypertext] Failed to open chat page:', error);
+    }
+  }
+}</pre>
+        </div>
+
+        <div class="card">
+            <h4>Implementation: Update chat page to read from storage</h4>
+            <pre>// demo/simple_chat_page.html &lt;script&gt;
+
+async function loadPayload() {
+  const params = new URLSearchParams(window.location.search);
+  const sessionKey = params.get('session');
+
+  if (sessionKey && typeof chrome !== 'undefined' && chrome.storage) {
+    try {
+      const result = await chrome.storage.session.get(sessionKey);
+      if (result[sessionKey]) {
+        // Clean up
+        chrome.storage.session.remove(sessionKey);
+        return result[sessionKey];
+      }
+    } catch (error) {
+      console.warn('Failed to load from chrome.storage:', error);
+    }
+  }
+
+  // Fallback to sessionStorage
+  try {
+    const cached = sessionStorage.getItem('hypertext:handoff');
+    if (cached) return JSON.parse(cached);
+  } catch (error) {
+    console.warn('Failed to parse cached payload:', error);
+  }
+
+  return fallbackPayload();
+}</pre>
+        </div>
+
+        <div class="card">
+            <h4>✅ Advantages</h4>
+            <ul class="dense-list">
+                <li>No web_accessible_resources needed</li>
+                <li>More secure (chat page not exposed)</li>
+                <li>Background script handles tab creation</li>
+                <li>Can use chrome.storage.session for data passing</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h4>⚠️ Disadvantages</h4>
+            <ul class="dense-list">
+                <li>More complex implementation</li>
+                <li>Requires background script modification</li>
+                <li>Requires "storage" permission in manifest</li>
+                <li>Less backward compatible with standalone demo</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="collapsible">
+    <div class="collapsible-header">
+        <span><strong>Option 3: Inject Chat UI Directly into Current Page</strong></span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <div class="secondary-section">
+            <h4>How it works</h4>
+            <ul class="dense-list">
+                <li>Instead of opening a new tab, expand the tooltip into a full-page overlay</li>
+                <li>No navigation required</li>
+                <li>Smooth transition from tooltip to full chat</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h4>Implementation Approach</h4>
+            <pre>// Add a "fullscreen" mode to the existing tooltip
+
+function expandChatToFullscreen(session) {
+  tooltip.classList.add('fullscreen-mode');
+  tooltip.style.position = 'fixed';
+  tooltip.style.left = '50%';
+  tooltip.style.top = '50%';
+  tooltip.style.transform = 'translate(-50%, -50%)';
+  tooltip.style.width = 'min(960px, 90vw)';
+  tooltip.style.height = '80vh';
+  tooltip.style.zIndex = '2147483647';
+
+  // Add fullscreen-specific UI elements
+  const closeFullscreenBtn = document.createElement('button');
+  closeFullscreenBtn.textContent = '← Back to reading';
+  closeFullscreenBtn.onclick = () => collapseChatFromFullscreen(session);
+
+  // Insert at top of tooltip header
+  tooltip.querySelector('.hx-chat-tooltip__header').prepend(closeFullscreenBtn);
+}</pre>
+        </div>
+
+        <div class="card">
+            <h4>✅ Advantages</h4>
+            <ul class="dense-list">
+                <li>No URL navigation needed</li>
+                <li>Smooth UX transition</li>
+                <li>All context remains in same page</li>
+                <li>No manifest changes required</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h4>⚠️ Disadvantages</h4>
+            <ul class="dense-list">
+                <li>Can't open chat in separate tab</li>
+                <li>Covers the current page content</li>
+                <li>May conflict with page styles</li>
+                <li>Different UX from original design</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="divider"></div>
+
+<h2>Recommendation</h2>
+
+<div class="card priority">
+    <h3>Use Option 1: chrome.runtime.getURL() via Configuration</h3>
+    <ul class="dense-list">
+        <li><strong>Simplest implementation</strong> with minimal code changes</li>
+        <li><strong>Maintains original UX</strong> of opening in new tab</li>
+        <li><strong>Backward compatible</strong> with standalone demo pages</li>
+        <li><strong>Clean architecture</strong> with extension-specific logic in loader</li>
+    </ul>
+</div>
+
+<div class="divider"></div>
+
+<h2>Implementation Checklist</h2>
+
+<div class="card">
+    <h3>Tasks</h3>
+    <ul class="dense-list">
+        <li>☐ Add <code>web_accessible_resources</code> to manifest.json</li>
+        <li>☐ Add <code>resolveExtensionUrl</code> parameter to createHypertextExperience options</li>
+        <li>☐ Update openChatPageFromSession to use resolveExtensionUrl when provided</li>
+        <li>☐ Update extension/hypertext-loader.js to pass chrome.runtime.getURL as resolver</li>
+        <li>☐ Test on external website (e.g., news.ycombinator.com)</li>
+        <li>☐ Test fallback behavior on standalone demo pages</li>
+        <li>☐ Update tests/hypertext-demo.spec.mjs if needed</li>
+    </ul>
+</div>
+
+<div class="divider"></div>
+
+<h2>Testing Strategy</h2>
+
+<div class="two-column">
+    <div class="card">
+        <h4>Test Case 1: Extension Context</h4>
+        <ol class="dense-list">
+            <li>Load extension in Chrome</li>
+            <li>Navigate to external site (e.g., news.ycombinator.com)</li>
+            <li>Select text and trigger hypertext (Cmd+Shift+K)</li>
+            <li>Click on generated hypertext link</li>
+            <li>Verify: Opens chrome-extension://[id]/demo/simple_chat_page.html</li>
+            <li>Verify: Chat payload is correctly loaded</li>
+        </ol>
+    </div>
+    <div class="card">
+        <h4>Test Case 2: Standalone Demo</h4>
+        <ol class="dense-list">
+            <li>Open demo/hypertext_navigation_demo.html directly</li>
+            <li>Select text and trigger hypertext</li>
+            <li>Click on generated hypertext link</li>
+            <li>Verify: Opens demo/simple_chat_page.html in same directory</li>
+            <li>Verify: Chat payload is correctly loaded</li>
+        </ol>
+    </div>
+</div>
+
+<div class="mermaid-container">
+    <h3>Final Architecture</h3>
+    <div class="mermaid">
+graph TB
+    subgraph "Content Script (any webpage)"
+        A[hypertext-experience.js]
+        B[hypertext-loader.js]
+        B -->|provides resolveExtensionUrl| A
+    end
+
+    subgraph "Extension Bundle"
+        C[demo/simple_chat_page.html]
+        D[manifest.json]
+        D -->|web_accessible_resources| C
+    end
+
+    A -->|User clicks link| E{resolveExtensionUrl exists?}
+    E -->|Yes Chrome Extension| F[chrome.runtime.getURL]
+    E -->|No Standalone| G[new URL relative]
+
+    F --> H[chrome-extension://abc123/demo/simple_chat_page.html]
+    G --> I[./demo/simple_chat_page.html]
+
+    H --> C
+    I --> J[Local file]
+
+    style C fill:#9f9,stroke:#0c0,stroke-width:2px
+    style H fill:#9f9,stroke:#0c0,stroke-width:2px
+    </div>
+</div>
+
+</div>
+
+<script>
+mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    flowchart: { curve: 'basis' }
+});
+
+document.querySelectorAll('.collapsible-header').forEach(header => {
+    header.addEventListener('click', () => {
+        const collapsible = header.parentElement;
+        collapsible.classList.toggle('open');
+    });
+});
+</script>
+</body>
+</html>

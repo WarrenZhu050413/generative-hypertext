@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan: TypeScript Declarations for Vanilla JS Module</title>
+<style>
+:root {
+    --chinese-red: #8B0000;
+    --chinese-gold: #FFD700;
+    --jade-green: #00A86B;
+    --ink-black: #2B2B2B;
+    --paper-beige: #F5F5DC;
+    --light-cream: #FAFAF0;
+    --level-1: #000;
+    --level-2: #333;
+    --level-3: #666;
+    --level-4: #999;
+}
+
+body {
+    background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+    color: var(--ink-black);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 26px;
+    font-weight: 900;
+    margin: 10px 0;
+    padding: 10px;
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 14px 0 8px 0;
+    padding: 8px;
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.03);
+}
+
+h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 10px 0 6px 0;
+    color: var(--level-2);
+}
+
+h4 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 8px 0 4px 0;
+    color: var(--level-3);
+}
+
+.important-always-visible {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+    border: 2px solid var(--chinese-gold);
+    padding: 14px;
+    margin: 14px 0;
+    border-radius: 4px;
+}
+
+.two-column-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 12px 0;
+}
+
+.collapsible {
+    margin: 8px 0;
+    border: 1px solid rgba(139, 0, 0, 0.15);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.collapsible-header {
+    cursor: pointer;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.collapsible-header:hover {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+}
+
+.collapsible-header .arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    color: var(--chinese-red);
+    font-size: 12px;
+}
+
+.collapsible.open .arrow {
+    transform: rotate(90deg);
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 12px;
+}
+
+.collapsible.open .collapsible-content {
+    max-height: 15000px;
+    padding: 12px;
+}
+
+.collapsible.critical .collapsible-header {
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+.collapsible.secondary .collapsible-header {
+    border-left: 2px solid #999;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.collapsible.full-width {
+    grid-column: span 2;
+}
+
+.metric {
+    display: inline-block;
+    background: white;
+    border: 1px solid var(--chinese-gold);
+    padding: 4px 10px;
+    margin: 3px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.metric.important {
+    background: var(--jade-green);
+    color: white;
+    border-color: var(--jade-green);
+}
+
+.critical-issue {
+    background: rgba(139, 0, 0, 0.05);
+    border-left: 4px solid var(--chinese-red);
+    padding: 12px;
+    margin: 12px 0;
+}
+
+.info-box {
+    background: rgba(0, 168, 107, 0.05);
+    border-left: 4px solid var(--jade-green);
+    padding: 12px;
+    margin: 12px 0;
+}
+
+code {
+    background: rgba(139, 0, 0, 0.06);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: Monaco, Menlo, monospace;
+    font-size: 12px;
+}
+
+pre {
+    background: rgba(139, 0, 0, 0.03);
+    border: 1px solid rgba(139, 0, 0, 0.15);
+    border-radius: 4px;
+    padding: 12px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+ul, ol {
+    margin: 8px 0 8px 24px;
+}
+
+li {
+    margin: 5px 0;
+    line-height: 1.5;
+}
+
+.dense-list {
+    list-style: none;
+    padding: 0;
+    margin: 6px 0;
+}
+
+.dense-list li {
+    padding: 5px 0;
+    border-bottom: 1px dashed rgba(139, 0, 0, 0.1);
+}
+
+.dense-list li:last-child {
+    border-bottom: none;
+}
+
+.indent-1 {
+    margin-left: 20px;
+}
+
+.muted {
+    color: var(--level-3);
+    font-size: 12px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 13px;
+}
+
+th {
+    background: var(--chinese-red);
+    color: white;
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+td {
+    border: 1px solid #ddd;
+    padding: 8px 10px;
+    vertical-align: top;
+}
+
+tr:nth-child(even) {
+    background: rgba(0,0,0,0.02);
+}
+
+button {
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    color: white;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 4px;
+    padding: 5px 12px;
+    margin: 5px 3px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+}
+
+.fix-badge {
+    display: inline-block;
+    background: var(--jade-green);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-left: 8px;
+}
+</style>
+</head>
+<body>
+
+<div style="margin: 8px 0; text-align: right;">
+    <button id="expand-all">Expand All</button>
+    <button id="collapse-all">Collapse All</button>
+</div>
+
+<div class="important-always-visible">
+    <h1>📘 TypeScript Declarations for Vanilla JS Module</h1>
+    <div class="two-column-layout">
+        <div>
+            <h3>Objective</h3>
+            <p>Add TypeScript type definitions to the vanilla JS hypertext module WITHOUT converting to TypeScript. Provides type safety for TypeScript consumers while maintaining vanilla JS runtime.</p>
+            <div class="metric">Approach: .d.ts files</div>
+            <div class="metric">No code changes</div>
+        </div>
+        <div>
+            <h3>Strategy</h3>
+            <p>Create declaration files → Add module entry points → Configure package.json → Automated validation → Maintain type/code sync</p>
+            <div class="metric important">Complexity: LOW-MEDIUM</div>
+            <div class="metric">Duration: 1-2 days</div>
+        </div>
+    </div>
+</div>
+
+<div class="critical-issue">
+    <h2>🔍 Codex Review: Critical Issues Fixed</h2>
+    <div class="two-column-layout">
+        <div>
+            <h4>Issues Identified</h4>
+            <ul style="margin: 8px 0 0 20px;">
+                <li>Current module uses <code>global.createHypertextExperience</code> (UMD), not proper exports</li>
+                <li>Missing ambient declarations for <code>window.createHypertextExperience</code></li>
+                <li>Session types severely underspecified (missing 10+ properties)</li>
+                <li>No automated validation strategy</li>
+            </ul>
+        </div>
+        <div>
+            <h4>Fixes Applied</h4>
+            <ul style="margin: 8px 0 0 20px;">
+                <li>✅ Create bridging <code>index.cjs</code> and <code>index.mjs</code> entry files</li>
+                <li>✅ Add <code>declare global</code> block for script tag users</li>
+                <li>✅ Audit module for ALL properties, include complete types</li>
+                <li>✅ Add <code>tsc --noEmit</code> validation in package scripts</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="collapsible full-width critical" data-collapsible="open">
+    <div class="collapsible-header">
+        <span>📚 TypeScript Fundamentals: What You Need to Know</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <h3>What is a .d.ts File?</h3>
+        <p><strong>Declaration files</strong> (<code>.d.ts</code>) contain <strong>type information only</strong> - no runtime code. They tell TypeScript what types exist in JavaScript files.</p>
+
+        <div class="two-column-layout" style="margin-top: 12px;">
+            <div>
+                <h4>Your JavaScript Code (hypertext-experience.js)</h4>
+                <pre><code>// This runs in the browser
+function createHypertextExperience(config) {
+  return {
+    destroy() { /* cleanup */ },
+    getSessions() { /* return sessions */ }
+  };
+}</code></pre>
+            </div>
+            <div>
+                <h4>Declaration File (hypertext-experience.d.ts)</h4>
+                <pre><code>// This is TypeScript ONLY (not run)
+export function createHypertextExperience(
+  config?: HypertextConfig
+): HypertextExperienceAPI;</code></pre>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 16px;">Interface vs Type: When to Use Which</h3>
+        <table>
+            <tr>
+                <th style="width: 20%;">Feature</th>
+                <th style="width: 40%;">interface</th>
+                <th style="width: 40%;">type</th>
+            </tr>
+            <tr>
+                <td><strong>Best For</strong></td>
+                <td>Object shapes that might be extended</td>
+                <td>Unions, intersections, primitives, tuples</td>
+            </tr>
+            <tr>
+                <td><strong>Extendable</strong></td>
+                <td>✅ Yes (<code>extends</code>, declaration merging)</td>
+                <td>❌ No (but can intersect with <code>&</code>)</td>
+            </tr>
+            <tr>
+                <td><strong>Syntax</strong></td>
+                <td><code>interface Foo { x: number }</code></td>
+                <td><code>type Foo = { x: number }</code></td>
+            </tr>
+            <tr>
+                <td><strong>Examples</strong></td>
+                <td>Config objects, API returns, data structures</td>
+                <td>Union types, mapped types, conditional types</td>
+            </tr>
+        </table>
+
+        <h4 style="margin-top: 12px;">For Your Module:</h4>
+        <pre><code>// ✅ USE interface (extendable object shapes)
+interface HypertextConfig { ... }
+interface HypertextSession { ... }
+interface HypertextExperienceAPI { ... }
+
+// ✅ USE type (unions, specific values)
+type HypertextMode = 'inline' | 'reference';
+type PillState = 'loading' | 'ready-inline' | 'ready-reference' | 'error';</code></pre>
+
+        <h3 style="margin-top: 16px;">Ambient Declarations: Global Types</h3>
+        <p>Your module adds <code>createHypertextExperience</code> to <code>window</code>. TypeScript users loading it via <code>&lt;script&gt;</code> tag need to know it exists:</p>
+
+        <pre><code>// In your .d.ts file
+declare global {
+  interface Window {
+    createHypertextExperience: typeof createHypertextExperience;
+  }
+}
+
+// Now TypeScript knows:
+window.createHypertextExperience({ backendUrl: '...' }); // ✅ Type-safe!</code></pre>
+
+        <h3 style="margin-top: 16px;">Optional vs Required Properties</h3>
+        <table>
+            <tr>
+                <th style="width: 50%;">TypeScript Syntax</th>
+                <th style="width: 50%;">Meaning</th>
+            </tr>
+            <tr>
+                <td><code>backendUrl: string</code></td>
+                <td>Required property (must provide)</td>
+            </tr>
+            <tr>
+                <td><code>backendUrl?: string</code></td>
+                <td>Optional property (can be <code>undefined</code>)</td>
+            </tr>
+            <tr>
+                <td><code>contextProvider?: (s: Session) => string</code></td>
+                <td>Optional function</td>
+            </tr>
+            <tr>
+                <td><code>destroy: () => void</code></td>
+                <td>Required method, returns nothing</td>
+            </tr>
+        </table>
+
+        <h3 style="margin-top: 16px;">Function Types</h3>
+        <pre><code>// Method in interface
+interface API {
+  destroy: () => void;  // ← Method signature
+  getSessions: () => Map<string, Session>;
+}
+
+// Function type in config
+interface Config {
+  // Optional callback function that takes KeyboardEvent, returns boolean
+  hotkey?: (event: KeyboardEvent) => boolean;
+
+  // Optional callback with multiple params
+  contextProvider?: (session: Session, opts: { truncateContext: boolean }) => string;
+}</code></pre>
+
+        <h3 style="margin-top: 16px;">Generic Types: Map, Set, etc.</h3>
+        <pre><code>// Your vanilla code returns:
+getSessions() {
+  return new Map(sessions); // Map of session ID → session object
+}
+
+// TypeScript declaration:
+getSessions(): Map<string, HypertextSession>;
+//             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//             Map with string keys, HypertextSession values
+
+// Make it readonly to prevent mutation:
+getSessions(): ReadonlyMap<string, HypertextSession>;</code></pre>
+
+        <h3 style="margin-top: 16px;">Union Types for Display Property</h3>
+        <p>Your code has complex display values:</p>
+        <pre><code>// JavaScript runtime has two forms:
+message.display = "Simple text";
+// OR
+message.display = { explanation: "Text", url: "https://..." };
+
+// TypeScript union type:
+interface HypertextMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  display?: string | { explanation: string; url?: string };
+  //        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  //        Can be EITHER a string OR an object
+  timestamp: number;
+}</code></pre>
+    </div>
+</div>
+
+<div class="two-column-layout">
+    <div class="collapsible critical" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>⚡ Phase 1: Module Audit & Inventory <span class="fix-badge">CODEX FIX</span></span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>1.1 Audit Exported API</strong>
+                    <div class="indent-1 muted">File: hypertext/hypertext-experience.js:2089-2096</div>
+                    <div class="indent-1">Document return value of createHypertextExperience</div>
+                    <div class="indent-1">List all methods: applyHypertext, destroy, getSessions, etc.</div>
+                    <div class="indent-1">Note parameter types for each</div>
+                </li>
+                <li><strong>1.2 Audit Configuration Object</strong>
+                    <div class="indent-1 muted">Lines: 789-802</div>
+                    <div class="indent-1">List ALL config properties (document, backendUrl, ...)</div>
+                    <div class="indent-1">Mark which are optional vs required</div>
+                    <div class="indent-1">Document function signatures for callbacks</div>
+                </li>
+                <li><strong>1.3 Audit Session Structure <span class="fix-badge">CRITICAL</span></strong>
+                    <div class="indent-1 muted">Lines: 832-847</div>
+                    <div class="indent-1">Document ALL properties: id, subject, context, wrapper, messages</div>
+                    <div class="indent-1">Include: draft, isStreaming, isPinned, tooltipPosition, tooltipSize</div>
+                    <div class="indent-1">Include: lastResult, lastUserMessage, lastInstructions, lastUpdatedAt</div>
+                </li>
+                <li><strong>1.4 Audit Message Structure</strong>
+                    <div class="indent-1 muted">Lines: 1399-1412, 1773-1777</div>
+                    <div class="indent-1">role: 'user' | 'assistant'</div>
+                    <div class="indent-1">content: string</div>
+                    <div class="indent-1">display: string | { explanation, url } (complex union)</div>
+                    <div class="indent-1">timestamp: number</div>
+                </li>
+                <li><strong>1.5 Audit Result Structure</strong>
+                    <div class="indent-1 muted">Lines: 701-732, 1158-1171</div>
+                    <div class="indent-1">pillText: string</div>
+                    <div class="indent-1">mode: 'inline' | 'reference'</div>
+                    <div class="indent-1">explanation?: string (optional)</div>
+                    <div class="indent-1">url?: string (optional)</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="collapsible critical" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>📝 Phase 2: Create .d.ts Declaration File</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>2.1 Create Declaration File</strong>
+                    <div class="indent-1 muted">New file: hypertext/hypertext-experience.d.ts</div>
+                    <div class="indent-1">Start with JSDoc comment explaining the module</div>
+                    <div class="indent-1">Include minimal usage example</div>
+                </li>
+                <li><strong>2.2 Define Core Interfaces</strong>
+                    <div class="indent-1">HypertextConfig (all 8+ properties)</div>
+                    <div class="indent-1">HypertextExperienceAPI (6 methods)</div>
+                    <div class="indent-1">HypertextSession (complete, 15+ properties)</div>
+                    <div class="indent-1">HypertextMessage (with union display type)</div>
+                    <div class="indent-1">HypertextResult (4 properties)</div>
+                </li>
+                <li><strong>2.3 Define Helper Types</strong>
+                    <div class="indent-1">type HypertextMode = 'inline' | 'reference'</div>
+                    <div class="indent-1">type PillState = 'loading' | 'ready-inline' | ...</div>
+                    <div class="indent-1">type TooltipPosition = { left: number; top: number }</div>
+                    <div class="indent-1">type TooltipSize = { width: number; height: number }</div>
+                </li>
+                <li><strong>2.4 Add Main Export</strong>
+                    <div class="indent-1">export function createHypertextExperience(...)</div>
+                    <div class="indent-1">Export all interfaces/types</div>
+                </li>
+                <li><strong>2.5 Add Ambient Declaration <span class="fix-badge">CODEX FIX</span></strong>
+                    <div class="indent-1">declare global { interface Window { ... } }</div>
+                    <div class="indent-1">Enables script tag usage with types</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="collapsible critical" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>🔧 Phase 3: Create Module Entry Points <span class="fix-badge">CODEX FIX</span></span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>3.1 Create CommonJS Entry</strong>
+                    <div class="indent-1 muted">New file: hypertext/index.cjs</div>
+                    <div class="indent-1">Require the vanilla module</div>
+                    <div class="indent-1">Export createHypertextExperience</div>
+                    <div class="indent-1">Attach types from .d.ts</div>
+                </li>
+                <li><strong>3.2 Create ES Module Entry</strong>
+                    <div class="indent-1 muted">New file: hypertext/index.mjs</div>
+                    <div class="indent-1">Import the vanilla module (or re-export)</div>
+                    <div class="indent-1">Export as named export</div>
+                </li>
+                <li><strong>3.3 Verify Entry Points Work</strong>
+                    <div class="indent-1">Test: <code>const { createHypertextExperience } = require('./index.cjs')</code></div>
+                    <div class="indent-1">Test: <code>import { createHypertextExperience } from './index.mjs'</code></div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📦 Phase 4: Configure package.json</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>4.1 Add Type Declarations</strong>
+                    <div class="indent-1 muted">File: package.json</div>
+                    <div class="indent-1">Add: <code>"types": "hypertext/hypertext-experience.d.ts"</code></div>
+                </li>
+                <li><strong>4.2 Configure Exports Field</strong>
+                    <div class="indent-1">Define dual ESM/CJS entry points</div>
+                    <div class="indent-1">Map to index.mjs and index.cjs</div>
+                    <div class="indent-1">Include types in exports map</div>
+                </li>
+                <li><strong>4.3 Add Main Fields</strong>
+                    <div class="indent-1"><code>"main": "hypertext/index.cjs"</code> (CJS default)</div>
+                    <div class="indent-1"><code>"module": "hypertext/index.mjs"</code> (ESM default)</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="collapsible critical" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>✓ Phase 5: Automated Validation <span class="fix-badge">CODEX FIX</span></span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>5.1 Create Type Test File</strong>
+                    <div class="indent-1 muted">New file: tests/types/hypertext-types.test.ts</div>
+                    <div class="indent-1">Import createHypertextExperience</div>
+                    <div class="indent-1">Test all config properties</div>
+                    <div class="indent-1">Test all API methods</div>
+                    <div class="indent-1">Test complex types (session, message)</div>
+                </li>
+                <li><strong>5.2 Add tsc Validation Script</strong>
+                    <div class="indent-1 muted">File: package.json</div>
+                    <div class="indent-1">Add script: <code>"type-check": "tsc --noEmit"</code></div>
+                    <div class="indent-1">Configure tsconfig.json with strict mode</div>
+                </li>
+                <li><strong>5.3 Run Validation</strong>
+                    <div class="indent-1">Execute: <code>npm run type-check</code></div>
+                    <div class="indent-1">Verify zero errors</div>
+                    <div class="indent-1">Test in VS Code for autocomplete</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📚 Phase 6: Documentation</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>6.1 Update README</strong>
+                    <div class="indent-1">Add "TypeScript Support" section</div>
+                    <div class="indent-1">Show import example</div>
+                    <div class="indent-1">Document that types are included</div>
+                </li>
+                <li><strong>6.2 Add Maintenance Checklist</strong>
+                    <div class="indent-1">Create TYPES_MAINTENANCE.md</div>
+                    <div class="indent-1">List: "When adding config props, update .d.ts"</div>
+                    <div class="indent-1">List: "Run type-check before commits"</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<div class="collapsible full-width critical" data-collapsible="open">
+    <div class="collapsible-header">
+        <span>💻 Complete Implementation: hypertext-experience.d.ts</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <pre><code>/**
+ * Nabokov's Hypertext Experience
+ *
+ * Provides text selection → AI-powered hyperlink generation → interactive tooltip chat
+ *
+ * @example
+ * ```typescript
+ * import { createHypertextExperience } from 'hypertext-experience';
+ *
+ * const experience = createHypertextExperience({
+ *   backendUrl: 'http://localhost:3100',
+ *   autoOpenTooltipOnHover: true
+ * });
+ *
+ * // Later, cleanup
+ * experience.destroy();
+ * ```
+ */
+
+// ============================================================================
+// Helper Types
+// ============================================================================
+
+/** Hypertext display mode */
+export type HypertextMode = 'inline' | 'reference';
+
+/** Pill state visual indicator */
+export type PillState = 'loading' | 'ready-inline' | 'ready-reference' | 'ready-url' | 'error';
+
+/** Tooltip position coordinates */
+export type TooltipPosition = {
+  left: number;
+  top: number;
+};
+
+/** Tooltip dimensions */
+export type TooltipSize = {
+  width: number;
+  height: number;
+};
+
+// ============================================================================
+// Core Interfaces
+// ============================================================================
+
+/**
+ * Configuration options for createHypertextExperience
+ */
+export interface HypertextConfig {
+  /** Custom document to operate on (defaults to window.document) */
+  document?: Document;
+
+  /** Backend URL for LLM API (defaults to http://localhost:3100) */
+  backendUrl?: string;
+
+  /** Custom context provider function */
+  contextProvider?: (
+    session: HypertextSession,
+    opts: { truncateContext: boolean }
+  ) => string;
+
+  /** Custom hotkey detector function (defaults to Cmd/Ctrl+Shift+K) */
+  hotkey?: (event: KeyboardEvent) => boolean;
+
+  /** Selection validation function */
+  selectionValidator?: (range: Range, text: string) => boolean;
+
+  /** Auto-open tooltip on hover (defaults to true) */
+  autoOpenTooltipOnHover?: boolean;
+
+  /** URL for full chat page (defaults to demo/simple_chat_page.html) */
+  chatPageUrl?: string;
+
+  /** Register external trigger function */
+  registerExternalTrigger?: (trigger: () => void) => void;
+}
+
+/**
+ * Hypertext session data structure
+ * Represents one hyperlinked text selection with its conversation history
+ */
+export interface HypertextSession {
+  /** Unique session identifier */
+  id: string;
+
+  /** Selected text that was hyperlinked */
+  subject: string;
+
+  /** Page context at time of creation */
+  context: string;
+
+  /** DOM wrapper element containing the hyperlink */
+  wrapper: HTMLElement | null;
+
+  /** Conversation message history */
+  messages: HypertextMessage[];
+
+  /** Most recent LLM generation result */
+  lastResult: HypertextResult | null;
+
+  /** Last user message content */
+  lastUserMessage: string | null;
+
+  /** Last custom instructions provided */
+  lastInstructions: string;
+
+  /** Whether currently streaming a response */
+  isStreaming: boolean;
+
+  /** Draft message in composer */
+  draft: string;
+
+  /** Whether tooltip is pinned open */
+  isPinned: boolean;
+
+  /** Saved tooltip position */
+  tooltipPosition: TooltipPosition | null;
+
+  /** Saved tooltip dimensions */
+  tooltipSize: TooltipSize | null;
+
+  /** Timestamp of last update */
+  lastUpdatedAt: number;
+}
+
+/**
+ * Message in a hypertext conversation
+ */
+export interface HypertextMessage {
+  /** Message role */
+  role: 'user' | 'assistant';
+
+  /** Raw message content */
+  content: string;
+
+  /** Display value (can be string or formatted object) */
+  display?: string | {
+    explanation: string;
+    url?: string;
+  };
+
+  /** Message timestamp (milliseconds since epoch) */
+  timestamp: number;
+}
+
+/**
+ * Result from LLM hypertext generation
+ */
+export interface HypertextResult {
+  /** Text to display in the hyperlink pill */
+  pillText: string;
+
+  /** Display mode (inline explanation vs external reference) */
+  mode: HypertextMode;
+
+  /** Inline explanation text (if mode is 'inline') */
+  explanation?: string;
+
+  /** External URL (if mode is 'reference') */
+  url?: string;
+}
+
+/**
+ * API returned by createHypertextExperience
+ */
+export interface HypertextExperienceAPI {
+  /** Apply hypertext to current selection with optional custom instructions */
+  applyHypertext: (instructions?: string) => void;
+
+  /** Destroy the experience and clean up all event listeners */
+  destroy: () => void;
+
+  /** Get all active hypertext sessions (returns a COPY of the map) */
+  getSessions: () => ReadonlyMap<string, HypertextSession>;
+
+  /** Get the palette DOM element */
+  getPaletteElement: () => HTMLElement;
+
+  /** Get the tooltip DOM element */
+  getTooltipElement: () => HTMLElement;
+
+  /** Trigger hypertext palette from external code (returns true if successful) */
+  triggerFromExternal: () => boolean;
+}
+
+// ============================================================================
+// Main Export
+// ============================================================================
+
+/**
+ * Create a hypertext experience on a document
+ *
+ * @param options - Configuration options
+ * @returns API object with methods to control the experience
+ *
+ * @example
+ * ```typescript
+ * // Basic usage
+ * const experience = createHypertextExperience({
+ *   backendUrl: 'http://localhost:3100'
+ * });
+ *
+ * // With custom context provider
+ * const experience = createHypertextExperience({
+ *   backendUrl: 'http://localhost:3100',
+ *   contextProvider: (session, opts) => {
+ *     return `Custom context for: ${session.subject}`;
+ *   }
+ * });
+ *
+ * // Cleanup when done
+ * experience.destroy();
+ * ```
+ */
+export function createHypertextExperience(
+  options?: HypertextConfig
+): HypertextExperienceAPI;
+
+// ============================================================================
+// Global Ambient Declaration (for script tag users)
+// ============================================================================
+
+declare global {
+  interface Window {
+    /**
+     * Hypertext experience factory (available when loaded via script tag)
+     * @see createHypertextExperience
+     */
+    createHypertextExperience: typeof createHypertextExperience;
+  }
+}
+</code></pre>
+    </div>
+</div>
+
+<div class="collapsible full-width secondary" data-collapsible="closed">
+    <div class="collapsible-header">
+        <span>💻 Implementation: Module Entry Points</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <h3>hypertext/index.cjs (CommonJS Entry)</h3>
+        <pre><code>/**
+ * CommonJS entry point for hypertext-experience
+ * Provides compatibility with Node.js require()
+ */
+
+// Load the vanilla UMD module
+require('./hypertext-experience.js');
+
+// Re-export the global function
+module.exports = {
+  createHypertextExperience: globalThis.createHypertextExperience
+};
+
+// For default import compatibility
+module.exports.default = module.exports.createHypertextExperience;
+</code></pre>
+
+        <h3 style="margin-top: 16px;">hypertext/index.mjs (ES Module Entry)</h3>
+        <pre><code>/**
+ * ES Module entry point for hypertext-experience
+ * Provides compatibility with import statements
+ */
+
+// Import the vanilla UMD module (this sets window.createHypertextExperience)
+import './hypertext-experience.js';
+
+// Re-export as named export
+export const createHypertextExperience = globalThis.createHypertextExperience;
+
+// Default export for convenience
+export default createHypertextExperience;
+</code></pre>
+
+        <h3 style="margin-top: 16px;">package.json Configuration</h3>
+        <pre><code>{
+  "name": "hypertext-experience",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./hypertext/index.cjs",
+  "module": "./hypertext/index.mjs",
+  "types": "./hypertext/hypertext-experience.d.ts",
+  "exports": {
+    ".": {
+      "types": "./hypertext/hypertext-experience.d.ts",
+      "import": "./hypertext/index.mjs",
+      "require": "./hypertext/index.cjs",
+      "default": "./hypertext/hypertext-experience.js"
+    }
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "test:types": "tsc --noEmit tests/types/**/*.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}
+</code></pre>
+    </div>
+</div>
+
+<div class="collapsible full-width secondary" data-collapsible="closed">
+    <div class="collapsible-header">
+        <span>✓ Type Validation Test File</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <h3>tests/types/hypertext-types.test.ts</h3>
+        <pre><code>/**
+ * TypeScript type validation tests
+ * These don't run - they just check types at compile time
+ */
+
+import {
+  createHypertextExperience,
+  HypertextConfig,
+  HypertextExperienceAPI,
+  HypertextSession,
+  HypertextMessage,
+  HypertextResult,
+} from '../../hypertext/hypertext-experience';
+
+// Test basic usage
+const experience1 = createHypertextExperience();
+const experience2 = createHypertextExperience({
+  backendUrl: 'http://localhost:3100',
+});
+
+// Test full config
+const fullConfig: HypertextConfig = {
+  document: document,
+  backendUrl: 'http://localhost:3100',
+  autoOpenTooltipOnHover: true,
+  chatPageUrl: 'demo/chat.html',
+  contextProvider: (session, opts) => {
+    return `Context for ${session.subject}`;
+  },
+  hotkey: (event) => {
+    return event.ctrlKey && event.key === 'k';
+  },
+  selectionValidator: (range, text) => {
+    return text.length > 0;
+  },
+  registerExternalTrigger: (trigger) => {
+    console.log('Trigger registered');
+  },
+};
+
+const experience3 = createHypertextExperience(fullConfig);
+
+// Test API methods
+experience1.applyHypertext();
+experience1.applyHypertext('Explain this');
+experience1.destroy();
+
+const sessions: ReadonlyMap<string, HypertextSession> = experience1.getSessions();
+const palette: HTMLElement = experience1.getPaletteElement();
+const tooltip: HTMLElement = experience1.getTooltipElement();
+const triggered: boolean = experience1.triggerFromExternal();
+
+// Test session structure
+const testSession: HypertextSession = {
+  id: 'test-1',
+  subject: 'selected text',
+  context: 'page context',
+  wrapper: document.createElement('span'),
+  messages: [],
+  lastResult: null,
+  lastUserMessage: null,
+  lastInstructions: '',
+  isStreaming: false,
+  draft: '',
+  isPinned: false,
+  tooltipPosition: { left: 100, top: 200 },
+  tooltipSize: { width: 360, height: 480 },
+  lastUpdatedAt: Date.now(),
+};
+
+// Test message structure (both display formats)
+const userMessage: HypertextMessage = {
+  role: 'user',
+  content: 'What is this?',
+  display: 'What is this?',
+  timestamp: Date.now(),
+};
+
+const assistantMessage: HypertextMessage = {
+  role: 'assistant',
+  content: '{"pillText": "..."}',
+  display: {
+    explanation: 'This is an explanation',
+    url: 'https://example.com',
+  },
+  timestamp: Date.now(),
+};
+
+// Test result structure
+const inlineResult: HypertextResult = {
+  pillText: 'Inline Info',
+  mode: 'inline',
+  explanation: 'This is explained inline',
+};
+
+const referenceResult: HypertextResult = {
+  pillText: 'External Link',
+  mode: 'reference',
+  url: 'https://example.com',
+  explanation: 'Optional explanation with link',
+};
+
+// Test global ambient (script tag usage)
+if (typeof window !== 'undefined') {
+  const globalExperience = window.createHypertextExperience({
+    backendUrl: 'http://localhost:3100',
+  });
+}
+
+// Type assertions to verify correct inference
+const _api: HypertextExperienceAPI = experience1;
+const _config: HypertextConfig = fullConfig;
+const _session: HypertextSession = testSession;
+
+console.log('Type tests pass!');
+</code></pre>
+    </div>
+</div>
+
+<div class="info-box" style="margin-top: 20px;">
+    <h3 style="margin-top: 0;">🎯 Success Criteria</h3>
+    <ul>
+        <li>✅ <code>npm run type-check</code> passes with zero errors</li>
+        <li>✅ VS Code autocomplete shows all config options</li>
+        <li>✅ TypeScript consumers get full type safety</li>
+        <li>✅ Script tag users get <code>window.createHypertextExperience</code> types</li>
+        <li>✅ Both ESM and CJS imports work</li>
+        <li>✅ Types match actual runtime behavior</li>
+        <li>✅ Zero changes to vanilla JS runtime code</li>
+    </ul>
+</div>
+
+<div class="critical-issue" style="margin-top: 20px;">
+    <h3 style="margin-top: 0;">⚠️ Ongoing Maintenance</h3>
+    <p><strong>Important:</strong> Types can drift from implementation over time. Prevent this by:</p>
+    <ol>
+        <li>Running <code>npm run type-check</code> before every commit</li>
+        <li>Updating .d.ts file whenever you add/modify config properties</li>
+        <li>Updating .d.ts file whenever you change session/message structure</li>
+        <li>Adding new test cases to types.test.ts for new features</li>
+        <li>Reviewing .d.ts file during code reviews</li>
+    </ol>
+    <p style="margin-top: 12px;"><strong>Consider:</strong> Adding <code>npm run type-check</code> to pre-commit hook or CI pipeline.</p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const collapsibles = document.querySelectorAll('.collapsible');
+
+    collapsibles.forEach(col => {
+        const header = col.querySelector('.collapsible-header');
+        const initialState = col.dataset.collapsible;
+
+        if (initialState === 'open') {
+            col.classList.add('open');
+        }
+
+        header.addEventListener('click', () => {
+            col.classList.toggle('open');
+        });
+    });
+
+    document.getElementById('expand-all').addEventListener('click', () => {
+        collapsibles.forEach(col => col.classList.add('open'));
+    });
+
+    document.getElementById('collapse-all').addEventListener('click', () => {
+        collapsibles.forEach(col => col.classList.remove('open'));
+    });
+});
+</script>
+
+</body>
+</html>

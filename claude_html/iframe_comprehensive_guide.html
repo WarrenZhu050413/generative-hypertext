@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFrame Deep Dive: Mechanisms, Security & Advanced Techniques</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --jade-green: #00A86B;
+            --ink-black: #2B2B2B;
+            --paper-beige: #F5F5DC;
+            --light-cream: #FAFAF0;
+            --level-1: #000;
+            --level-2: #333;
+            --level-3: #666;
+            --level-4: #999;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            max-width: 100%;
+            line-height: 1.3;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .container {
+            width: 100%;
+            padding: 12px;
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin: 8px 0;
+            padding: 8px 0;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 12px 0 6px 0;
+            padding: 6px 8px;
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.03);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 8px 0 4px 0;
+            color: var(--level-2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h4 {
+            font-size: 13px;
+            font-weight: 500;
+            margin: 6px 0 2px 0;
+            color: var(--level-3);
+        }
+
+        .important-always-visible {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), white);
+            border: 3px solid var(--chinese-gold);
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+
+        .important-always-visible h2 {
+            color: var(--chinese-red);
+            margin-top: 0;
+            border: none;
+            background: none;
+            padding: 0;
+        }
+
+        .critical-info {
+            background: rgba(139, 0, 0, 0.05);
+            border-left: 4px solid var(--chinese-red);
+            padding: 8px 12px;
+            margin: 8px 0;
+            font-weight: 600;
+        }
+
+        .collapsible {
+            margin: 6px 0;
+            width: 100%;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+            border-left: 3px solid var(--chinese-gold);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+        }
+
+        .collapsible-header .arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-size: 12px;
+            margin-right: 8px;
+        }
+
+        .collapsible.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+            padding: 0 12px;
+            margin-left: 16px;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 8000px;
+            padding: 12px;
+        }
+
+        .collapsible.critical .collapsible-header {
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.08);
+            font-weight: 700;
+        }
+
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 8px 0;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            border-radius: 3px;
+            padding: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.priority {
+            border: 2px solid var(--chinese-gold);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+        }
+
+        pre, code {
+            background: linear-gradient(135deg, rgba(245, 245, 220, 0.4), rgba(255, 255, 255, 0.6));
+            border: 1px solid rgba(139, 0, 0, 0.15);
+            font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        pre {
+            padding: 8px;
+            margin: 6px 0;
+            overflow-x: auto;
+            border-radius: 2px;
+        }
+
+        code {
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+
+        pre code {
+            padding: 0;
+            border: none;
+            background: transparent;
+        }
+
+        .dense-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 8px 12px;
+        }
+
+        .dense-list li {
+            padding: 3px 0 3px 16px;
+            border-left: 2px solid transparent;
+            position: relative;
+            line-height: 1.5;
+        }
+
+        .dense-list li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--chinese-red);
+            font-size: 11px;
+        }
+
+        .dense-list li strong {
+            color: var(--level-2);
+            font-weight: 600;
+        }
+
+        .indent-1 { margin-left: 16px; }
+        .indent-2 { margin-left: 32px; }
+        .indent-3 { margin-left: 48px; }
+
+        .divider {
+            height: 2px;
+            background: linear-gradient(90deg, var(--chinese-red), transparent);
+            margin: 16px 0;
+        }
+
+        .mermaid {
+            background: white;
+            padding: 12px;
+            border: 2px solid var(--chinese-gold);
+            border-radius: 4px;
+            margin: 12px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            background: white;
+        }
+
+        th, td {
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            padding: 6px 8px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.08), rgba(255, 215, 0, 0.05));
+            font-weight: 600;
+            color: var(--level-1);
+        }
+
+        .warning {
+            background: rgba(255, 165, 0, 0.1);
+            border-left: 4px solid #FFA500;
+            padding: 8px 12px;
+            margin: 8px 0;
+        }
+
+        .success {
+            background: rgba(0, 168, 107, 0.1);
+            border-left: 4px solid var(--jade-green);
+            padding: 8px 12px;
+            margin: 8px 0;
+        }
+
+        .section-nav {
+            background: white;
+            border: 2px solid var(--chinese-gold);
+            padding: 12px;
+            margin: 12px 0;
+            position: sticky;
+            top: 12px;
+            z-index: 100;
+        }
+
+        .section-nav a {
+            color: var(--chinese-red);
+            text-decoration: none;
+            margin-right: 16px;
+            font-weight: 600;
+        }
+
+        .section-nav a:hover {
+            text-decoration: underline;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            transition: all 0.2s ease;
+            padding: 4px 12px;
+            margin: 4px 2px;
+            font-size: 13px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+            border-color: var(--chinese-gold);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ IFrame Deep Dive: Mechanisms, Security & Advanced Techniques</h1>
+
+        <div class="section-nav">
+            <strong>Quick Navigation:</strong>
+            <a href="#mechanisms">Core Mechanisms</a>
+            <a href="#advanced">Advanced Techniques</a>
+            <a href="#security">Security</a>
+            <a href="#use-cases">Use Cases</a>
+            <a href="#browser">Browser Quirks</a>
+            <button onclick="expandAll()">Expand All</button>
+            <button onclick="collapseAll()">Collapse All</button>
+        </div>
+
+        <div class="important-always-visible">
+            <h2>⚡ What You Need to Know First</h2>
+            <div class="critical-info">
+                <strong>Core Concept:</strong> An iframe creates a <em>nested browsing context</em> with its own Document, event loop, and session history. It's like embedding a completely separate browser window inside your page.
+            </div>
+            <ul class="dense-list">
+                <li><strong>Isolation:</strong> Each iframe has independent DOM, styles, scripts, and storage (subject to Same-Origin Policy)</li>
+                <li><strong>Process Model:</strong> Modern browsers (Chromium) run cross-site iframes in separate OS processes for security (site-per-process)</li>
+                <li><strong>Communication:</strong> Parent ↔ iframe messaging requires <code>postMessage</code> API for cross-origin, or direct access via <code>contentWindow</code> for same-origin</li>
+                <li><strong>Security:</strong> Same-Origin Policy blocks cross-origin DOM/storage access; use <code>sandbox</code>, <code>X-Frame-Options</code>, and CSP headers for defense</li>
+                <li><strong>Performance:</strong> Each iframe adds parallel rendering work (DOM, layout, paint, composite) and can delay parent's <code>load</code> event</li>
+            </ul>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- CORE MECHANISMS -->
+        <div id="mechanisms">
+            <h2>🔧 Core Mechanisms: How IFrames Actually Work</h2>
+
+            <div class="collapsible critical open">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Browser Architecture: Nested Browsing Contexts</span>
+                </div>
+                <div class="collapsible-content">
+                    <div class="mermaid">
+graph TB
+    ParentDoc["Parent Document<br/>(Main Browsing Context)"]
+    ParentWindow["Window object<br/>WindowProxy"]
+    IFrameEl["&lt;iframe&gt; element"]
+    ChildContext["Child Browsing Context"]
+    ChildDoc["Child Document"]
+    ChildWindow["Child Window<br/>WindowProxy"]
+
+    ParentDoc -->|"contains"| IFrameEl
+    ParentDoc -->|"owns"| ParentWindow
+    IFrameEl -->|"creates"| ChildContext
+    ChildContext -->|"has"| ChildDoc
+    ChildContext -->|"has"| ChildWindow
+
+    ParentWindow -.->|"iframe.contentWindow"| ChildWindow
+    ParentWindow -.->|"iframe.contentDocument"| ChildDoc
+    ChildWindow -.->|"window.parent"| ParentWindow
+
+    style ChildContext fill:#ffe6e6
+    style ParentDoc fill:#e6f3ff
+                    </div>
+
+                    <h4>Key Internals:</h4>
+                    <ul class="dense-list">
+                        <li><strong>Nested Browsing Context:</strong> Browsers create a complete browsing environment for every iframe - includes session history, active document, event loop</li>
+                        <li><strong>WindowProxy:</strong> Parent interacts through a proxy object, not directly with the iframe's Window (allows navigation without breaking references)</li>
+                        <li><strong>Load Event Blocking:</strong> Parent document's <code>load</code> event waits for all child iframes to finish loading (can be deferred with <code>loading="lazy"</code>)</li>
+                        <li><strong>Independent Event Loop:</strong> Each iframe can have its own task queue and microtask processing, though implementation varies by browser</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="collapsible critical open">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Rendering Pipeline: Parallel Processing</span>
+                </div>
+                <div class="collapsible-content">
+                    <div class="mermaid">
+graph LR
+    A[HTML Parse] --> B[DOM Construction]
+    B --> C[CSSOM Build]
+    C --> D[Layout Tree]
+    D --> E[Paint]
+    E --> F[Composite]
+
+    subgraph "Parent Process"
+        A
+        B
+        C
+        D
+        E
+        F
+    end
+
+    subgraph "IFrame Process (cross-origin)"
+        A2[HTML Parse] --> B2[DOM Construction]
+        B2 --> C2[CSSOM Build]
+        C2 --> D2[Layout Tree]
+        D2 --> E2[Paint]
+        E2 --> F2[Composite]
+    end
+
+    F -.->|"IPC: Compositor Frame"| F2
+
+    style A2 fill:#ffe6e6
+    style B2 fill:#ffe6e6
+    style C2 fill:#ffe6e6
+    style D2 fill:#ffe6e6
+    style E2 fill:#ffe6e6
+    style F2 fill:#ffe6e6
+                    </div>
+
+                    <h4>Performance Impact:</h4>
+                    <ul class="dense-list">
+                        <li><strong>Parallel Work:</strong> Each iframe runs its own DOM→Layout→Paint pipeline, adding CPU overhead proportional to embed count</li>
+                        <li><strong>Process Isolation (Chromium):</strong> Cross-site iframes run in separate renderer processes (site-per-process) to mitigate Spectre attacks</li>
+                        <li><strong>Extra Paints:</strong> Heavy iframes trigger additional paint/composite phases, potentially causing jank on lower-end devices</li>
+                        <li><strong>Memory Cost:</strong> Each browsing context allocates separate JS heap, DOM structures, and style engines</li>
+                    </ul>
+
+                    <div class="warning">
+                        <strong>⚠️ Performance Tip:</strong> Limit iframe count, use <code>loading="lazy"</code>, and consider façades (thumbnails + click-to-load) for third-party embeds like videos.
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Event Propagation: Boundary Stops</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>Cross-Boundary Rules:</h4>
+                    <ul class="dense-list">
+                        <li><strong>Default Behavior:</strong> DOM events (click, keypress, etc.) do NOT propagate across iframe boundaries</li>
+                        <li><strong>Cross-Origin Restriction:</strong> Parent cannot observe child's DOM events without explicit messaging, even for bubbling events</li>
+                        <li><strong>Same-Origin Access:</strong> When origins match, parent can access <code>iframe.contentDocument</code> and attach event listeners directly</li>
+                        <li><strong>Focus Events:</strong> <code>focus</code>/<code>blur</code> on iframe element itself fires in parent, but child's internal focus events stay isolated</li>
+                    </ul>
+
+                    <pre><code>// Same-origin: direct listener attachment
+const iframeDoc = iframe.contentDocument;
+iframeDoc.querySelector('button').addEventListener('click', () => {
+  console.log('Clicked inside iframe');
+});
+
+// Cross-origin: must use postMessage
+iframe.contentWindow.postMessage({ action: 'attachListener' }, 'https://child.example');</code></pre>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Resource Loading: Fetch & Lifecycle</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>Loading Sequence:</h4>
+                    <div class="mermaid">
+sequenceDiagram
+    participant Parent
+    participant Browser
+    participant ChildDoc
+
+    Parent->>Browser: Set iframe.src
+    Browser->>Browser: Start network fetch
+    Browser->>ChildDoc: Parse HTML
+    ChildDoc->>Browser: Request subresources<br/>(CSS, JS, images)
+    Browser->>ChildDoc: Load complete
+    ChildDoc->>Parent: Trigger iframe 'load' event
+    Parent->>Parent: Trigger document 'load' event
+                    </div>
+
+                    <ul class="dense-list">
+                        <li><strong>Eager Loading (Default):</strong> Browser starts downloading as soon as <code>src</code> is set or changed</li>
+                        <li><strong>Lazy Loading:</strong> <code>loading="lazy"</code> defers network work until iframe nears viewport (~3000px threshold in Chrome)</li>
+                        <li><strong>srcdoc Override:</strong> <code>srcdoc</code> attribute bypasses <code>src</code> and injects HTML directly (no network fetch)</li>
+                        <li><strong>Load Event Delay:</strong> Parent's <code>window.onload</code> waits for all non-lazy iframes to finish loading</li>
+                    </ul>
+
+                    <div class="success">
+                        <strong>✓ Best Practice:</strong> Combine <code>loading="lazy"</code> with explicit <code>width</code>/<code>height</code> to prevent CLS (Cumulative Layout Shift).
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ADVANCED TECHNIQUES -->
+        <div id="advanced">
+            <h2>🚀 Advanced Techniques</h2>
+
+            <div class="collapsible critical open">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Cross-Origin Communication: postMessage</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>The Primary Cross-Origin Channel:</h4>
+                    <p><code>window.postMessage()</code> is the standard method for secure parent ↔ iframe communication when origins differ.</p>
+
+                    <div class="two-column-layout">
+                        <div class="card">
+                            <h4>Parent → IFrame</h4>
+                            <pre><code>// Send message to iframe
+const iframe = document.querySelector('iframe');
+iframe.contentWindow.postMessage(
+  { type: 'CONFIG', theme: 'dark' },
+  'https://widget.example.com' // targetOrigin
+);</code></pre>
+                        </div>
+
+                        <div class="card">
+                            <h4>IFrame → Parent</h4>
+                            <pre><code>// Send message to parent
+window.parent.postMessage(
+  { type: 'RESIZE', height: 450 },
+  'https://parent.example.com' // targetOrigin
+);</code></pre>
+                        </div>
+                    </div>
+
+                    <h4>Receiving Messages (Both Sides):</h4>
+                    <pre><code>window.addEventListener('message', (event) => {
+  // CRITICAL: Validate origin
+  if (event.origin !== 'https://trusted.example.com') {
+    console.warn('Untrusted origin:', event.origin);
+    return;
+  }
+
+  // Validate data structure
+  const { type, ...payload } = event.data || {};
+
+  switch(type) {
+    case 'RESIZE':
+      iframe.style.height = `${payload.height}px`;
+      break;
+    case 'CONFIG':
+      applyTheme(payload.theme);
+      break;
+    default:
+      console.warn('Unknown message type:', type);
+  }
+});</code></pre>
+
+                    <div class="warning">
+                        <strong>🔒 Security Checklist:</strong>
+                        <ul class="dense-list">
+                            <li>ALWAYS specify <code>targetOrigin</code> (never use <code>'*'</code> in production)</li>
+                            <li>ALWAYS validate <code>event.origin</code> in the receiver</li>
+                            <li>Validate message structure and sanitize data before use</li>
+                            <li>Use structured message schemas (e.g., <code>{ type, payload }</code>)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Same-Origin Direct Access</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>When Origins Match:</h4>
+                    <ul class="dense-list">
+                        <li><strong>contentWindow:</strong> Direct access to iframe's Window object</li>
+                        <li><strong>contentDocument:</strong> Direct access to iframe's Document (shorthand for <code>contentWindow.document</code>)</li>
+                        <li><strong>window.parent:</strong> Child accesses parent Window</li>
+                        <li><strong>window.top:</strong> Access the topmost Window in the frame hierarchy</li>
+                    </ul>
+
+                    <pre><code>// Same-origin: Direct DOM manipulation
+const iframeDoc = iframe.contentDocument;
+const button = iframeDoc.querySelector('#submit');
+button.addEventListener('click', handleSubmit);
+
+// Shared function execution
+iframe.contentWindow.someFunction('arg');
+
+// Child → Parent
+window.parent.parentFunction();</code></pre>
+
+                    <div class="warning">
+                        <strong>⚠️ Warning:</strong> Cross-origin access to <code>contentDocument</code> or <code>contentWindow</code> properties throws <code>SecurityError</code>. Must fall back to <code>postMessage</code>.
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible critical">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Sandbox Attribute: Fine-Grained Security</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>Understanding Sandbox:</h4>
+                    <p>The <code>sandbox</code> attribute applies restrictions to iframe content, treating it as from a unique origin even if same-domain.</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Attribute Value</th>
+                                <th>Effect</th>
+                                <th>Use Case</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>sandbox</code> (empty)</td>
+                                <td>Maximum restrictions: no scripts, forms, navigation, storage, popups, same-origin</td>
+                                <td>Static untrusted HTML content</td>
+                            </tr>
+                            <tr>
+                                <td><code>allow-scripts</code></td>
+                                <td>Re-enable JavaScript execution</td>
+                                <td>Interactive widgets (with other restrictions)</td>
+                            </tr>
+                            <tr>
+                                <td><code>allow-same-origin</code></td>
+                                <td>Treat as same origin (access storage, cookies)</td>
+                                <td>Trusted same-domain embeds</td>
+                            </tr>
+                            <tr>
+                                <td><code>allow-forms</code></td>
+                                <td>Enable form submission</td>
+                                <td>Embedded survey/contact forms</td>
+                            </tr>
+                            <tr>
+                                <td><code>allow-popups</code></td>
+                                <td>Allow window.open() and target="_blank"</td>
+                                <td>OAuth flows, external links</td>
+                            </tr>
+                            <tr>
+                                <td><code>allow-top-navigation</code></td>
+                                <td>Allow navigating parent window</td>
+                                <td>Login redirects (use cautiously)</td>
+                            </tr>
+                            <tr>
+                                <td><code>allow-modals</code></td>
+                                <td>Enable alert(), confirm(), prompt()</td>
+                                <td>Legacy widgets with dialogs</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Example Configurations:</h4>
+                    <pre><code><!-- Maximum security: static content only -->
+&lt;iframe sandbox src="untrusted.html">&lt;/iframe>
+
+<!-- Interactive widget: scripts + forms, NO same-origin -->
+&lt;iframe sandbox="allow-scripts allow-forms" src="widget.html">&lt;/iframe>
+
+<!-- Trusted embed: full access -->
+&lt;iframe sandbox="allow-scripts allow-same-origin allow-forms" src="trusted.html">&lt;/iframe></code></pre>
+
+                    <div class="warning">
+                        <strong>🚨 DANGER:</strong> NEVER combine <code>allow-scripts</code> + <code>allow-same-origin</code> for untrusted content. This lets malicious code remove the sandbox attribute and gain full access.
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Responsive IFrame Resizing</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>Problem:</h4>
+                    <p>IFrames have fixed dimensions, but embedded content often needs dynamic height based on internal content.</p>
+
+                    <h4>Solution Pattern (Cross-Origin Safe):</h4>
+
+                    <div class="two-column-layout">
+                        <div class="card">
+                            <h4>Inside IFrame (Child):</h4>
+                            <pre><code>// Monitor size changes
+const observer = new ResizeObserver(() => {
+  const height = document.body.scrollHeight;
+
+  // Send to parent
+  window.parent.postMessage(
+    { type: 'RESIZE', height },
+    'https://parent.example.com'
+  );
+});
+
+observer.observe(document.body);</code></pre>
+                        </div>
+
+                        <div class="card">
+                            <h4>In Parent (Host):</h4>
+                            <pre><code>// Listen for resize messages
+window.addEventListener('message', (e) => {
+  if (e.origin !== 'https://widget.example.com')
+    return;
+
+  if (e.data?.type === 'RESIZE') {
+    iframe.style.height = `${e.data.height}px`;
+  }
+});</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="success">
+                        <strong>✓ Library Option:</strong> <a href="https://iframe-resizer.com/" target="_blank">iframe-resizer v5</a> automates this pattern with additional features (scroll syncing, visibility detection).
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Lazy Loading & Performance Optimization</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>Native Lazy Loading:</h4>
+                    <pre><code>&lt;iframe
+  src="https://heavy-embed.example.com"
+  loading="lazy"
+  width="560"
+  height="315"
+>&lt;/iframe></code></pre>
+
+                    <ul class="dense-list">
+                        <li><strong>Browser Support:</strong> Chrome 77+, Firefox 121+, Safari 16.4+ (93%+ global coverage)</li>
+                        <li><strong>Threshold:</strong> Loads ~3000px before entering viewport (browser-controlled)</li>
+                        <li><strong>CLS Prevention:</strong> MUST include <code>width</code> and <code>height</code> attributes for proper space reservation</li>
+                    </ul>
+
+                    <h4>Façade Pattern (Click-to-Load):</h4>
+                    <pre><code>&lt;div class="video-facade" onclick="loadVideo(this)">
+  &lt;img src="thumbnail.jpg" alt="Video preview">
+  &lt;button>▶ Load Video&lt;/button>
+&lt;/div>
+
+&lt;script>
+function loadVideo(facade) {
+  const iframe = document.createElement('iframe');
+  iframe.src = 'https://youtube.com/embed/...';
+  iframe.width = '560';
+  iframe.height = '315';
+
+  facade.replaceWith(iframe);
+}
+&lt;/script></code></pre>
+
+                    <div class="success">
+                        <strong>✓ Performance Gain:</strong> Façades eliminate third-party script execution until user interaction, reducing initial page load by 70-90% for video embeds.
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>srcdoc: Inline HTML Injection</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>Use Case:</h4>
+                    <p>Inject HTML directly without network fetches, useful for templated content or user-generated previews.</p>
+
+                    <pre><code>&lt;iframe
+  srcdoc="&lt;html>&lt;body>&lt;h1>Hello!&lt;/h1>&lt;p>No network fetch needed.&lt;/p>&lt;/body>&lt;/html>"
+  sandbox="allow-scripts"
+>&lt;/iframe></code></pre>
+
+                    <ul class="dense-list">
+                        <li><strong>Override Behavior:</strong> <code>srcdoc</code> takes precedence over <code>src</code> when both are present</li>
+                        <li><strong>Security:</strong> Always combine with <code>sandbox</code> when injecting user content</li>
+                        <li><strong>Performance:</strong> No network roundtrip; instant rendering</li>
+                        <li><strong>Limitation:</strong> Cannot reference external resources without absolute URLs</li>
+                    </ul>
+
+                    <div class="warning">
+                        <strong>🔒 Security:</strong> ALWAYS sanitize HTML before injecting into <code>srcdoc</code>. Use DOMPurify or similar library.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- SECURITY -->
+        <div id="security">
+            <h2>🔒 Security Deep Dive</h2>
+
+            <div class="collapsible critical open">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Same-Origin Policy (SOP)</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>What SOP Blocks Between Cross-Origin Parent & IFrame:</h4>
+                    <div class="mermaid">
+graph LR
+    ParentOrigin["Parent<br/>https://app.example.com"]
+    IFrameOrigin["IFrame<br/>https://widget.other.com"]
+
+    ParentOrigin -.->|"❌ DOM Access"| IFrameOrigin
+    ParentOrigin -.->|"❌ localStorage/cookies"| IFrameOrigin
+    ParentOrigin -.->|"❌ JS execution context"| IFrameOrigin
+    ParentOrigin -->|"✅ postMessage"| IFrameOrigin
+    ParentOrigin -->|"✅ Navigation (location)"| IFrameOrigin
+
+    style ParentOrigin fill:#e6f3ff
+    style IFrameOrigin fill:#ffe6e6
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Operation</th>
+                                <th>Same-Origin</th>
+                                <th>Cross-Origin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Access iframe.contentDocument</td>
+                                <td>✅ Allowed</td>
+                                <td>❌ SecurityError</td>
+                            </tr>
+                            <tr>
+                                <td>Read/write iframe.contentWindow properties</td>
+                                <td>✅ Allowed</td>
+                                <td>❌ SecurityError</td>
+                            </tr>
+                            <tr>
+                                <td>postMessage communication</td>
+                                <td>✅ Allowed</td>
+                                <td>✅ Allowed</td>
+                            </tr>
+                            <tr>
+                                <td>Change iframe.src (navigation)</td>
+                                <td>✅ Allowed</td>
+                                <td>✅ Allowed</td>
+                            </tr>
+                            <tr>
+                                <td>Access cookies/localStorage</td>
+                                <td>✅ Shared</td>
+                                <td>❌ Isolated</td>
+                            </tr>
+                            <tr>
+                                <td>Observe DOM events</td>
+                                <td>✅ Allowed</td>
+                                <td>❌ Blocked</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Origin Matching Rules:</h4>
+                    <ul class="dense-list">
+                        <li><strong>Protocol:</strong> <code>http://</code> ≠ <code>https://</code></li>
+                        <li><strong>Domain:</strong> <code>example.com</code> ≠ <code>www.example.com</code> ≠ <code>api.example.com</code></li>
+                        <li><strong>Port:</strong> <code>:80</code> ≠ <code>:8080</code> (default ports often omitted)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="collapsible critical">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Clickjacking Attacks & Defenses</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>The Attack:</h4>
+                    <p>Attacker embeds your site in a transparent iframe overlaying a fake UI, tricking users into clicking sensitive buttons.</p>
+
+                    <div class="mermaid">
+sequenceDiagram
+    participant User
+    participant AttackerSite
+    participant VictimSite as Victim Site (in iframe)
+
+    User->>AttackerSite: Visit malicious page
+    AttackerSite->>AttackerSite: Load victim in transparent iframe
+    AttackerSite->>User: Show fake "Download" button<br/>(positioned over real "Delete Account")
+    User->>VictimSite: Click (thinks it's download)
+    VictimSite->>VictimSite: Execute delete account
+    VictimSite->>User: Account deleted
+                    </div>
+
+                    <h4>Defense Layer 1: X-Frame-Options Header</h4>
+                    <pre><code>// Server response header
+X-Frame-Options: DENY                  // Never allow framing
+X-Frame-Options: SAMEORIGIN            // Only allow same-origin framing</code></pre>
+
+                    <h4>Defense Layer 2: Content-Security-Policy (CSP)</h4>
+                    <pre><code>// Server response header (more flexible than X-Frame-Options)
+Content-Security-Policy: frame-ancestors 'none'                    // Same as DENY
+Content-Security-Policy: frame-ancestors 'self'                    // Same as SAMEORIGIN
+Content-Security-Policy: frame-ancestors 'self' https://partner.example.com  // Allowlist</code></pre>
+
+                    <div class="success">
+                        <strong>✓ Best Practice:</strong> Use CSP <code>frame-ancestors</code> (modern, flexible) + <code>X-Frame-Options</code> (legacy browser fallback).
+                    </div>
+
+                    <h4>Defense Layer 3: SameSite Cookies</h4>
+                    <pre><code>Set-Cookie: sessionId=abc123; SameSite=Strict; Secure; HttpOnly</code></pre>
+                    <ul class="dense-list">
+                        <li><strong>SameSite=Strict:</strong> Cookies not sent in any cross-site context (including iframes)</li>
+                        <li><strong>SameSite=Lax:</strong> Cookies sent for top-level navigations, blocked in iframes</li>
+                    </ul>
+
+                    <h4>Defense Layer 4: Frame-Busting (Client-Side, Fragile)</h4>
+                    <pre><code>// Legacy technique, NOT recommended as primary defense
+if (window !== window.top) {
+  window.top.location = window.location;  // Break out of frame
+}</code></pre>
+                    <div class="warning">
+                        <strong>⚠️ Warning:</strong> Frame-busting can be bypassed via <code>sandbox</code> attribute. Always use server-side headers as primary defense.
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Third-Party Cookie Blocking & Storage Access</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>The Problem:</h4>
+                    <p>Modern browsers (Safari, Firefox, Chrome) block or partition third-party cookies in iframes for privacy.</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Browser</th>
+                                <th>Default Behavior</th>
+                                <th>Impact on IFrames</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Safari (ITP)</strong></td>
+                                <td>Block all 3rd-party cookies</td>
+                                <td>Embedded login/auth fails unless Storage Access API used</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Firefox</strong></td>
+                                <td>Partition 3rd-party cookies by top-level site</td>
+                                <td>Each parent site sees separate cookie jar for same iframe</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Chrome (Privacy Sandbox)</strong></td>
+                                <td>Phasing out 3rd-party cookies (2024-2025)</td>
+                                <td>User-choice controls + Storage Access API prompts</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Solution: Storage Access API</h4>
+                    <pre><code>// Inside iframe (must be triggered by user gesture)
+document.querySelector('#loginBtn').addEventListener('click', async () => {
+  try {
+    // Request storage access
+    await document.requestStorageAccess();
+
+    // Now can access cookies/localStorage
+    const token = localStorage.getItem('authToken');
+    authenticateUser(token);
+  } catch (err) {
+    console.error('Storage access denied:', err);
+    // Fall back to alternative auth flow
+  }
+});</code></pre>
+
+                    <ul class="dense-list">
+                        <li><strong>User Gesture Required:</strong> Must be called in response to click/tap</li>
+                        <li><strong>Browser Prompt:</strong> User sees permission dialog (varies by browser)</li>
+                        <li><strong>Temporary Grant:</strong> Permission expires after period of inactivity</li>
+                    </ul>
+
+                    <div class="success">
+                        <strong>✓ Alternative:</strong> Use token-based auth passed via <code>postMessage</code> instead of relying on cookies.
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Process Isolation & Spectre Mitigation</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>Site-Per-Process (Chromium):</h4>
+                    <p>Cross-origin iframes run in separate OS processes to prevent Spectre-style timing attacks.</p>
+
+                    <div class="mermaid">
+graph TB
+    Browser[Browser Process]
+    ParentProcess[Renderer Process A<br/>https://app.example.com]
+    IFrame1Process[Renderer Process B<br/>https://widget.other.com]
+    IFrame2Process[Renderer Process C<br/>https://ads.third.com]
+
+    Browser -->|"IPC"| ParentProcess
+    Browser -->|"IPC"| IFrame1Process
+    Browser -->|"IPC"| IFrame2Process
+
+    ParentProcess -.->|"Cannot access memory"| IFrame1Process
+    IFrame1Process -.->|"Cannot access memory"| IFrame2Process
+
+    style ParentProcess fill:#e6f3ff
+    style IFrame1Process fill:#ffe6e6
+    style IFrame2Process fill:#fff6e6
+                    </div>
+
+                    <h4>Advanced Isolation Headers:</h4>
+                    <pre><code>// Enable cross-origin isolation for powerful APIs (SharedArrayBuffer, etc.)
+Cross-Origin-Embedder-Policy: require-corp
+Cross-Origin-Opener-Policy: same-origin</code></pre>
+
+                    <ul class="dense-list">
+                        <li><strong>COEP:</strong> Requires all subresources (including iframes) to opt-in via CORS or CORP</li>
+                        <li><strong>COOP:</strong> Isolates browsing context group from cross-origin windows</li>
+                        <li><strong>Use Case:</strong> High-security apps (finance, healthcare) or apps using SharedArrayBuffer</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Security Best Practices Summary</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>For Embedding Sites (Hosts):</h4>
+                    <ul class="dense-list">
+                        <li>✅ Validate <code>event.origin</code> in all <code>postMessage</code> handlers</li>
+                        <li>✅ Use CSP <code>frame-src</code> directive to allowlist iframe sources</li>
+                        <li>✅ Apply <code>sandbox</code> with minimal permissions for third-party embeds</li>
+                        <li>✅ Monitor and log iframe creation/messaging for unexpected embeds</li>
+                        <li>✅ Use <code>loading="lazy"</code> to defer untrusted embeds</li>
+                    </ul>
+
+                    <h4>For Embedded Sites (Guests):</h4>
+                    <ul class="dense-list">
+                        <li>✅ Set <code>X-Frame-Options</code> or <code>CSP frame-ancestors</code> to control who can embed you</li>
+                        <li>✅ Use <code>SameSite=Strict</code> cookies to prevent CSRF via iframes</li>
+                        <li>✅ Validate <code>targetOrigin</code> in all <code>postMessage</code> sends</li>
+                        <li>✅ Implement Storage Access API for legitimate cross-site embeds</li>
+                        <li>✅ Never trust user input in <code>srcdoc</code> without sanitization</li>
+                    </ul>
+
+                    <div class="warning">
+                        <strong>🚨 Critical:</strong> NEVER combine <code>sandbox="allow-scripts allow-same-origin"</code> for untrusted content. This is a sandbox escape vector.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- USE CASES -->
+        <div id="use-cases">
+            <h2>🎯 Modern Use Cases & Alternatives</h2>
+
+            <div class="collapsible open">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>When to Use IFrames</span>
+                </div>
+                <div class="collapsible-content">
+                    <ul class="dense-list">
+                        <li><strong>Strong Isolation Required:</strong> Third-party widgets, ads, untrusted content that must be sandboxed</li>
+                        <li><strong>Independent Deployment:</strong> Embed apps maintained by other teams/domains with separate release cycles</li>
+                        <li><strong>Complete App Embedding:</strong> Admin portals, billing consoles, support dashboards from external vendors</li>
+                        <li><strong>Security Boundaries:</strong> Payment forms, authentication flows that need process-level isolation</li>
+                        <li><strong>Legacy Integration:</strong> Wrapping old apps during gradual migration to modern architecture</li>
+                    </ul>
+
+                    <div class="success">
+                        <strong>✓ Example:</strong> Embedding Stripe payment form, Zendesk support widget, or Google Analytics dashboard.
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible open">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>When to Use Alternatives</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>Web Components:</h4>
+                    <ul class="dense-list">
+                        <li><strong>Pros:</strong> Deep style integration, shared routing, better SEO, lighter weight</li>
+                        <li><strong>Cons:</strong> Same-origin only, no process isolation, shared JS heap</li>
+                        <li><strong>Use Case:</strong> Design system components, reusable UI widgets within same app</li>
+                    </ul>
+
+                    <h4>Server-Side Includes (SSI) / Edge-Side Includes (ESI):</h4>
+                    <ul class="dense-list">
+                        <li><strong>Pros:</strong> No client-side overhead, SEO-friendly, unified HTML</li>
+                        <li><strong>Cons:</strong> Requires server/CDN support, no dynamic updates</li>
+                        <li><strong>Use Case:</strong> Header/footer fragments, static content blocks</li>
+                    </ul>
+
+                    <h4>Module Federation (Webpack 5+):</h4>
+                    <ul class="dense-list">
+                        <li><strong>Pros:</strong> Share dependencies, micro-frontend architecture, no iframes</li>
+                        <li><strong>Cons:</strong> Complex build setup, same-origin, version conflicts</li>
+                        <li><strong>Use Case:</strong> Large-scale apps with multiple teams, shared component libraries</li>
+                    </ul>
+
+                    <h4>Fetch + innerHTML (Dynamic Content):</h4>
+                    <ul class="dense-list">
+                        <li><strong>Pros:</strong> Simple, no iframe overhead, full style control</li>
+                        <li><strong>Cons:</strong> XSS risk (must sanitize), no script execution, same-origin</li>
+                        <li><strong>Use Case:</strong> Loading static HTML snippets, markdown rendering</li>
+                    </ul>
+
+                    <div class="warning">
+                        <strong>⚠️ Decision Matrix:</strong> Use iframes for isolation/cross-origin; use alternatives for performance/integration.
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Hybrid Pattern: Minimal IFrame Shell</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>Embed a minimal iframe for core functionality while rendering peripheral UI in the host document.</p>
+
+                    <div class="mermaid">
+graph TB
+    Host[Host Document]
+    HostUI[Host-Rendered UI<br/>Filters, Tabs, Navigation]
+    IFrameShell[Minimal IFrame<br/>Core Widget Logic]
+
+    Host -->|"Styles, Analytics"| HostUI
+    Host -->|"postMessage API"| IFrameShell
+    HostUI -->|"Sends config"| IFrameShell
+    IFrameShell -->|"Sends events"| Host
+
+    style Host fill:#e6f3ff
+    style HostUI fill:#e6ffe6
+    style IFrameShell fill:#ffe6e6
+                    </div>
+
+                    <h4>Benefits:</h4>
+                    <ul class="dense-list">
+                        <li>Maintain isolation for core logic (third-party widget)</li>
+                        <li>Integrate peripheral UI with host styles/analytics</li>
+                        <li>Reduce iframe overhead by minimizing embedded surface area</li>
+                        <li>Easier A/B testing and tracking (host controls UI)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- BROWSER QUIRKS -->
+        <div id="browser">
+            <h2>🌐 Browser Compatibility & Quirks</h2>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Lazy Loading Support</span>
+                </div>
+                <div class="collapsible-content">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Browser</th>
+                                <th>Version</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Chrome / Edge</td>
+                                <td>77+</td>
+                                <td>Full support, ~3000px threshold</td>
+                            </tr>
+                            <tr>
+                                <td>Firefox</td>
+                                <td>121+</td>
+                                <td>Full support</td>
+                            </tr>
+                            <tr>
+                                <td>Safari</td>
+                                <td>16.4+</td>
+                                <td>Full support</td>
+                            </tr>
+                            <tr>
+                                <td>Global Coverage</td>
+                                <td colspan="2">93%+ of traffic (as of 2024)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="success">
+                        <strong>✓ Progressive Enhancement:</strong> Unsupported browsers simply load eagerly; no polyfill needed.
+                    </div>
+
+                    <pre><code>&lt;iframe
+  src="embed.html"
+  loading="lazy"
+  width="600"
+  height="400"
+>&lt;/iframe></code></pre>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Third-Party Cookie Behavior</span>
+                </div>
+                <div class="collapsible-content">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Browser</th>
+                                <th>Policy</th>
+                                <th>IFrame Impact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Safari (ITP)</strong></td>
+                                <td>Block all 3rd-party cookies by default</td>
+                                <td>Embedded auth/login broken unless Storage Access API used</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Firefox</strong></td>
+                                <td>Partition 3rd-party cookies per top-level site</td>
+                                <td>Same iframe sees different cookies on different parent sites</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Chrome / Edge</strong></td>
+                                <td>Phasing out (2024-2025), user choice controls</td>
+                                <td>Temporary support, will require Storage Access API</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="warning">
+                        <strong>⚠️ Action Required:</strong> Implement Storage Access API or token-based auth for cross-site embeds.
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Process Isolation Differences</span>
+                </div>
+                <div class="collapsible-content">
+                    <ul class="dense-list">
+                        <li><strong>Desktop Chromium:</strong> Site-per-process enabled by default; most cross-site iframes run out-of-process</li>
+                        <li><strong>Safari:</strong> Rolling out FrameProcess tracking; may share processes for memory efficiency</li>
+                        <li><strong>Firefox:</strong> Fission (site isolation) enabled in recent versions; gradual rollout</li>
+                        <li><strong>Mobile WebView (Android):</strong> Low-memory devices may host all frames in single process</li>
+                    </ul>
+
+                    <div class="success">
+                        <strong>✓ Implication:</strong> Don't rely on process isolation as sole security layer; always use sandbox + CSP.
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Error Event Handling</span>
+                </div>
+                <div class="collapsible-content">
+                    <p>Some browsers fire <code>load</code> event even when iframe fails to load (network error, CSP block).</p>
+
+                    <pre><code>// Unreliable: error event not consistently fired
+iframe.addEventListener('error', () => {
+  console.log('IFrame failed to load'); // May not fire!
+});
+
+// Better: Cooperative health check via postMessage
+iframe.addEventListener('load', () => {
+  iframe.contentWindow.postMessage({ type: 'PING' }, '*');
+
+  setTimeout(() => {
+    if (!receivedPong) {
+      console.error('IFrame loaded but not responding');
+    }
+  }, 1000);
+});</code></pre>
+
+                    <div class="warning">
+                        <strong>⚠️ Workaround:</strong> Use cooperative messaging (PING/PONG) to verify iframe health after load.
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapsible">
+                <div class="collapsible-header">
+                    <span><span class="arrow">▶</span>Cumulative Layout Shift (CLS)</span>
+                </div>
+                <div class="collapsible-content">
+                    <h4>The Problem:</h4>
+                    <p>IFrames without explicit dimensions cause layout shifts when they load and reserve space.</p>
+
+                    <h4>Solution:</h4>
+                    <pre><code><!-- BAD: No dimensions, causes CLS -->
+&lt;iframe src="embed.html" loading="lazy">&lt;/iframe>
+
+<!-- GOOD: Explicit dimensions prevent layout shift -->
+&lt;iframe
+  src="embed.html"
+  loading="lazy"
+  width="600"
+  height="400"
+>&lt;/iframe></code></pre>
+
+                    <div class="success">
+                        <strong>✓ Core Web Vitals:</strong> Always include <code>width</code> and <code>height</code> attributes to improve CLS score.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- NEXT STEPS -->
+        <div class="important-always-visible">
+            <h2>🚀 Suggested Next Steps</h2>
+            <ol class="dense-list">
+                <li><strong>Audit Existing IFrames:</strong> Document owners, origins, required capabilities, and security headers</li>
+                <li><strong>Standardize Messaging Contract:</strong> Define schema (types, payloads), resize protocol, health pings</li>
+                <li><strong>Add CI/CD Security Checks:</strong> Automated validation of CSP, frame-ancestors, sandbox attributes</li>
+                <li><strong>High-Risk Embed Pilot:</strong> Test Document Isolation Policy or credentialless embeds for payments/admin tools</li>
+                <li><strong>Storage Access Migration:</strong> Implement token-based auth or Storage Access API for Safari compatibility</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+
+        // Collapsible functionality
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const collapsible = header.parentElement;
+                collapsible.classList.toggle('open');
+            });
+        });
+
+        // Expand/Collapse all
+        function expandAll() {
+            document.querySelectorAll('.collapsible').forEach(c => c.classList.add('open'));
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.collapsible').forEach(c => c.classList.remove('open'));
+        }
+    </script>
+</body>
+</html>

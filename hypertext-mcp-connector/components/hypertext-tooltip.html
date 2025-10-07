@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src *;">
+  <title>Hypertext Tooltip</title>
+  <style>
+    /* Base styles adapted from hypertext-experience.js */
+    :root {
+      --hx-red-start: #b23232;
+      --hx-red-end: #a32020;
+      --hx-paper: #fdf8f6;
+      --hx-panel: #f7efed;
+      --hx-border: rgba(178, 60, 60, 0.55);
+      --hx-shadow: 0 18px 38px rgba(170, 34, 34, 0.18);
+      --hx-ink: #2c1f1f;
+      --hx-muted: rgba(255, 240, 240, 0.75);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--hx-ink);
+      background: var(--hx-paper);
+      min-height: 200px;
+    }
+
+    .hx-chat-tooltip {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100%;
+      min-height: 200px;
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .hx-chat-tooltip__header {
+      background: linear-gradient(135deg, var(--hx-red-start), var(--hx-red-end));
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .hx-chat-tooltip__header h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff6f4;
+    }
+
+    .hx-chat-tooltip__header-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .hx-chat-tooltip__icon {
+      border: 1px solid rgba(255, 230, 230, 0.4);
+      border-radius: 6px;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff6f4;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .hx-chat-tooltip__icon:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.26);
+    }
+
+    .hx-chat-tooltip__icon:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .hx-chat-tooltip__body {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 10px;
+      padding: 12px 12px 14px;
+      background: var(--hx-panel);
+      height: 100%;
+    }
+
+    .hx-chat-tooltip__meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #7b4545;
+    }
+
+    .hx-chat-tooltip__list {
+      background: #ffffff;
+      border: 1px solid rgba(177, 60, 60, 0.22);
+      border-radius: 9px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.45;
+      overflow-y: auto;
+      max-height: 400px;
+    }
+
+    .hx-chat-tooltip__list ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+
+    .hx-chat-tooltip__item {
+      display: grid;
+      gap: 2px;
+      border-bottom: 1px dashed rgba(177, 60, 60, 0.18);
+      padding-bottom: 6px;
+    }
+
+    .hx-chat-tooltip__item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .hx-chat-tooltip__role {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #a12323;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .hx-chat-tooltip__content {
+      color: var(--hx-ink);
+      word-break: break-word;
+    }
+
+    .hx-chat-tooltip__content.loading {
+      opacity: 0.6;
+      font-style: italic;
+    }
+
+    .hx-chat-tooltip__input-wrap {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .hx-chat-tooltip__input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1px solid rgba(177, 60, 60, 0.28);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      background: #ffffff;
+      transition: border-color 0.2s ease;
+    }
+
+    .hx-chat-tooltip__input:focus {
+      outline: none;
+      border-color: var(--hx-red-start);
+      box-shadow: 0 0 0 2px rgba(178, 50, 50, 0.1);
+    }
+
+    .hx-chat-tooltip__send {
+      padding: 8px 14px;
+      background: linear-gradient(135deg, var(--hx-red-start), var(--hx-red-end));
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .hx-chat-tooltip__send:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(178, 50, 50, 0.3);
+    }
+
+    .hx-chat-tooltip__send:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Suggested followups */
+    .hx-followups {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(177, 60, 60, 0.18);
+    }
+
+    .hx-followups__title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #7b4545;
+      margin-bottom: 6px;
+    }
+
+    .hx-followups__list {
+      display: grid;
+      gap: 4px;
+    }
+
+    .hx-followup-btn {
+      text-align: left;
+      padding: 6px 8px;
+      background: rgba(178, 50, 50, 0.06);
+      border: 1px solid rgba(177, 60, 60, 0.15);
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--hx-ink);
+    }
+
+    .hx-followup-btn:hover {
+      background: rgba(178, 50, 50, 0.12);
+      border-color: rgba(177, 60, 60, 0.3);
+    }
+
+    /* Dark theme support */
+    body[data-theme="dark"] {
+      --hx-paper: #1a1a1a;
+      --hx-panel: #2a2a2a;
+      --hx-ink: #e0e0e0;
+      background: var(--hx-paper);
+    }
+
+    body[data-theme="dark"] .hx-chat-tooltip__list,
+    body[data-theme="dark"] .hx-chat-tooltip__input {
+      background: #333;
+      border-color: rgba(177, 60, 60, 0.4);
+      color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    // Hypertext Tooltip Component for ChatGPT
+    (function() {
+      'use strict';
+
+      // Get initial data from window.openai
+      const toolOutput = window.openai?.toolOutput || {};
+      const {
+        term = 'Concept',
+        display_text,
+        context = '',
+        initial_content = 'Loading...',
+        mode = 'educational'
+      } = toolOutput;
+
+      // State
+      let conversation = [
+        { role: 'assistant', content: initial_content }
+      ];
+      let theme = window.openai?.theme?.mode || 'light';
+      let isLoading = false;
+      let suggestedFollowups = [];
+
+      // Apply theme
+      document.body.setAttribute('data-theme', theme);
+
+      // Build UI
+      function render() {
+        const root = document.getElementById('root');
+
+        root.innerHTML = `
+          <div class="hx-chat-tooltip">
+            <div class="hx-chat-tooltip__header">
+              <h3>${escapeHtml(display_text || term)}</h3>
+              <div class="hx-chat-tooltip__header-actions">
+                <button class="hx-chat-tooltip__icon" data-action="expand" title="Expand">↔</button>
+                <button class="hx-chat-tooltip__icon" data-action="close" title="Close">✕</button>
+              </div>
+            </div>
+            <div class="hx-chat-tooltip__body">
+              <div class="hx-chat-tooltip__meta">
+                <span>Topic: ${escapeHtml(term)}</span>
+                <span>${conversation.length} ${conversation.length === 1 ? 'message' : 'messages'}</span>
+              </div>
+              <div class="hx-chat-tooltip__list">
+                <ul id="conversation-list"></ul>
+                ${suggestedFollowups.length > 0 ? `
+                  <div class="hx-followups">
+                    <div class="hx-followups__title">Suggested questions:</div>
+                    <div class="hx-followups__list" id="followups-list"></div>
+                  </div>
+                ` : ''}
+              </div>
+              <div class="hx-chat-tooltip__input-wrap">
+                <input
+                  type="text"
+                  id="user-input"
+                  placeholder="Ask about ${escapeHtml(term)}..."
+                  class="hx-chat-tooltip__input"
+                  ${isLoading ? 'disabled' : ''}
+                />
+                <button
+                  id="send-btn"
+                  class="hx-chat-tooltip__send"
+                  ${isLoading ? 'disabled' : ''}
+                >→</button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        renderConversation();
+        renderFollowups();
+        attachEventListeners();
+      }
+
+      function renderConversation() {
+        const list = document.getElementById('conversation-list');
+        if (!list) return;
+
+        list.innerHTML = conversation.map(msg => `
+          <li class="hx-chat-tooltip__item">
+            <div class="hx-chat-tooltip__role">
+              ${msg.role === 'user' ? 'You' : 'Assistant'}
+            </div>
+            <div class="hx-chat-tooltip__content ${msg.loading ? 'loading' : ''}">
+              ${escapeHtml(msg.content)}
+            </div>
+          </li>
+        `).join('');
+
+        // Scroll to bottom
+        list.scrollTop = list.scrollHeight;
+      }
+
+      function renderFollowups() {
+        const list = document.getElementById('followups-list');
+        if (!list || suggestedFollowups.length === 0) return;
+
+        list.innerHTML = suggestedFollowups.map((question, idx) => `
+          <button class="hx-followup-btn" data-index="${idx}">
+            ${escapeHtml(question)}
+          </button>
+        `).join('');
+      }
+
+      function attachEventListeners() {
+        // Send message
+        const sendBtn = document.getElementById('send-btn');
+        const input = document.getElementById('user-input');
+
+        if (sendBtn) {
+          sendBtn.addEventListener('click', sendMessage);
+        }
+
+        if (input) {
+          input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !isLoading) {
+              sendMessage();
+            }
+          });
+        }
+
+        // Expand button
+        const expandBtn = document.querySelector('[data-action="expand"]');
+        if (expandBtn) {
+          expandBtn.addEventListener('click', () => {
+            window.openai?.requestDisplayMode('fullscreen');
+          });
+        }
+
+        // Close button
+        const closeBtn = document.querySelector('[data-action="close"]');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => {
+            // Notify ChatGPT that user finished exploring
+            window.openai?.sendFollowupTurn(`User finished exploring "${term}"`);
+          });
+        }
+
+        // Follow-up question buttons
+        const followupBtns = document.querySelectorAll('.hx-followup-btn');
+        followupBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const question = suggestedFollowups[btn.dataset.index];
+            const input = document.getElementById('user-input');
+            if (input && question) {
+              input.value = question;
+              sendMessage();
+            }
+          });
+        });
+      }
+
+      async function sendMessage() {
+        const input = document.getElementById('user-input');
+        if (!input) return;
+
+        const message = input.value.trim();
+        if (!message || isLoading) return;
+
+        // Add user message
+        conversation.push({ role: 'user', content: message });
+        input.value = '';
+        isLoading = true;
+
+        // Add loading message
+        conversation.push({ role: 'assistant', content: 'Thinking...', loading: true });
+        render();
+
+        try {
+          // Call MCP tool via window.openai
+          if (window.openai?.callTool) {
+            window.openai.callTool('explore_concept', {
+              concept: term,
+              depth: 'intermediate',
+              previous_messages: JSON.stringify(conversation.slice(0, -1)) // Exclude loading message
+            });
+          } else {
+            // Fallback if window.openai not available
+            throw new Error('window.openai not available');
+          }
+        } catch (error) {
+          console.error('Error calling tool:', error);
+          // Replace loading message with error
+          conversation[conversation.length - 1] = {
+            role: 'assistant',
+            content: 'Sorry, I encountered an error. Please try again.',
+            loading: false
+          };
+          isLoading = false;
+          render();
+        }
+      }
+
+      // Listen for tool responses
+      window.addEventListener('message', (event) => {
+        if (event.data.type === 'openai:tool_response') {
+          if (event.data.toolName === 'explore_concept') {
+            const response = event.data.toolOutput;
+
+            // Replace loading message with actual response
+            conversation[conversation.length - 1] = {
+              role: 'assistant',
+              content: response.content || 'No response available',
+              loading: false
+            };
+
+            // Update suggested followups
+            if (response.suggested_followups) {
+              suggestedFollowups = response.suggested_followups;
+            }
+
+            isLoading = false;
+            render();
+
+            // Persist conversation state
+            if (window.openai?.setWidgetState) {
+              window.openai.setWidgetState({
+                conversation: conversation,
+                term: term,
+                context: context
+              });
+            }
+          }
+        }
+
+        // Handle theme changes
+        if (event.data.type === 'openai:set_globals') {
+          if (event.data.theme?.mode) {
+            theme = event.data.theme.mode;
+            document.body.setAttribute('data-theme', theme);
+          }
+        }
+      });
+
+      // Utility: Escape HTML
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Initialize
+      console.log('Hypertext Tooltip initialized:', { term, mode, theme });
+      render();
+
+      // Focus input
+      setTimeout(() => {
+        const input = document.getElementById('user-input');
+        if (input) input.focus();
+      }, 100);
+
+    })();
+  </script>
+</body>
+</html>

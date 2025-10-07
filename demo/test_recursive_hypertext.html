@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recursive Hypertext Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-steps {
+            background: #f0f0f0;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .test-steps h3 {
+            margin-top: 0;
+        }
+        .expected {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .code {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔬 Recursive Hypertext Test Page</h1>
+
+    <p>This page tests the recursive hypertext feature where hypertext tooltips can be generated inside other hypertext tooltips.</p>
+
+    <div class="test-steps">
+        <h3>📋 Test Steps</h3>
+        <ol>
+            <li><strong>Select this text</strong> and press <code>Cmd+Shift+K</code> (or <code>Ctrl+Shift+K</code> on Windows)</li>
+            <li>Click "Generate Hypertext" in the palette</li>
+            <li>Wait for the tooltip to appear (Level 1)</li>
+            <li>Open browser DevTools (F12) → Console tab</li>
+            <li>Run: <code class="code">console.log('Level 1 z-index:', document.querySelector('.hx-chat-tooltip').style.zIndex)</code></li>
+            <li>Hover over the tooltip and <strong>select text inside it</strong></li>
+            <li>Press <code>Cmd+Shift+K</code> again</li>
+            <li>Click "Generate Hypertext" again</li>
+            <li>Check console for "Auto-pinned parent tooltip" message</li>
+            <li>Run: <code class="code">document.querySelectorAll('.hx-chat-tooltip').forEach((t, i) => console.log(`Tooltip ${i} z-index:`, t.style.zIndex))</code></li>
+        </ol>
+    </div>
+
+    <div class="expected">
+        <h3>✅ Expected Results</h3>
+        <ul>
+            <li>Level 1 tooltip appears with z-index ≈ 2147483000</li>
+            <li>Console shows: <code>[Hypertext] Auto-pinned parent tooltip</code></li>
+            <li>Level 2 tooltip has z-index = Level 1 z-index + 1</li>
+            <li>Level 2 tooltip visually appears ABOVE Level 1 tooltip</li>
+            <li>When you click Level 1 tooltip, it stays BELOW Level 2 (doesn't jump to front)</li>
+            <li>Parent tooltip has pin icon filled (📍) after child is created</li>
+            <li>Closing Level 2 tooltip unpins Level 1 (📍 → 📌)</li>
+        </ul>
+    </div>
+
+    <h2>Sample Content for Testing</h2>
+
+    <p>Vladimir Nabokov was a Russian-American novelist, poet, translator, and entomologist. His first nine novels were in Russian, but he achieved international prominence after he began writing in English.</p>
+
+    <p>Born in 1899 in Saint Petersburg to an aristocratic family, Nabokov fled Russia in 1919 during the Russian Revolution. He lived in Berlin and Paris before moving to the United States in 1940, where he became a citizen in 1945.</p>
+
+    <p>Nabokov is best known for his novel "Lolita" (1955), which was initially rejected by several American publishers and first appeared in Paris. The novel became a cultural phenomenon and is now considered one of the greatest works of 20th-century literature.</p>
+
+    <h2>Debug Commands</h2>
+
+    <div class="code">
+        <p><strong>Check all tooltip z-indexes:</strong></p>
+        <code>document.querySelectorAll('.hx-chat-tooltip').forEach((t, i) => console.log(`Tooltip ${i} z-index: ${t.style.zIndex}, nested: ${t.dataset.nested}, level: ${t.dataset.nestingLevel}`))</code>
+
+        <p style="margin-top: 15px;"><strong>Verify parent-child relationship:</strong></p>
+        <code>const tooltips = Array.from(document.querySelectorAll('.hx-chat-tooltip'));<br>
+tooltips.forEach((t, i) => {<br>
+&nbsp;&nbsp;const zIndex = parseInt(t.style.zIndex);<br>
+&nbsp;&nbsp;const isNested = t.dataset.nested === 'true';<br>
+&nbsp;&nbsp;console.log(`Tooltip ${i}: z=${zIndex}, nested=${isNested}`);<br>
+});</code>
+    </div>
+
+    <script src="../hypertext/hypertext-experience.js"></script>
+    <script>
+        // Initialize hypertext
+        window.createHypertextExperience(document, window, {
+            backendUrl: 'http://localhost:3124/api/hypertext',
+            chatPageUrl: '/demo/simple_chat_page.html'
+        });
+
+        // Log when tooltips are created
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.classList && node.classList.contains('hx-chat-tooltip')) {
+                        console.log('✨ Tooltip created:', {
+                            zIndex: node.style.zIndex,
+                            nested: node.dataset.nested,
+                            level: node.dataset.nestingLevel,
+                            sessionId: node.dataset.sessionId
+                        });
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypertext ChatGPT Connector - Design & Implementation</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --jade-green: #00A86B;
+            --ink-black: #2B2B2B;
+            --paper-beige: #F5F5DC;
+            --light-cream: #FAFAF0;
+            --level-1: #000;
+            --level-2: #333;
+            --level-3: #666;
+            --level-4: #999;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            margin: 0;
+            padding: 12px;
+            width: 100vw;
+            max-width: 100%;
+            line-height: 1.3;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin: 8px 0 12px 0;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            border-bottom: 3px solid var(--chinese-gold);
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 12px 0 6px 0;
+            padding: 6px 8px;
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.04);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 8px 0 4px 0;
+            color: var(--level-2);
+            padding-left: 8px;
+            border-left: 2px solid var(--chinese-gold);
+        }
+
+        h4 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 6px 0 3px 12px;
+            color: var(--level-2);
+        }
+
+        .important-always-visible {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), white);
+            border: 2px solid var(--chinese-gold);
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+
+        .important-always-visible h2 {
+            color: var(--chinese-red);
+            margin-top: 0;
+            border: none;
+            background: none;
+            padding-left: 0;
+        }
+
+        .collapsible {
+            margin: 6px 0;
+            width: 100%;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 8px 10px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+            border-left: 3px solid var(--chinese-gold);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+        }
+
+        .collapsible-header .arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-size: 12px;
+            margin-right: 8px;
+        }
+
+        .collapsible.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 12px;
+            margin-left: 12px;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 15000px;
+            padding: 12px;
+        }
+
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 12px 0;
+        }
+
+        .two-column-layout > * {
+            min-width: 0;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        pre {
+            background: linear-gradient(135deg, rgba(43, 43, 43, 0.95), rgba(0, 0, 0, 0.9));
+            border: 1px solid var(--chinese-gold);
+            border-radius: 3px;
+            padding: 12px;
+            overflow-x: auto;
+            margin: 8px 0;
+            font-size: 13px;
+            line-height: 1.4;
+            color: #f8f8f2;
+        }
+
+        code {
+            background: rgba(139, 0, 0, 0.08);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            color: var(--chinese-red);
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: #f8f8f2;
+        }
+
+        .mermaid {
+            background: white;
+            padding: 16px;
+            border: 2px solid var(--chinese-gold);
+            border-radius: 4px;
+            margin: 12px 0;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            border-radius: 4px;
+            padding: 10px;
+            margin: 8px 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.priority {
+            border: 2px solid var(--chinese-red);
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.02), white);
+        }
+
+        .card.success {
+            border: 2px solid var(--jade-green);
+            background: linear-gradient(135deg, rgba(0, 168, 107, 0.02), white);
+        }
+
+        .dense-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 8px 12px;
+        }
+
+        .dense-list li {
+            padding: 3px 0 3px 16px;
+            border-left: 2px solid transparent;
+            position: relative;
+            line-height: 1.5;
+        }
+
+        .dense-list li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--chinese-red);
+            font-size: 12px;
+        }
+
+        .dense-list li strong {
+            color: var(--level-1);
+            font-weight: 600;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, var(--chinese-red), transparent);
+            margin: 16px 0;
+        }
+
+        button, .button {
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            padding: 6px 12px;
+            margin: 4px;
+            font-size: 13px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+            border-color: var(--chinese-gold);
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--jade-green);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .badge.warning {
+            background: var(--chinese-gold);
+            color: var(--ink-black);
+        }
+
+        .badge.critical {
+            background: var(--chinese-red);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 13px;
+        }
+
+        th {
+            background: var(--chinese-red);
+            color: white;
+            padding: 8px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:nth-child(even) {
+            background: rgba(245, 245, 220, 0.3);
+        }
+
+        .note {
+            background: rgba(0, 168, 107, 0.1);
+            border-left: 3px solid var(--jade-green);
+            padding: 8px 12px;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+
+        .warning {
+            background: rgba(255, 215, 0, 0.1);
+            border-left: 3px solid var(--chinese-gold);
+            padding: 8px 12px;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+
+        .expand-all, .collapse-all {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .collapse-all {
+            right: 140px;
+        }
+    </style>
+</head>
+<body>
+    <button class="expand-all" onclick="expandAll()">Expand All</button>
+    <button class="collapse-all" onclick="collapseAll()">Collapse All</button>
+
+    <div class="container">
+        <h1>Hypertext ChatGPT Connector Design</h1>
+
+        <div class="important-always-visible">
+            <h2>Vision: Hypertext-Enabled ChatGPT with Educational Modes</h2>
+            <div class="mermaid">
+graph TB
+    subgraph "ChatGPT with Hypertext Connector"
+        A[User Query] --> B[ChatGPT]
+        B --> C{Output Mode}
+        C -->|Standard| D[Regular Text]
+        C -->|Educational| E[Hypertext-Enhanced]
+        C -->|Exploratory| F[Deep-Dive Links]
+
+        E --> G[create_hypertext tool]
+        F --> G
+        G --> H[MCP Server]
+        H --> I[Hypertext Component]
+        I --> J[Interactive Tooltip]
+        J --> K[Inline Conversation]
+    end
+
+    style B fill:#FFD700,stroke:#8B0000,stroke-width:2px
+    style G fill:#00A86B,stroke:#8B0000,stroke-width:2px
+    style I fill:#8B0000,color:#fff,stroke:#FFD700,stroke-width:2px
+            </div>
+            <ul class="dense-list">
+                <li><strong>Core Concept:</strong> Package hypertext module as MCP connector that ChatGPT can invoke</li>
+                <li><strong>Output Control:</strong> Tools that influence ChatGPT's response style (educational/exploratory modes)</li>
+                <li><strong>Interactive:</strong> Hypertext links enable inline mini-conversations on any concept</li>
+                <li><strong>Seamless:</strong> Works directly in ChatGPT interface, no browser extension needed</li>
+            </ul>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <div><span class="arrow">▶</span>1. Architecture Overview <span class="badge critical">FOUNDATION</span></div>
+            </div>
+            <div class="collapsible-content">
+                <h3>Three-Tier Architecture</h3>
+                <div class="mermaid">
+sequenceDiagram
+    participant User
+    participant ChatGPT
+    participant Connector as Hypertext MCP
+    participant Component as Tooltip UI
+
+    User->>ChatGPT: "Explain quantum entanglement"
+    ChatGPT->>Connector: set_output_mode("educational")
+    Connector-->>ChatGPT: Mode set ✓
+
+    ChatGPT->>User: Returns explanation
+    Note over ChatGPT,User: Text includes hypertext markers
+
+    ChatGPT->>Connector: create_hypertext("quantum superposition", context)
+    Connector->>Component: Render tooltip component
+    Component-->>User: Interactive hover tooltip
+
+    User->>Component: Hover "quantum superposition"
+    Component->>Connector: Continue conversation
+    Connector-->>Component: Stream response
+    Component-->>User: Inline mini-chat
+                </div>
+
+                <h3>Component Breakdown</h3>
+                <div class="two-column-layout">
+                    <div class="card priority">
+                        <h4>MCP Server (FastMCP)</h4>
+                        <ul class="dense-list">
+                            <li><strong>Tools:</strong> create_hypertext, set_output_mode, explore_concept</li>
+                            <li><strong>Resources:</strong> Tooltip component HTML/JS</li>
+                            <li><strong>State:</strong> Current mode, conversation context</li>
+                            <li><strong>Backend:</strong> Existing /api/stream endpoint</li>
+                        </ul>
+                    </div>
+                    <div class="card priority">
+                        <h4>ChatGPT Integration</h4>
+                        <ul class="dense-list">
+                            <li><strong>Discovery:</strong> ChatGPT sees available tools</li>
+                            <li><strong>Prompts:</strong> System instructions for modes</li>
+                            <li><strong>Components:</strong> Renders tooltip iframes</li>
+                            <li><strong>Context:</strong> Maintains conversation state</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h3>Current vs. Connector Architecture</h3>
+                <table>
+                    <tr>
+                        <th>Aspect</th>
+                        <th>Current (Extension)</th>
+                        <th>New (MCP Connector)</th>
+                    </tr>
+                    <tr>
+                        <td>Activation</td>
+                        <td>Cmd/Ctrl + Shift + K</td>
+                        <td>ChatGPT invokes tool</td>
+                    </tr>
+                    <tr>
+                        <td>UI Location</td>
+                        <td>On webpage</td>
+                        <td>In ChatGPT chat bubble</td>
+                    </tr>
+                    <tr>
+                        <td>Backend</td>
+                        <td>localhost:3100</td>
+                        <td>MCP server (HTTPS)</td>
+                    </tr>
+                    <tr>
+                        <td>Distribution</td>
+                        <td>Chrome extension</td>
+                        <td>MCP connector URL</td>
+                    </tr>
+                    <tr>
+                        <td>Scope</td>
+                        <td>Any webpage</td>
+                        <td>ChatGPT responses</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <div><span class="arrow">▶</span>2. MCP Server Implementation <span class="badge critical">CORE</span></div>
+            </div>
+            <div class="collapsible-content">
+                <h3>Server Structure</h3>
+                <pre><code># server.py - FastMCP Hypertext Connector
+from fastmcp import FastMCP
+from typing import Literal
+import json
+
+mcp = FastMCP("Hypertext Navigator")
+
+# Global state for output mode
+current_mode = "standard"
+
+@mcp.tool
+def set_output_mode(
+    mode: Literal["standard", "educational", "exploratory"]
+) -> dict:
+    """Control ChatGPT's output style for enhanced learning.
+
+    Modes:
+    - standard: Regular ChatGPT responses
+    - educational: Add hypertext links on key concepts for inline exploration
+    - exploratory: Deep-dive mode with extensive hyperlinks for research
+
+    Args:
+        mode: The output mode to activate
+
+    Returns:
+        Confirmation and instructions for ChatGPT
+    """
+    global current_mode
+    current_mode = mode
+
+    instructions = {
+        "standard": {
+            "style": "default",
+            "guidance": "Respond normally without special formatting"
+        },
+        "educational": {
+            "style": "learning-focused",
+            "guidance": """When explaining concepts:
+1. Identify 3-5 key terms that deserve deeper exploration
+2. After your explanation, call create_hypertext for each term
+3. Use clear, pedagogical language
+4. Build from fundamentals to advanced concepts"""
+        },
+        "exploratory": {
+            "style": "research-oriented",
+            "guidance": """When answering research questions:
+1. Provide comprehensive overview
+2. Identify 5-10 branching topics worth exploring
+3. Call create_hypertext for each branch
+4. Include methodological considerations
+5. Suggest related areas of inquiry"""
+        }
+    }
+
+    return {
+        "mode": mode,
+        "active": True,
+        "instructions": instructions[mode],
+        "message": f"Output mode set to: {mode}"
+    }
+
+
+@mcp.tool
+def create_hypertext(
+    term: str,
+    context: str,
+    display_text: str = None
+) -> dict:
+    """Create an interactive hypertext link with inline tooltip chat.
+
+    This tool embeds an interactive element in ChatGPT's response that users
+    can hover to continue exploring the concept without leaving the conversation.
+
+    Args:
+        term: The concept to make interactive (e.g., "quantum entanglement")
+        context: Surrounding context for personalized responses
+        display_text: Optional custom display text (defaults to term)
+
+    Returns:
+        Component metadata for ChatGPT to render
+    """
+    if display_text is None:
+        display_text = term
+
+    # Generate initial explanation for the tooltip
+    initial_content = generate_explanation(term, context)
+
+    return {
+        "term": term,
+        "display_text": display_text,
+        "context": context,
+        "initial_content": initial_content,
+        "_meta": {
+            "openai/outputTemplate": {
+                "type": "text/html+skybridge",
+                "url": "https://your-cdn.com/hypertext-tooltip.html"
+            },
+            "openai/widgetAccessible": True,
+            "openai/widgetPrefersBorder": False
+        }
+    }
+
+
+@mcp.tool
+def explore_concept(
+    concept: str,
+    depth: Literal["overview", "intermediate", "advanced"] = "overview",
+    previous_context: str = None
+) -> dict:
+    """Deep dive into a concept with contextual understanding.
+
+    Used by the tooltip component when users continue the conversation.
+
+    Args:
+        concept: The concept to explore
+        depth: How deep to go in the explanation
+        previous_context: Previous messages for continuity
+
+    Returns:
+        Detailed explanation tailored to depth level
+    """
+    # This integrates with your existing backend
+    response = call_backend_stream(concept, depth, previous_context)
+
+    return {
+        "concept": concept,
+        "depth": depth,
+        "content": response,
+        "suggested_followups": generate_followup_questions(concept, depth)
+    }
+
+
+def generate_explanation(term: str, context: str) -> str:
+    """Generate initial tooltip content."""
+    # Integration with your existing hypertext backend
+    # POST to localhost:3100/api/stream or your deployed endpoint
+    import requests
+
+    response = requests.post("http://localhost:3100/api/stream", json={
+        "messages": [
+            {"role": "system", "content": f"Explain {term} concisely in 2-3 sentences, given this context: {context}"},
+            {"role": "user", "content": f"What is {term}?"}
+        ]
+    }, stream=True)
+
+    # Collect streamed response
+    content = ""
+    for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
+        content += chunk
+
+    return content
+
+
+def call_backend_stream(concept: str, depth: str, context: str):
+    """Call existing hypertext backend for detailed exploration."""
+    import requests
+
+    system_prompts = {
+        "overview": "Provide a clear, accessible explanation",
+        "intermediate": "Explain with technical detail and examples",
+        "advanced": "Deep technical analysis with edge cases and research directions"
+    }
+
+    response = requests.post("http://localhost:3100/api/stream", json={
+        "messages": [
+            {"role": "system", "content": system_prompts[depth]},
+            {"role": "user", "content": f"Explain {concept} in depth. Previous context: {context}"}
+        ]
+    }, stream=True)
+
+    content = ""
+    for chunk in response.iter_content(chunk_size=1024, decode_unicode=True):
+        content += chunk
+
+    return content
+
+
+def generate_followup_questions(concept: str, depth: str) -> list[str]:
+    """Generate suggested followup questions."""
+    # Could be hardcoded or LLM-generated
+    return [
+        f"How does {concept} relate to other concepts?",
+        f"What are practical applications of {concept}?",
+        f"What are common misconceptions about {concept}?"
+    ]
+
+
+if __name__ == "__main__":
+    mcp.run(transport="http", port=8000)</code></pre>
+
+                <h3>System Prompts for Mode Enforcement</h3>
+                <pre><code># Add to MCP server as a prompt resource
+@mcp.prompt("educational-mode-instructions")
+def educational_instructions():
+    """System prompt for educational mode."""
+    return """You are in EDUCATIONAL MODE. Your goal is to teach effectively.
+
+For every response:
+1. Explain the core concept clearly
+2. Identify 3-5 key terms that deserve deeper exploration
+3. After your explanation, use create_hypertext() for each key term
+4. Provide examples to illustrate concepts
+5. Encourage exploration through hypertext links
+
+Example structure:
+[Your clear explanation]
+
+**Explore deeper:**
+- [Term 1] ← call create_hypertext("Term 1", context)
+- [Term 2] ← call create_hypertext("Term 2", context)
+- [Term 3] ← call create_hypertext("Term 3", context)
+
+Hypertext links allow users to hover and continue learning inline."""
+
+
+@mcp.prompt("exploratory-mode-instructions")
+def exploratory_instructions():
+    """System prompt for exploratory mode."""
+    return """You are in EXPLORATORY MODE. Enable deep research.
+
+For every response:
+1. Provide comprehensive overview
+2. Identify 5-10 branching topics
+3. Use create_hypertext() extensively
+4. Include methodological considerations
+5. Suggest related areas and open questions
+
+Think like a research assistant helping explore a knowledge graph.
+Every hypertext link is a portal to a deeper rabbit hole."""</code></pre>
+
+                <div class="note">
+                    <strong>💡 Key Innovation:</strong> The <code>set_output_mode</code> tool doesn't just toggle a flag—it returns detailed instructions that ChatGPT incorporates into its reasoning, fundamentally changing how it structures responses.
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <div><span class="arrow">▶</span>3. Component Adaptation <span class="badge warning">UI/UX</span></div>
+            </div>
+            <div class="collapsible-content">
+                <h3>Tooltip Component for ChatGPT</h3>
+                <p style="margin: 8px 0; line-height: 1.5;">Adapt your existing <code>hypertext-experience.js</code> to work as a ChatGPT component using <code>window.openai</code> API.</p>
+
+                <h3>Component Structure</h3>
+                <pre><code>// components/hypertext-tooltip.html
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+  &lt;meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"&gt;
+  &lt;style&gt;
+    /* Paste BASE_STYLES from hypertext-experience.js */
+    /* Adapt for iframe context */
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div id="root"&gt;&lt;/div&gt;
+  &lt;script&gt;
+    // Hypertext Tooltip Component for ChatGPT
+    (function() {
+      // Get initial data from window.openai
+      const toolOutput = window.openai?.toolOutput || {};
+      const {
+        term,
+        display_text,
+        context,
+        initial_content
+      } = toolOutput;
+
+      // State
+      let conversation = [
+        { role: 'assistant', content: initial_content }
+      ];
+      let theme = window.openai?.theme?.mode || 'light';
+
+      // Build UI
+      function renderTooltip() {
+        const root = document.getElementById('root');
+        root.innerHTML = `
+          &lt;div class="hx-chat-tooltip" data-theme="${theme}"&gt;
+            &lt;div class="hx-chat-tooltip__header"&gt;
+              &lt;h3&gt;${display_text || term}&lt;/h3&gt;
+              &lt;div class="hx-chat-tooltip__header-actions"&gt;
+                &lt;button class="hx-chat-tooltip__size-toggle"&gt;↔&lt;/button&gt;
+                &lt;button class="hx-chat-tooltip__icon" data-action="close"&gt;✕&lt;/button&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class="hx-chat-tooltip__body"&gt;
+              &lt;div class="hx-chat-tooltip__meta"&gt;
+                &lt;span&gt;Topic: ${term}&lt;/span&gt;
+                &lt;span&gt;${conversation.length} messages&lt;/span&gt;
+              &lt;/div&gt;
+              &lt;div class="hx-chat-tooltip__list"&gt;
+                &lt;ul id="conversation-list"&gt;&lt;/ul&gt;
+              &lt;/div&gt;
+              &lt;div class="hx-chat-tooltip__input-wrap"&gt;
+                &lt;input
+                  type="text"
+                  id="user-input"
+                  placeholder="Ask about ${term}..."
+                  class="hx-chat-tooltip__input"
+                /&gt;
+                &lt;button id="send-btn" class="hx-chat-tooltip__send"&gt;→&lt;/button&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        `;
+
+        renderConversation();
+        attachEventListeners();
+      }
+
+      function renderConversation() {
+        const list = document.getElementById('conversation-list');
+        list.innerHTML = conversation.map(msg =&gt; `
+          &lt;li class="hx-chat-tooltip__item"&gt;
+            &lt;div class="hx-chat-tooltip__role"&gt;
+              ${msg.role === 'user' ? 'You' : 'Assistant'}
+            &lt;/div&gt;
+            &lt;div class="hx-chat-tooltip__content"&gt;
+              ${msg.content}
+            &lt;/div&gt;
+          &lt;/li&gt;
+        `).join('');
+
+        // Scroll to bottom
+        list.scrollTop = list.scrollHeight;
+      }
+
+      function attachEventListeners() {
+        // Send message
+        document.getElementById('send-btn').addEventListener('click', sendMessage);
+        document.getElementById('user-input').addEventListener('keypress', (e) =&gt; {
+          if (e.key === 'Enter') sendMessage();
+        });
+
+        // Size toggle
+        document.querySelector('.hx-chat-tooltip__size-toggle').addEventListener('click', () =&gt; {
+          window.openai.requestDisplayMode('fullscreen');
+        });
+
+        // Close
+        document.querySelector('[data-action="close"]').addEventListener('click', () =&gt; {
+          // Notify ChatGPT that user closed tooltip
+          window.openai.sendFollowupTurn(`User finished exploring ${term}`);
+        });
+      }
+
+      async function sendMessage() {
+        const input = document.getElementById('user-input');
+        const message = input.value.trim();
+        if (!message) return;
+
+        // Add user message to conversation
+        conversation.push({ role: 'user', content: message });
+        renderConversation();
+        input.value = '';
+
+        // Call MCP tool to get response
+        window.openai.callTool('explore_concept', {
+          concept: term,
+          depth: 'intermediate',
+          previous_context: JSON.stringify(conversation)
+        });
+
+        // Show loading state
+        conversation.push({ role: 'assistant', content: 'Thinking...' });
+        renderConversation();
+      }
+
+      // Listen for tool responses
+      window.addEventListener('message', (event) =&gt; {
+        if (event.data.type === 'openai:tool_response') {
+          if (event.data.toolName === 'explore_concept') {
+            // Replace loading message with actual response
+            conversation[conversation.length - 1] = {
+              role: 'assistant',
+              content: event.data.toolOutput.content
+            };
+            renderConversation();
+
+            // Update widget state
+            window.openai.setWidgetState({
+              conversation: conversation,
+              term: term
+            });
+          }
+        }
+
+        // Handle theme changes
+        if (event.data.type === 'openai:set_globals') {
+          theme = event.data.theme?.mode || 'light';
+          document.querySelector('.hx-chat-tooltip').dataset.theme = theme;
+        }
+      });
+
+      // Initialize
+      renderTooltip();
+    })();
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+                <div class="warning">
+                    <strong>⚠️ Adaptations Needed:</strong>
+                    <ul class="dense-list" style="margin-top: 8px;">
+                        <li>Replace DOM selection logic (no Cmd+K trigger in ChatGPT)</li>
+                        <li>Use <code>window.openai.callTool</code> instead of direct fetch</li>
+                        <li>Handle <code>window.openai.toolOutput</code> for initialization</li>
+                        <li>Respond to <code>openai:set_globals</code> for theme/layout</li>
+                        <li>Update styles for iframe constraints</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <div><span class="arrow">▶</span>4. Controlling ChatGPT Output Style <span class="badge critical">INNOVATION</span></div>
+            </div>
+            <div class="collapsible-content">
+                <h3>How Mode Control Works</h3>
+                <p style="margin: 8px 0; line-height: 1.5;">Unlike simple flags, this approach uses <strong>tool-mediated prompt engineering</strong> to fundamentally reshape ChatGPT's behavior.</p>
+
+                <div class="mermaid">
+sequenceDiagram
+    participant User
+    participant ChatGPT
+    participant MCP as Hypertext MCP
+
+    User->>ChatGPT: "Switch to educational mode"
+    ChatGPT->>MCP: set_output_mode("educational")
+    MCP-->>ChatGPT: {instructions, guidance, style}
+
+    Note over ChatGPT: Incorporates mode instructions<br/>into reasoning process
+
+    User->>ChatGPT: "Explain black holes"
+    ChatGPT->>ChatGPT: Apply educational mode logic
+    ChatGPT->>MCP: create_hypertext("event horizon", context)
+    ChatGPT->>MCP: create_hypertext("singularity", context)
+    ChatGPT->>MCP: create_hypertext("Hawking radiation", context)
+
+    Note over ChatGPT,User: Response includes interactive<br/>hypertext components
+                </div>
+
+                <h3>Three Output Modes Explained</h3>
+                <div class="two-column-layout">
+                    <div class="card">
+                        <h4>🎓 Educational Mode</h4>
+                        <p style="margin: 8px 0;"><strong>Purpose:</strong> Optimize for learning and understanding</p>
+                        <p style="margin: 8px 0;"><strong>Behavior:</strong></p>
+                        <ul class="dense-list">
+                            <li>Pedagogical explanations (simple → complex)</li>
+                            <li>3-5 hypertext links per response</li>
+                            <li>Focus on core concepts</li>
+                            <li>Include examples and analogies</li>
+                            <li>Encourage curiosity</li>
+                        </ul>
+                        <p style="margin: 8px 0;"><strong>Use Case:</strong> Students, beginners, teaching contexts</p>
+                    </div>
+                    <div class="card">
+                        <h4>🔬 Exploratory Mode</h4>
+                        <p style="margin: 8px 0;"><strong>Purpose:</strong> Enable deep research and knowledge discovery</p>
+                        <p style="margin: 8px 0;"><strong>Behavior:</strong></p>
+                        <ul class="dense-list">
+                            <li>Comprehensive overviews</li>
+                            <li>5-10 hypertext links (knowledge graph)</li>
+                            <li>Methodological considerations</li>
+                            <li>Open questions and research directions</li>
+                            <li>Cross-domain connections</li>
+                        </ul>
+                        <p style="margin: 8px 0;"><strong>Use Case:</strong> Researchers, deep dives, literature reviews</p>
+                    </div>
+                </div>
+                <div class="card full-width">
+                    <h4>📝 Standard Mode</h4>
+                    <p style="margin: 8px 0;"><strong>Purpose:</strong> Regular ChatGPT behavior without hypertext</p>
+                    <p style="margin: 8px 0;"><strong>Behavior:</strong> No special formatting, no hypertext links</p>
+                    <p style="margin: 8px 0;"><strong>Use Case:</strong> Quick questions, casual conversation</p>
+                </div>
+
+                <h3>Example: Same Question, Different Modes</h3>
+                <div class="card priority">
+                    <h4>Query: "Explain quantum computing"</h4>
+
+                    <p style="margin: 12px 0 4px 0;"><strong>Standard Mode:</strong></p>
+                    <div style="background: #f5f5f5; padding: 8px; border-left: 3px solid #999;">
+                        Quantum computing uses quantum mechanical phenomena like superposition and entanglement to perform computations. Unlike classical computers that use bits (0 or 1), quantum computers use qubits that can be both 0 and 1 simultaneously...
+                    </div>
+
+                    <p style="margin: 12px 0 4px 0;"><strong>Educational Mode:</strong></p>
+                    <div style="background: #fff6e6; padding: 8px; border-left: 3px solid #FFD700;">
+                        Quantum computing represents a fundamentally different approach to computation. Let's build from the basics:
+
+                        First, classical computers use <span style="color: #8b0000; text-decoration: underline;">bits</span> (0 or 1), but quantum computers use <span style="color: #8b0000; text-decoration: underline;">qubits</span> that can exist in superposition...
+
+                        <strong>Explore deeper:</strong>
+                        • <span style="color: #8b0000; text-decoration: underline;">Quantum superposition</span> ← interactive tooltip
+                        • <span style="color: #8b0000; text-decoration: underline;">Quantum entanglement</span> ← interactive tooltip
+                        • <span style="color: #8b0000; text-decoration: underline;">Quantum gates</span> ← interactive tooltip
+                    </div>
+
+                    <p style="margin: 12px 0 4px 0;"><strong>Exploratory Mode:</strong></p>
+                    <div style="background: #e6f7ff; padding: 8px; border-left: 3px solid #1a73e8;">
+                        Quantum computing leverages quantum mechanical principles to perform computations intractable for classical systems...
+
+                        <strong>Knowledge graph branches:</strong>
+                        <em>Fundamentals:</em> <span style="color: #1a73e8; text-decoration: underline;">Hilbert spaces</span>, <span style="color: #1a73e8; text-decoration: underline;">quantum state vectors</span>, <span style="color: #1a73e8; text-decoration: underline;">measurement problem</span>
+
+                        <em>Hardware:</em> <span style="color: #1a73e8; text-decoration: underline;">Superconducting qubits</span>, <span style="color: #1a73e8; text-decoration: underline;">ion traps</span>, <span style="color: #1a73e8; text-decoration: underline;">topological qubits</span>
+
+                        <em>Algorithms:</em> <span style="color: #1a73e8; text-decoration: underline;">Shor's algorithm</span>, <span style="color: #1a73e8; text-decoration: underline;">Grover's search</span>, <span style="color: #1a73e8; text-decoration: underline;">VQE</span>
+
+                        <em>Open questions:</em> <span style="color: #1a73e8; text-decoration: underline;">Quantum error correction</span>, <span style="color: #1a73e8; text-decoration: underline;">NISQ algorithms</span>
+                    </div>
+                </div>
+
+                <h3>Implementation Pattern</h3>
+                <pre><code>// In your ChatGPT conversation:
+
+User: "Switch to educational mode"
+ChatGPT: [calls set_output_mode("educational")]
+"I've switched to educational mode. I'll now provide learning-focused explanations with interactive hypertext links for deeper exploration."
+
+User: "Explain machine learning"
+ChatGPT: [applies educational mode logic]
+"Machine learning enables computers to learn from data without explicit programming...
+
+Let's explore key concepts:
+- [calls create_hypertext("supervised learning", context)]
+- [calls create_hypertext("neural networks", context)]
+- [calls create_hypertext("gradient descent", context)]
+
+Each underlined term has an interactive tooltip—hover to learn more!"
+
+// Result: Response includes 3 interactive hypertext components</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <div><span class="arrow">▶</span>5. Deployment & Distribution <span class="badge warning">PRACTICAL</span></div>
+            </div>
+            <div class="collapsible-content">
+                <h3>Deployment Architecture</h3>
+                <div class="mermaid">
+graph TB
+    A[MCP Server<br/>FastMCP + Tools] --> B[HTTPS Endpoint]
+    B --> C[ChatGPT Connector]
+
+    D[Tooltip Component<br/>HTML + JS] --> E[CDN<br/>CloudFlare/Vercel]
+
+    F[Existing Backend<br/>localhost:3100] --> G[Cloud Deployment<br/>Fly.io/Render]
+
+    C --> A
+    C --> E
+    A --> G
+
+    style A fill:#00A86B,stroke:#8B0000,stroke-width:2px
+    style C fill:#FFD700,stroke:#8B0000,stroke-width:2px
+    style E fill:#8B0000,color:#fff,stroke:#FFD700,stroke-width:2px
+                </div>
+
+                <h3>Deployment Steps</h3>
+                <div class="card priority">
+                    <h4>Step 1: Deploy Your Existing Backend</h4>
+                    <pre><code># Deploy the hypertext backend (currently localhost:3100)
+# to a cloud platform
+
+# Option: Fly.io
+fly launch
+fly deploy
+
+# Get URL: https://your-hypertext.fly.dev</code></pre>
+                </div>
+
+                <div class="card priority">
+                    <h4>Step 2: Deploy MCP Server</h4>
+                    <pre><code># Project structure:
+hypertext-mcp/
+  server.py          # FastMCP server
+  requirements.txt   # fastmcp, requests
+  Procfile          # For deployment
+
+# requirements.txt
+fastmcp>=2.0.0
+requests>=2.31.0
+
+# Deploy to Fly.io
+fly launch --name hypertext-mcp
+fly deploy
+
+# Get MCP endpoint: https://hypertext-mcp.fly.dev/mcp</code></pre>
+                </div>
+
+                <div class="card priority">
+                    <h4>Step 3: Deploy Tooltip Component to CDN</h4>
+                    <pre><code># Build component
+# components/hypertext-tooltip.html (single file)
+
+# Deploy to Vercel/Netlify/CloudFlare Pages
+# Get URL: https://cdn.your-domain.com/hypertext-tooltip.html
+
+# Update MCP server to reference this URL in create_hypertext()</code></pre>
+                </div>
+
+                <div class="card priority">
+                    <h4>Step 4: Register with ChatGPT</h4>
+                    <ol style="margin: 8px 0 8px 20px; line-height: 1.8;">
+                        <li>Open ChatGPT Settings</li>
+                        <li>Go to Connectors → Advanced</li>
+                        <li>Enable Developer Mode</li>
+                        <li>Add connector: <code>https://hypertext-mcp.fly.dev/mcp</code></li>
+                        <li>Name it: "Hypertext Navigator"</li>
+                    </ol>
+                </div>
+
+                <h3>Environment Configuration</h3>
+                <pre><code># .env
+HYPERTEXT_BACKEND_URL=https://your-hypertext.fly.dev
+COMPONENT_CDN_URL=https://cdn.your-domain.com/hypertext-tooltip.html
+OPENAI_API_KEY=sk-...  # If using OpenAI for content generation
+
+# server.py - Use environment variables
+import os
+
+BACKEND_URL = os.getenv('HYPERTEXT_BACKEND_URL', 'http://localhost:3100')
+COMPONENT_URL = os.getenv('COMPONENT_CDN_URL', 'http://localhost:8080/tooltip.html')
+
+def generate_explanation(term, context):
+    response = requests.post(f"{BACKEND_URL}/api/stream", ...)
+    ...</code></pre>
+
+                <h3>Testing Before Deployment</h3>
+                <pre><code># 1. Test MCP server locally
+python server.py
+npx @modelcontextprotocol/inspector
+
+# 2. Test with ngrok
+ngrok http 8000
+# Add to ChatGPT: https://abc123.ngrok.io/mcp
+
+# 3. Test all tools
+- set_output_mode("educational")
+- create_hypertext("test concept", "test context")
+- explore_concept("test", "overview")
+
+# 4. Verify component renders
+- Check iframe loads
+- Test tooltip interactions
+- Verify backend communication</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <div><span class="arrow">▶</span>6. Usage Examples <span class="badge">PRACTICAL</span></div>
+            </div>
+            <div class="collapsible-content">
+                <h3>Example Session 1: Learning Mode</h3>
+                <div class="card">
+                    <pre><code>User: Enable educational mode
+
+ChatGPT: [calls set_output_mode("educational")]
+✓ Educational mode activated. I'll provide learning-focused explanations
+with interactive hypertext links.
+
+User: Teach me about neural networks
+
+ChatGPT: Let me explain neural networks step by step.
+
+A neural network is a computational model inspired by biological brains.
+It consists of interconnected nodes (neurons) organized in layers that
+process information.
+
+**Core Components:**
+- Input layer: Receives raw data
+- Hidden layers: Process and transform data
+- Output layer: Produces predictions
+
+[calls create_hypertext("activation functions", context)]
+[calls create_hypertext("backpropagation", context)]
+[calls create_hypertext("gradient descent", context)]
+
+**Explore these concepts:**
+• <u style="color: #8b0000">activation functions</u> ← Hover to learn more
+• <u style="color: #8b0000">backpropagation</u> ← How networks learn
+• <u style="color: #8b0000">gradient descent</u> ← Optimization algorithm
+
+User: [hovers "activation functions"]
+→ Tooltip appears with mini-chat
+→ Can continue conversation inline</code></pre>
+                </div>
+
+                <h3>Example Session 2: Research Mode</h3>
+                <div class="card">
+                    <pre><code>User: Switch to exploratory mode
+
+ChatGPT: [calls set_output_mode("exploratory")]
+✓ Exploratory mode enabled. I'll provide comprehensive overviews with
+extensive hyperlinks for research.
+
+User: Overview of quantum error correction
+
+ChatGPT: Quantum error correction (QEC) is critical for fault-tolerant
+quantum computing, protecting quantum information from decoherence and
+operational errors.
+
+**Theoretical Foundations:**
+[calls create_hypertext("stabilizer codes", context)]
+[calls create_hypertext("Shor code", context)]
+[calls create_hypertext("surface codes", context)]
+
+**Physical Implementations:**
+[calls create_hypertext("superconducting architectures", context)]
+[calls create_hypertext("ion trap implementations", context)]
+
+**Current Challenges:**
+[calls create_hypertext("threshold theorem", context)]
+[calls create_hypertext("magic state distillation", context)]
+
+**Research Frontiers:**
+[calls create_hypertext("topological codes", context)]
+[calls create_hypertext("LDPC codes for QEC", context)]
+
+→ Response includes 9 interactive research branches</code></pre>
+                </div>
+
+                <h3>Example Session 3: Mode Switching</h3>
+                <div class="card">
+                    <pre><code>User: What's the capital of France?
+
+ChatGPT: Paris
+
+User: Switch to educational mode and explain the French Revolution
+
+ChatGPT: [calls set_output_mode("educational")]
+
+The French Revolution (1789-1799) was a period of radical social and
+political upheaval in France...
+
+[creates hypertext for "Estates-General", "Bastille", "Reign of Terror", etc.]
+
+User: Back to standard mode
+
+ChatGPT: [calls set_output_mode("standard")]
+✓ Standard mode restored. No special formatting enabled.
+
+User: What year did it start?
+
+ChatGPT: 1789</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <div><span class="arrow">▶</span>7. Advanced Features <span class="badge">ENHANCEMENT</span></div>
+            </div>
+            <div class="collapsible-content">
+                <h3>Persistent Mode Preferences</h3>
+                <pre><code>@mcp.tool
+def get_user_preferences(user_id: str = None) -> dict:
+    """Retrieve saved output mode and preferences."""
+    # Could integrate with a database
+    return {
+        "default_mode": "educational",
+        "hypertext_density": "medium",  # low, medium, high
+        "tooltip_size": "compact"
+    }
+
+@mcp.tool
+def save_user_preferences(
+    user_id: str,
+    default_mode: str,
+    hypertext_density: str = "medium"
+) -> dict:
+    """Save user preferences for future sessions."""
+    # Persist to database
+    return {"saved": True}</code></pre>
+
+                <h3>Analytics & Insights</h3>
+                <pre><code>@mcp.tool
+def get_learning_analytics(user_id: str) -> dict:
+    """Show which concepts user has explored via hypertext."""
+    return {
+        "concepts_explored": [
+            {"term": "neural networks", "depth": "advanced", "timestamp": "..."},
+            {"term": "backpropagation", "depth": "intermediate", "timestamp": "..."}
+        ],
+        "learning_graph": "URL_to_visualization",
+        "suggested_next": ["convolutional networks", "transformers"]
+    }</code></pre>
+
+                <h3>Collaborative Learning</h3>
+                <pre><code>@mcp.tool
+def share_hypertext_conversation(
+    conversation_id: str,
+    recipient: str
+) -> dict:
+    """Share a hypertext learning session with others."""
+    return {
+        "share_link": "https://hypertext.app/share/abc123",
+        "recipient_notified": True
+    }</code></pre>
+
+                <h3>Custom Mode Creation</h3>
+                <pre><code>@mcp.tool
+def create_custom_mode(
+    name: str,
+    description: str,
+    hypertext_density: int,
+    style_guidance: str
+) -> dict:
+    """Allow users to define their own output modes."""
+    # Save custom mode configuration
+    return {
+        "mode_name": name,
+        "created": True,
+        "usage": f"set_output_mode('{name}')"
+    }
+
+# Example usage:
+User: "Create a 'code-focused' mode that adds hypertext links for every
+programming concept with lots of code examples"</code></pre>
+
+                <h3>Visual Knowledge Graph</h3>
+                <pre><code>@mcp.tool
+def visualize_knowledge_graph(
+    root_concept: str,
+    explored_concepts: list[str]
+) -> dict:
+    """Generate visual map of explored hypertext links."""
+    return {
+        "graph_data": {
+            "nodes": [...],
+            "edges": [...]
+        },
+        "_meta": {
+            "openai/outputTemplate": {
+                "type": "text/html+skybridge",
+                "url": "https://cdn.your-domain.com/knowledge-graph.html"
+            }
+        }
+    }</code></pre>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <div><span class="arrow">▶</span>8. Implementation Roadmap <span class="badge critical">PLAN</span></div>
+            </div>
+            <div class="collapsible-content">
+                <h3>Phase 1: MVP (1-2 weeks)</h3>
+                <div class="card priority">
+                    <ul class="dense-list">
+                        <li>✓ Create FastMCP server with 3 core tools</li>
+                        <li>✓ Adapt hypertext-experience.js as ChatGPT component</li>
+                        <li>✓ Deploy backend to cloud (Fly.io)</li>
+                        <li>✓ Deploy MCP server</li>
+                        <li>✓ Host component on CDN</li>
+                        <li>✓ Test with ChatGPT Developer Mode</li>
+                        <li>✓ Validate educational mode works</li>
+                    </ul>
+                </div>
+
+                <h3>Phase 2: Refinement (1 week)</h3>
+                <div class="card">
+                    <ul class="dense-list">
+                        <li>Polish tooltip UI for ChatGPT context</li>
+                        <li>Add exploratory mode</li>
+                        <li>Improve mode-switching UX</li>
+                        <li>Add conversation persistence</li>
+                        <li>Optimize streaming performance</li>
+                    </ul>
+                </div>
+
+                <h3>Phase 3: Enhancement (2 weeks)</h3>
+                <div class="card">
+                    <ul class="dense-list">
+                        <li>User preferences and persistence</li>
+                        <li>Learning analytics</li>
+                        <li>Visual knowledge graph</li>
+                        <li>Custom mode creation</li>
+                        <li>Collaborative features</li>
+                    </ul>
+                </div>
+
+                <h3>Phase 4: Public Launch</h3>
+                <div class="card success">
+                    <ul class="dense-list">
+                        <li>Documentation and examples</li>
+                        <li>Video demos</li>
+                        <li>Submit to MCP connector directory</li>
+                        <li>Blog post announcement</li>
+                        <li>Gather user feedback</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="important-always-visible">
+            <h2>🚀 Quick Start Checklist</h2>
+            <div class="card priority">
+                <ol style="margin: 8px 0 8px 20px; line-height: 2;">
+                    <li><strong>Setup FastMCP:</strong> <code>pip install fastmcp</code></li>
+                    <li><strong>Create server.py:</strong> Implement set_output_mode, create_hypertext, explore_concept</li>
+                    <li><strong>Adapt component:</strong> Convert hypertext-experience.js to use window.openai API</li>
+                    <li><strong>Deploy backend:</strong> Move localhost:3100 to cloud (Fly.io)</li>
+                    <li><strong>Deploy MCP:</strong> Deploy server.py to HTTPS endpoint</li>
+                    <li><strong>Deploy component:</strong> Host tooltip HTML on CDN</li>
+                    <li><strong>Test locally:</strong> Use ngrok + MCP Inspector</li>
+                    <li><strong>Add to ChatGPT:</strong> Settings → Connectors → Add MCP URL</li>
+                    <li><strong>Test modes:</strong> Try educational and exploratory modes</li>
+                    <li><strong>Iterate:</strong> Refine based on usage</li>
+                </ol>
+            </div>
+
+            <div class="note" style="margin-top: 12px;">
+                <strong>💡 Key Insight:</strong> This isn't just "adding hypertext to ChatGPT"—it's creating a new interaction paradigm where AI responses become launchpads for deeper exploration. Every concept can spawn its own mini-conversation, creating a fractal learning experience.
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#FFD700',
+                primaryTextColor: '#2B2B2B',
+                primaryBorderColor: '#8B0000',
+                lineColor: '#8B0000',
+                secondaryColor: '#F5F5DC',
+                tertiaryColor: '#00A86B'
+            }
+        });
+
+        // Collapsible functionality
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const collapsible = header.parentElement;
+                collapsible.classList.toggle('open');
+            });
+        });
+
+        function expandAll() {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.classList.add('open');
+            });
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.classList.remove('open');
+            });
+        }
+
+        // Auto-expand first section
+        document.querySelector('.collapsible').classList.add('open');
+    </script>
+</body>
+</html>

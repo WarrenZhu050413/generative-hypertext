@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan: HTML Style Documentation Restructuring</title>
+<style>
+:root {
+    --chinese-red: #8B0000;
+    --chinese-gold: #FFD700;
+    --jade-green: #00A86B;
+    --ink-black: #2B2B2B;
+    --paper-beige: #F5F5DC;
+    --light-cream: #FAFAF0;
+    --level-1: #000;
+    --level-2: #333;
+    --level-3: #666;
+    --level-4: #999;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+    color: var(--ink-black);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.3;
+    padding: 8px;
+}
+
+h1 {
+    font-size: 22px;
+    font-weight: 900;
+    margin: 6px 0;
+    padding: 6px;
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 10px 0 4px 0;
+    padding: 4px;
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.03);
+    color: var(--level-1);
+}
+
+h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 6px 0 3px 0;
+    color: var(--level-2);
+}
+
+h4 {
+    font-size: 12px;
+    font-weight: 500;
+    margin: 4px 0 2px 8px;
+    color: var(--level-3);
+}
+
+.two-column-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+}
+
+.full-width { grid-column: span 2; }
+
+button {
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    color: white;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    padding: 4px 8px;
+    margin: 2px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 2px;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+}
+
+.important-always-visible {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+    border: 2px solid var(--chinese-gold);
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 3px;
+}
+
+.metric {
+    display: inline-block;
+    background: white;
+    border: 1px solid var(--chinese-gold);
+    padding: 2px 6px;
+    margin: 2px;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.metric.important {
+    background: var(--chinese-gold);
+    color: white;
+    font-weight: 700;
+}
+
+.collapsible { margin: 4px 0; width: 100%; }
+.collapsible-header {
+    cursor: pointer;
+    padding: 6px 8px;
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+    border-left: 3px solid var(--chinese-gold);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.collapsible.critical .collapsible-header {
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+.collapsible.secondary .collapsible-header {
+    border-left: 2px solid #999;
+    background: rgba(0, 0, 0, 0.02);
+    font-size: 13px;
+}
+
+.collapsible-header:hover {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+}
+
+.collapsible-header .arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    color: var(--chinese-red);
+    font-size: 10px;
+}
+
+.collapsible.open .arrow {
+    transform: rotate(90deg);
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 8px;
+    margin-left: 8px;
+}
+
+.collapsible.open .collapsible-content {
+    max-height: 5000px;
+    padding: 8px;
+}
+
+.dense-list {
+    list-style: none;
+    padding: 0;
+    margin-left: 8px;
+}
+
+.dense-list li {
+    padding: 3px 0 3px 12px;
+    position: relative;
+    line-height: 1.4;
+}
+
+.dense-list li:before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--chinese-red);
+    font-size: 10px;
+}
+
+ol.dense-list {
+    list-style: decimal;
+    padding-left: 20px;
+}
+
+ol.dense-list li:before {
+    content: none;
+}
+
+.indent-1 { margin-left: 12px; }
+.indent-2 { margin-left: 24px; }
+.indent-3 { margin-left: 36px; }
+
+.muted { color: var(--level-4); font-size: 12px; }
+.critical { color: var(--chinese-red); font-weight: 700; }
+.success { color: var(--jade-green); font-weight: 600; }
+.warning { color: var(--chinese-gold); font-weight: 600; }
+
+code {
+    background: rgba(139, 0, 0, 0.05);
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 12px;
+    font-family: "Monaco", "Courier New", monospace;
+}
+
+pre {
+    background: rgba(245, 245, 220, 0.3);
+    border: 1px solid rgba(139, 0, 0, 0.1);
+    padding: 6px;
+    margin: 4px 0;
+    overflow-x: auto;
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0;
+    font-size: 12px;
+}
+
+th {
+    background: var(--chinese-red);
+    color: white;
+    padding: 4px 6px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+td {
+    border: 1px solid #ddd;
+    padding: 3px 6px;
+    vertical-align: top;
+}
+
+tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+
+.step-box {
+    background: white;
+    border-left: 3px solid var(--chinese-gold);
+    padding: 6px;
+    margin: 4px 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.phase-header {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+    padding: 6px;
+    margin: 8px 0 4px 0;
+    font-weight: 700;
+    border-left: 4px solid var(--chinese-red);
+}
+</style>
+</head>
+<body>
+
+<div style="margin: 8px 0; text-align: right;">
+    <button id="expand-all">Expand All</button>
+    <button id="collapse-all">Collapse All</button>
+</div>
+
+<div class="important-always-visible">
+    <h1>📋 Plan: HTML Style Documentation Restructuring</h1>
+    <div class="two-column-layout">
+        <div>
+            <h3>Objective</h3>
+            <p>Restructure the 877-line HTML style documentation to improve clarity, reduce redundancy, and increase actionability while reducing token count by 35%.</p>
+        </div>
+        <div>
+            <h3>Approach</h3>
+            <p>Reorganize content in logical order (quick-start first, colors early), consolidate 6 redundant sections, add decision guides, move Mermaid to appendix.</p>
+            <div style="margin-top: 4px;">
+                <span class="metric important">Complexity: Medium</span>
+                <span class="metric">Time: ~60 min</span>
+                <span class="metric">Impact: High</span>
+            </div>
+        </div>
+    </div>
+    <div style="margin-top: 6px; padding: 6px; background: white; border-radius: 2px;">
+        <strong>Success Metrics:</strong>
+        <span class="success">~600 lines (-35%)</span>,
+        <span class="success">~4500 tokens (-35%)</span>,
+        <span class="success">Logical flow</span>,
+        <span class="success">Zero ambiguity</span>
+    </div>
+</div>
+
+<div class="two-column-layout">
+    <!-- Left Column: Implementation Steps -->
+    <div class="collapsible critical full-width" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>⚡ Implementation Steps (10 Phases)</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+
+            <div class="phase-header">Phase 1: Add Quick-Start Example (Lines 1-60)</div>
+            <div class="step-box">
+                <h4>Step 1.1: Create Minimal Working Example</h4>
+                <p>Insert complete minimal HTML template showing all key features in ~50 lines</p>
+                <div class="indent-1 muted">File: ~/.claude/output-styles/html.md (insert at line 7, after Primary Purpose)</div>
+                <div class="indent-1">
+                    <strong>Include:</strong> DOCTYPE, head with :root variables, body styles, two-column layout, collapsible example, JavaScript
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.2: Add Quick Reference Table</h4>
+                <p>Insert component selection guide immediately after example</p>
+                <div class="indent-1">
+                    <strong>Columns:</strong> Use Case | Component | When to Use | Example
+                </div>
+            </div>
+
+            <div class="phase-header">Phase 2: Reorganize Color Palette (Lines 61-90)</div>
+            <div class="step-box">
+                <h4>Step 2.1: Move Color Palette Section</h4>
+                <p>Move entire "Chinese Color Palette" section from line 503 to line 61 (right after quick-start)</p>
+                <div class="indent-1 muted">Move lines 503-528 → new position after line 60</div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 2.2: Add Visual Color Swatches</h4>
+                <p>Enhance palette with usage frequency indicators</p>
+                <div class="indent-1">
+                    <strong>Add:</strong> Primary (Red), Secondary (Gold), Success (Green), Text hierarchy (level-1 through level-4)
+                </div>
+            </div>
+
+            <div class="phase-header">Phase 3: Consolidate Design Principles (Lines 91-140)</div>
+            <div class="step-box">
+                <h4>Step 3.1: Merge Redundant Headers</h4>
+                <p>Consolidate 3 redundant sections into single "Design Principles & Requirements"</p>
+                <div class="indent-1">
+                    <strong>Merge:</strong>
+                    <ul style="list-style: disc; margin-left: 20px; margin-top: 2px;">
+                        <li>Line 22-30: "Compact Design Principles"</li>
+                        <li>Line 32-39: "HTML Formatting Guidelines" + Line 35-39: "HTML Structure"</li>
+                        <li>Line 41-47: "Compact Styling Requirements"</li>
+                        <li>Line 356-363: "Compact Design Specifications" (duplicate)</li>
+                    </ul>
+                </div>
+                <div class="indent-1" style="margin-top: 4px;">
+                    <strong>Result:</strong> Single section with subsections: (a) Progressive Disclosure, (b) Layout Strategy, (c) Typography & Spacing, (d) Semantic HTML
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 3.2: Add Font Stack Definition</h4>
+                <p>Define the actual CSS for font stack (currently only mentioned in prose)</p>
+                <pre>font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;</pre>
+            </div>
+
+            <div class="phase-header">Phase 4: Reorganize CSS Sections (Lines 141-450)</div>
+            <div class="step-box">
+                <h4>Step 4.1: Reorder CSS by Dependency</h4>
+                <p>Organize CSS sections in logical dependency order</p>
+                <div class="indent-1">
+                    <strong>New order:</strong>
+                    <ol style="list-style: decimal; margin-left: 20px; margin-top: 2px;">
+                        <li>Base Styles (body, containers, reset)</li>
+                        <li>Typography (h1-h6)</li>
+                        <li>Layout Systems (two-column, grids, responsive)</li>
+                        <li>Interactive Elements (buttons, links)</li>
+                        <li>Collapsibles (complete implementation)</li>
+                        <li>Content Components (cards, sections, lists)</li>
+                        <li>Code Blocks & Tables</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 4.2: Consolidate Hierarchical Sections</h4>
+                <p>Merge "Hierarchical Content Sections" (235-311) with "Hierarchical Visual Elements" (365-422)</p>
+                <div class="indent-1">
+                    <strong>Result:</strong> Single "Content Hierarchy" section with primary/secondary/tertiary sections, cards, lists, indentation
+                </div>
+            </div>
+
+            <div class="phase-header">Phase 5: Move JavaScript Near Collapsibles (Lines 380-410)</div>
+            <div class="step-box">
+                <h4>Step 5.1: Relocate JavaScript Block</h4>
+                <p>Move JavaScript from line 756 to immediately after collapsible CSS definition</p>
+                <div class="indent-1 muted">Move lines 756-796 → insert after collapsible CSS (around line 233)</div>
+                <div class="indent-1">
+                    <strong>Reason:</strong> Keep implementation and behavior together for easier understanding
+                </div>
+            </div>
+
+            <div class="phase-header">Phase 6: Add Decision Guides (Lines 450-520)</div>
+            <div class="step-box">
+                <h4>Step 6.1: Create Component Selection Matrix</h4>
+                <p>Add comprehensive table mapping use cases to components</p>
+                <div class="indent-1">
+                    <strong>Include:</strong>
+                    <table style="margin-top: 4px; font-size: 11px;">
+                        <tr>
+                            <th>Use Case</th>
+                            <th>Component</th>
+                            <th>Priority</th>
+                        </tr>
+                        <tr>
+                            <td>Critical always-visible info</td>
+                            <td><code>.important-always-visible</code></td>
+                            <td>Critical</td>
+                        </tr>
+                        <tr>
+                            <td>Comparison/alternatives</td>
+                            <td><code>.two-column-layout</code></td>
+                            <td>High</td>
+                        </tr>
+                        <tr>
+                            <td>Secondary expandable details</td>
+                            <td><code>.collapsible</code></td>
+                            <td>Medium</td>
+                        </tr>
+                        <tr>
+                            <td>Process visualization</td>
+                            <td>Mermaid flowchart</td>
+                            <td>Medium</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 6.2: Add Layout Selection Flowchart</h4>
+                <p>Create simple decision tree for choosing layout strategy</p>
+                <pre>Comparing options? → Two-column
+Many short items? → Dense columns
+Sequential steps? → Single column + collapsibles
+Complex process? → Mermaid diagram</pre>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 6.3: Add "When to Use" for Each Component</h4>
+                <p>Enhance each CSS component section with usage guidance</p>
+                <div class="indent-1">
+                    <strong>Format:</strong> "Use this when..." callout box for collapsibles, cards, sections, layouts
+                </div>
+            </div>
+
+            <div class="phase-header">Phase 7: Streamline File Handling (Lines 520-560)</div>
+            <div class="step-box">
+                <h4>Step 7.1: Move File Handling to End</h4>
+                <p>Relocate "File Handling Instructions" from line 16 to near end (operational detail, not design)</p>
+                <div class="indent-1 muted">Move lines 16-20 → new location at line 520</div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 7.2: Add Troubleshooting Section</h4>
+                <p>Insert new section with common issues and solutions</p>
+                <div class="indent-1">
+                    <strong>Include:</strong> Collapsibles not working, colors not applying, layout breaking on mobile, JavaScript errors
+                </div>
+            </div>
+
+            <div class="phase-header">Phase 8: Move Mermaid to Appendix (Lines 561-650)</div>
+            <div class="step-box">
+                <h4>Step 8.1: Create Appendix Section</h4>
+                <p>Add "## Appendix: Advanced Features" header at line 561</p>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 8.2: Condense Mermaid Documentation</h4>
+                <p>Reduce Mermaid section from 204 lines to ~80 lines</p>
+                <div class="indent-1">
+                    <strong>Keep:</strong>
+                    <ul style="list-style: disc; margin-left: 20px; margin-top: 2px;">
+                        <li>Setup code (required)</li>
+                        <li>One example per diagram type (flowchart, sequence, class, state)</li>
+                        <li>Theme configuration</li>
+                    </ul>
+                </div>
+                <div class="indent-1">
+                    <strong>Remove:</strong>
+                    <ul style="list-style: disc; margin-left: 20px; margin-top: 2px;">
+                        <li>Redundant "when to use" explanations</li>
+                        <li>Duplicate styling examples</li>
+                        <li>Verbose best practices (condense to bullets)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 8.3: Reference Mermaid Docs</h4>
+                <p>Replace detailed explanations with link to official Mermaid documentation</p>
+                <div class="indent-1">
+                    <strong>Add:</strong> "For complete Mermaid syntax reference, see https://mermaid.js.org/"
+                </div>
+            </div>
+
+            <div class="phase-header">Phase 9: Remove Redundancy & Polish (Lines 651-600)</div>
+            <div class="step-box">
+                <h4>Step 9.1: Remove Duplicate CSS Comments</h4>
+                <p>Streamline CSS comments that restate property names</p>
+                <div class="indent-1">
+                    <strong>Example:</strong>
+                    <pre>/* Remove: */
+/* Two-column layout as default */
+.two-column-layout { ... }
+
+/* Keep: */
+.two-column-layout { ... } /* Default for comparisons */</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 9.2: Consolidate "Compact" References</h4>
+                <p>Remove 3 redundant mentions of "compact design" (keep one authoritative statement)</p>
+                <div class="indent-1 muted">Currently at lines 22, 41, 356 — merge into single statement</div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 9.3: Add Table of Contents</h4>
+                <p>Insert linked TOC at line 8 (right after Primary Purpose, before quick-start)</p>
+                <div class="indent-1">
+                    <strong>Format:</strong> Markdown list with anchor links to major sections
+                </div>
+            </div>
+
+            <div class="phase-header">Phase 10: Validation & Testing (Final)</div>
+            <div class="step-box">
+                <h4>Step 10.1: Verify Line Count Reduction</h4>
+                <p>Confirm document is ~600 lines (from 877)</p>
+                <div class="indent-1">
+                    <strong>Target:</strong> 30-35% reduction
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 10.2: Verify Token Count Reduction</h4>
+                <p>Estimate token count reduction to ~4500 tokens</p>
+                <div class="indent-1 muted">Use: wc -w to approximate word count, estimate tokens ≈ words × 1.3</div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 10.3: Test with Sample Generation</h4>
+                <p>Create test HTML document using restructured guidelines to verify completeness</p>
+                <div class="indent-1">
+                    <strong>Test:</strong> Generate HTML for "Git Analysis" topic, verify all styles apply correctly
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Prerequisites & Context -->
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📍 Prerequisites & Context</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Files to Examine</h3>
+            <ul class="dense-list">
+                <li><strong>Primary:</strong> <code>~/.claude/output-styles/html.md</code> (877 lines)</li>
+                <li><strong>Related:</strong> <code>~/.claude/snippets/snippets/HTML.md</code> (may need sync)</li>
+                <li><strong>Related:</strong> <code>~/.claude/snippets/snippets/PLANHTML.md</code> (may need sync)</li>
+            </ul>
+
+            <h3>Current Structure Issues</h3>
+            <ul class="dense-list">
+                <li><strong>Variables undefined:</strong> CSS vars used from line 1, defined at line 506</li>
+                <li><strong>Redundant sections:</strong> 6 sections with duplicate content</li>
+                <li><strong>Poor flow:</strong> File handling before design, Mermaid interrupts, JS at end</li>
+                <li><strong>Missing guides:</strong> No component selection help, no "when to use"</li>
+            </ul>
+
+            <h3>Analysis Complete</h3>
+            <p>Detailed analysis already performed in <code>claude_html/html_style_analysis.html</code> with specific findings.</p>
+        </div>
+    </div>
+
+    <!-- Testing & Validation -->
+    <div class="collapsible secondary" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>✓ Testing & Validation</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Per-Phase Validation</h3>
+            <table>
+                <tr>
+                    <th>Phase</th>
+                    <th>Validation Test</th>
+                    <th>Expected Result</th>
+                </tr>
+                <tr>
+                    <td>1: Quick-Start</td>
+                    <td>Copy example, save as .html, open in browser</td>
+                    <td>Renders correctly with colors, collapsibles work</td>
+                </tr>
+                <tr>
+                    <td>2: Color Palette</td>
+                    <td>Verify variables defined before first use</td>
+                    <td>No undefined variable references</td>
+                </tr>
+                <tr>
+                    <td>3: Principles</td>
+                    <td>Search for "compact" mentions</td>
+                    <td>Exactly 1 authoritative definition</td>
+                </tr>
+                <tr>
+                    <td>4: CSS Order</td>
+                    <td>Check dependencies (base → typography → layout)</td>
+                    <td>No forward references</td>
+                </tr>
+                <tr>
+                    <td>5: JavaScript</td>
+                    <td>Verify JS appears after collapsible CSS</td>
+                    <td>Clear connection between CSS and behavior</td>
+                </tr>
+                <tr>
+                    <td>6: Decisions</td>
+                    <td>Try to select component for "comparison" use case</td>
+                    <td>Clear guidance leads to .two-column-layout</td>
+                </tr>
+                <tr>
+                    <td>8: Mermaid</td>
+                    <td>Count Mermaid section lines</td>
+                    <td>~80 lines (down from 204)</td>
+                </tr>
+                <tr>
+                    <td>9: Polish</td>
+                    <td>Search for redundant headers</td>
+                    <td>No duplicate "HTML Formatting" sections</td>
+                </tr>
+                <tr>
+                    <td>10: Final</td>
+                    <td>wc -l html.md</td>
+                    <td>~600 lines (±50)</td>
+                </tr>
+            </table>
+
+            <h3>Integration Test</h3>
+            <div class="step-box">
+                <strong>Test Scenario:</strong> Generate HTML document for "Code Review Results"
+                <div class="indent-1">
+                    <strong>Steps:</strong>
+                    <ol style="list-style: decimal; margin-left: 20px; margin-top: 2px;">
+                        <li>Request HTML output using restructured guidelines</li>
+                        <li>Verify all styles apply correctly (colors, layout, collapsibles)</li>
+                        <li>Verify decision guides are easy to follow</li>
+                        <li>Confirm quick-start example was helpful reference</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Potential Issues & Mitigations -->
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>⚠️ Potential Issues & Mitigations</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Risk: Breaking Existing Workflows</h3>
+            <div class="step-box">
+                <strong>Issue:</strong> Moving sections might confuse users familiar with current structure
+                <div class="indent-1">
+                    <strong>Mitigation:</strong> Add TOC with clear section names; maintain all CSS class names unchanged
+                </div>
+            </div>
+
+            <h3>Risk: Over-Condensing Mermaid</h3>
+            <div class="step-box">
+                <strong>Issue:</strong> Reducing from 204 to 80 lines might remove critical information
+                <div class="indent-1">
+                    <strong>Mitigation:</strong> Keep all setup code and one complete example per diagram type; link to official docs for details
+                </div>
+            </div>
+
+            <h3>Risk: CSS Dependencies</h3>
+            <div class="step-box">
+                <strong>Issue:</strong> Reordering CSS might create unintended cascade effects
+                <div class="indent-1">
+                    <strong>Mitigation:</strong> Test generated HTML after each phase; verify specificity rules maintain expected behavior
+                </div>
+            </div>
+
+            <h3>Risk: Token Count Estimation</h3>
+            <div class="step-box">
+                <strong>Issue:</strong> May not hit exact 35% reduction target
+                <div class="indent-1">
+                    <strong>Mitigation:</strong> Acceptable range is 25-40% reduction; focus on clarity over exact token count
+                </div>
+            </div>
+
+            <h3>Edge Cases</h3>
+            <ul class="dense-list">
+                <li><strong>Snippet files sync:</strong> HTML.md and PLANHTML.md snippets may need manual updates if they reference line numbers</li>
+                <li><strong>Mobile responsive:</strong> Verify two-column layouts collapse properly on narrow screens</li>
+                <li><strong>Browser compatibility:</strong> Test collapsible transitions in Safari, Firefox, Chrome</li>
+                <li><strong>Long content:</strong> Test max-height: 5000px is sufficient for deeply nested collapsibles</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Dependencies & Execution Order -->
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>🔗 Dependencies & Execution Order</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Sequential Dependencies</h3>
+            <p>These phases MUST be executed in order:</p>
+            <table>
+                <tr>
+                    <th>Phase</th>
+                    <th>Depends On</th>
+                    <th>Reason</th>
+                </tr>
+                <tr>
+                    <td>2 (Color Palette)</td>
+                    <td>1 (Quick-Start)</td>
+                    <td>Line numbers shift after insertion</td>
+                </tr>
+                <tr>
+                    <td>4 (CSS Order)</td>
+                    <td>2, 3</td>
+                    <td>Palette must be positioned first</td>
+                </tr>
+                <tr>
+                    <td>9 (Polish)</td>
+                    <td>All previous</td>
+                    <td>Final cleanup after structure settled</td>
+                </tr>
+                <tr>
+                    <td>10 (Validation)</td>
+                    <td>All previous</td>
+                    <td>Tests complete restructure</td>
+                </tr>
+            </table>
+
+            <h3>Parallelizable Phases</h3>
+            <p><strong>Can be done simultaneously:</strong></p>
+            <ul class="dense-list">
+                <li>Phase 3 (Principles) + Phase 7 (File Handling) — different sections</li>
+                <li>Phase 6.1, 6.2, 6.3 (Decision guides) — independent additions</li>
+            </ul>
+
+            <h3>Recommended Execution Strategy</h3>
+            <div class="phase-header">Strategy: Top-Down Sequential</div>
+            <p>Execute phases 1-10 in strict order, validating after each major phase (1, 2, 4, 8, 10).</p>
+            <div class="indent-1">
+                <strong>Reason:</strong> Line numbers shift with each insertion/deletion; sequential execution minimizes conflicts
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Full-width sections -->
+<div class="collapsible secondary full-width" data-collapsible="closed">
+    <div class="collapsible-header">
+        <span>📊 Post-Implementation</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <div class="two-column-layout">
+            <div>
+                <h3>Documentation Updates</h3>
+                <ul class="dense-list">
+                    <li><strong>Changelog:</strong> Add entry noting restructuring with before/after metrics</li>
+                    <li><strong>Migration note:</strong> If anyone has line-number references, provide old→new mapping</li>
+                    <li><strong>Snippet sync:</strong> Update HTML.md and PLANHTML.md verification hashes</li>
+                </ul>
+            </div>
+
+            <div>
+                <h3>Follow-Up Tasks</h3>
+                <ul class="dense-list">
+                    <li>Generate 2-3 sample HTML documents to dogfood new structure</li>
+                    <li>Collect user feedback on clarity improvements</li>
+                    <li>Monitor if decision guides reduce ambiguity questions</li>
+                </ul>
+            </div>
+        </div>
+
+        <h3>Maintenance Considerations</h3>
+        <div class="step-box">
+            <p><strong>Future additions:</strong> New CSS components should be added to Phase 4's category structure (after base styles, before appendix)</p>
+            <p><strong>Preserve structure:</strong> Resist urge to add content before color palette; keep quick-start minimal</p>
+            <p><strong>Mermaid updates:</strong> Add to appendix, keep under 100 lines total</p>
+        </div>
+
+        <h3>Success Metrics (1 week post-implementation)</h3>
+        <ul class="dense-list">
+            <li><strong>Clarity:</strong> Zero questions about "which component to use"</li>
+            <li><strong>Adoption:</strong> Generated HTML documents use decision guides</li>
+            <li><strong>Efficiency:</strong> Token count verified at ~4500 (±300)</li>
+            <li><strong>Completeness:</strong> No reports of missing CSS or undefined variables</li>
+        </ul>
+    </div>
+</div>
+
+<div style="margin: 16px 0; padding: 10px; background: white; border: 2px solid var(--chinese-gold); border-radius: 3px;">
+    <h3 style="margin: 0 0 6px 0; color: var(--chinese-red);">📌 Implementation Checklist</h3>
+    <div class="two-column-layout">
+        <div>
+            <strong>Before Starting:</strong>
+            <ul style="list-style: disc; margin-left: 20px; margin-top: 4px;">
+                <li>Backup current html.md</li>
+                <li>Read complete current file</li>
+                <li>Confirm line numbers match</li>
+            </ul>
+        </div>
+        <div>
+            <strong>During Implementation:</strong>
+            <ul style="list-style: disc; margin-left: 20px; margin-top: 4px;">
+                <li>Validate after phases 1, 2, 4, 8</li>
+                <li>Track line number shifts</li>
+                <li>Test sample HTML generation</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-create collapsibles
+    document.querySelectorAll('[data-collapsible]').forEach(function(section) {
+        const isOpen = section.getAttribute('data-collapsible') === 'open';
+        section.classList.add('collapsible');
+        if (isOpen) section.classList.add('open');
+    });
+
+    // Handle clicks
+    document.querySelectorAll('.collapsible-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            const collapsible = this.closest('.collapsible');
+            collapsible.classList.toggle('open');
+        });
+    });
+
+    // Expand/collapse all
+    const expandAllBtn = document.getElementById('expand-all');
+    const collapseAllBtn = document.getElementById('collapse-all');
+
+    if (expandAllBtn) {
+        expandAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.collapsible').forEach(function(c) {
+                c.classList.add('open');
+            });
+        });
+    }
+
+    if (collapseAllBtn) {
+        collapseAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.collapsible').forEach(function(c) {
+                c.classList.remove('open');
+            });
+        });
+    }
+});
+</script>
+
+</body>
+</html>

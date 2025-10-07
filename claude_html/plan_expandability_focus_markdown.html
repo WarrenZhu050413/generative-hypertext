@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Plan: Fix Expandability, Document Focus, Add Markdown</title>
+    <style>
+        :root {
+            --color-bg: #faf8f5;
+            --color-surface: #fff;
+            --color-border: #d4cfc7;
+            --color-text: #2d2d2d;
+            --color-text-muted: #6b6b6b;
+            --color-accent: #b8391f;
+            --color-accent-light: #e8ddd8;
+            --color-success: #2d7a3e;
+            --color-warning: #c87d1f;
+            --color-info: #1f5f8b;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+            --radius: 6px;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-bg);
+            margin: 0;
+            padding: 20px;
+        }
+        h1, h2, h3, h4 {
+            margin: 0 0 12px 0;
+            line-height: 1.3;
+            font-weight: 600;
+        }
+        h1 { font-size: 24px; color: var(--color-accent); }
+        h2 { font-size: 18px; margin-top: 20px; }
+        h3 { font-size: 16px; margin-top: 16px; }
+        p { margin: 0 0 12px 0; }
+        .important-always-visible {
+            background: var(--color-surface);
+            border: 2px solid var(--color-accent);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-md);
+        }
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .collapsible {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        .collapsible.critical { border-left: 4px solid var(--color-accent); }
+        .collapsible.secondary { border-left: 4px solid var(--color-info); }
+        .collapsible.full-width { grid-column: 1 / -1; }
+        .collapsible-header {
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            background: linear-gradient(to bottom, #fff, #fafafa);
+        }
+        .collapsible-header:hover {
+            background: var(--color-accent-light);
+        }
+        .collapsible-content {
+            padding: 16px;
+            display: none;
+        }
+        .collapsible[data-collapsible="open"] .collapsible-content {
+            display: block;
+        }
+        .collapsible[data-collapsible="open"] .arrow {
+            transform: rotate(90deg);
+        }
+        .arrow {
+            transition: transform 0.2s;
+            font-size: 14px;
+        }
+        .dense-list {
+            margin: 0;
+            padding-left: 24px;
+        }
+        .dense-list li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .indent-1 {
+            margin-left: 20px;
+            font-size: 13px;
+        }
+        .muted {
+            color: var(--color-text-muted);
+        }
+        .metric {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        .metric.important {
+            background: var(--color-accent-light);
+            color: var(--color-accent);
+        }
+        code {
+            font-family: "SF Mono", Consolas, monospace;
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: var(--radius);
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        button {
+            padding: 8px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            background: var(--color-surface);
+            cursor: pointer;
+            font-size: 13px;
+        }
+        button:hover {
+            background: var(--color-accent-light);
+        }
+    </style>
+</head>
+<body>
+    <div style="margin: 8px 0; text-align: right;">
+        <button id="expand-all">Expand All</button>
+        <button id="collapse-all">Collapse All</button>
+    </div>
+
+    <div class="important-always-visible">
+        <h1>📋 Task Plan: Fix Expandability, Focus Collection, Add Markdown</h1>
+        <div class="two-column-layout">
+            <div>
+                <h3>Objectives</h3>
+                <ol style="margin: 8px 0; padding-left: 20px;">
+                    <li>Fix chat expandability regression</li>
+                    <li>Document how Focus summary is collected</li>
+                    <li>Add markdown rendering support for assistant messages</li>
+                </ol>
+            </div>
+            <div>
+                <h3>Approach</h3>
+                <p>1) Test chat click behavior, 2) Document Focus logic, 3) Integrate marked.js for markdown rendering in vanilla JS.</p>
+                <div class="metric important">Complexity: Medium</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="two-column-layout">
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>⚡ Implementation Steps</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h3>Phase 1: Investigate & Fix Expandability</h3>
+                <ol class="dense-list">
+                    <li><strong>Step 1.1:</strong> Test hypertext link click behavior
+                        <div class="indent-1 muted">Manual test: Click on generated hypertext link</div>
+                        <div class="indent-1">
+                            • Verify click opens chat page in new tab<br>
+                            • Check browser console for errors
+                        </div>
+                    </li>
+                    <li><strong>Step 1.2:</strong> Verify hover tooltip opens
+                        <div class="indent-1 muted">Manual test: Hover over hypertext link</div>
+                        <div class="indent-1">
+                            • Tooltip should appear on hover<br>
+                            • Check for CSS/visibility issues
+                        </div>
+                    </li>
+                    <li><strong>Step 1.3:</strong> Fix identified issue
+                        <div class="indent-1">Based on findings from 1.1-1.2</div>
+                    </li>
+                </ol>
+
+                <h3>Phase 2: Add Markdown Support</h3>
+                <ol class="dense-list" start="4">
+                    <li><strong>Step 2.1:</strong> Add marked.js via CDN
+                        <div class="indent-1 muted">File: demo/hypertext_navigation_demo.html</div>
+                        <div class="indent-1">
+                            • Add: <code>&lt;script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"&gt;&lt;/script&gt;</code><br>
+                            • Place before hypertext-experience.js
+                        </div>
+                    </li>
+                    <li><strong>Step 2.2:</strong> Create markdown rendering function
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js (after buildSystemPrompt)</div>
+                        <div class="indent-1">
+                            • Function: <code>renderMarkdown(text)</code><br>
+                            • Check if <code>window.marked</code> exists<br>
+                            • Fallback to plain text if not available<br>
+                            • Sanitize output to prevent XSS
+                        </div>
+                    </li>
+                    <li><strong>Step 2.3:</strong> Update message rendering to use markdown
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js:1274-1290</div>
+                        <div class="indent-1">
+                            • Change <code>content.textContent = text</code><br>
+                            • To <code>content.innerHTML = renderMarkdown(text)</code><br>
+                            • Apply only to assistant messages
+                        </div>
+                    </li>
+                    <li><strong>Step 2.4:</strong> Add markdown CSS styling
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js (BASE_STYLES)</div>
+                        <div class="indent-1">
+                            • Style for <code>.hx-chat-tooltip__content h1, h2, h3</code><br>
+                            • Style for <code>.hx-chat-tooltip__content code, pre</code><br>
+                            • Style for <code>.hx-chat-tooltip__content ul, ol</code>
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="collapsible secondary" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>📝 Focus Collection Documentation</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h3>How Focus Summary is Collected</h3>
+                <p><strong>Location:</strong> <code>hypertext-experience.js:1225, 1333</code></p>
+
+                <h4>Priority Chain:</h4>
+                <ol class="dense-list">
+                    <li><strong>First Priority:</strong> <code>session.lastResult.pillText</code>
+                        <div class="indent-1 muted">The LLM-generated pill text from the hypertext response</div>
+                        <div class="indent-1">Example: "Gradient Reference", "ML Concept", etc.</div>
+                    </li>
+                    <li><strong>Second Priority:</strong> <code>session.subject</code>
+                        <div class="indent-1 muted">The original text selected by the user</div>
+                        <div class="indent-1">Example: "gradient descent", "machine learning", etc.</div>
+                    </li>
+                    <li><strong>Fallback:</strong> <code>'Active selection'</code>
+                        <div class="indent-1 muted">Used if neither pillText nor subject available</div>
+                    </li>
+                </ol>
+
+                <h4>Code Snippet:</h4>
+                <pre>const focusLabel = session.lastResult?.pillText || session.subject || 'Active selection';</pre>
+
+                <h4>Used In:</h4>
+                <ul class="dense-list">
+                    <li><code>buildChatPayload()</code> - Sent to chat page as <code>focus</code> field</li>
+                    <li><code>renderConversation()</code> - Displayed in chat tooltip meta area</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>✓ Testing & Validation</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h3>Manual Tests</h3>
+                <ul class="dense-list">
+                    <li><strong>Test 1:</strong> Click on hypertext link → Opens chat page</li>
+                    <li><strong>Test 2:</strong> Hover over link → Tooltip appears</li>
+                    <li><strong>Test 3:</strong> Send message with markdown (bold, italic, code, list)</li>
+                    <li><strong>Verify:</strong> Markdown renders correctly in tooltip</li>
+                    <li><strong>Test 4:</strong> Check Focus label in tooltip meta area</li>
+                    <li><strong>Verify:</strong> Shows pillText > subject > 'Active selection'</li>
+                </ul>
+
+                <h3>Playwright Tests</h3>
+                <ul class="dense-list">
+                    <li><code>npx playwright test tests/hypertext-demo.spec.mjs</code></li>
+                    <li>All 3 tests should pass</li>
+                    <li>Consider adding markdown rendering test</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>⚠️ Potential Issues & Mitigations</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h3>Expandability Issues</h3>
+                <ul class="dense-list">
+                    <li><strong>Issue:</strong> Click handler may be blocked by other elements
+                        <br><strong>Mitigation:</strong> Check z-index and pointer-events
+                    </li>
+                    <li><strong>Issue:</strong> Chat page URL may be relative and fail in some contexts
+                        <br><strong>Mitigation:</strong> Verify URL resolution in openChatPageFromSession
+                    </li>
+                </ul>
+
+                <h3>Markdown Security</h3>
+                <ul class="dense-list">
+                    <li><strong>Issue:</strong> XSS vulnerability if markdown not sanitized
+                        <br><strong>Mitigation:</strong> Use marked's built-in sanitizer or DOMPurify
+                    </li>
+                    <li><strong>Issue:</strong> Markdown may break CSS layout
+                        <br><strong>Mitigation:</strong> Add specific CSS rules to constrain markdown elements
+                    </li>
+                    <li><strong>Issue:</strong> Code blocks may overflow small tooltip
+                        <br><strong>Mitigation:</strong> Add overflow-x: auto to pre elements
+                    </li>
+                </ul>
+
+                <h3>CDN Dependency</h3>
+                <ul class="dense-list">
+                    <li><strong>Issue:</strong> marked.js CDN may be unavailable
+                        <br><strong>Mitigation:</strong> Fallback to plain text rendering
+                    </li>
+                    <li><strong>Issue:</strong> Version changes may break API
+                        <br><strong>Mitigation:</strong> Pin to specific version (e.g., @11.0.0)
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>🔍 Technical Details</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Markdown Rendering Function</h3>
+            <pre>
+function renderMarkdown(text) {
+  if (typeof window.marked === 'undefined') {
+    return text; // Fallback to plain text
+  }
+
+  try {
+    // Configure marked with safe options
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+      headerIds: false,
+      mangle: false,
+      sanitize: false // We'll sanitize afterward if needed
+    });
+
+    return marked.parse(text);
+  } catch (error) {
+    console.warn('[Hypertext] Markdown parsing failed:', error);
+    return text;
+  }
+}
+            </pre>
+
+            <h3>Markdown CSS Styling</h3>
+            <pre>
+.hx-chat-tooltip__content h1,
+.hx-chat-tooltip__content h2,
+.hx-chat-tooltip__content h3 {
+  margin: 8px 0 4px 0;
+  font-size: 1em;
+  font-weight: 600;
+  color: var(--hx-red-start);
+}
+
+.hx-chat-tooltip__content code {
+  background: rgba(177, 60, 60, 0.08);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.hx-chat-tooltip__content pre {
+  background: rgba(177, 60, 60, 0.05);
+  border: 1px solid rgba(177, 60, 60, 0.15);
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+
+.hx-chat-tooltip__content pre code {
+  background: none;
+  padding: 0;
+}
+
+.hx-chat-tooltip__content ul,
+.hx-chat-tooltip__content ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.hx-chat-tooltip__content li {
+  margin: 4px 0;
+}
+            </pre>
+
+            <h3>CDN Script Tag</h3>
+            <pre>
+&lt;!-- Add to demo/hypertext_navigation_demo.html before hypertext-experience.js --&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/marked@11.0.0/marked.min.js"&gt;&lt;/script&gt;
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const collapsible = header.parentElement;
+                const isOpen = collapsible.getAttribute('data-collapsible') === 'open';
+                collapsible.setAttribute('data-collapsible', isOpen ? 'closed' : 'open');
+            });
+        });
+
+        document.getElementById('expand-all').addEventListener('click', () => {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.setAttribute('data-collapsible', 'open');
+            });
+        });
+
+        document.getElementById('collapse-all').addEventListener('click', () => {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.setAttribute('data-collapsible', 'closed');
+            });
+        });
+    </script>
+</body>
+</html>

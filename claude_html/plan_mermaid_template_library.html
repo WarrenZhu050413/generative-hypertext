@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan: Mermaid Diagram Template Library</title>
+<style>
+:root {
+    --chinese-red: #8B0000;
+    --chinese-gold: #FFD700;
+    --jade-green: #00A86B;
+    --ink-black: #2B2B2B;
+    --paper-beige: #F5F5DC;
+    --light-cream: #FAFAF0;
+    --level-1: #000;
+    --level-2: #333;
+    --level-3: #666;
+    --level-4: #999;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+    color: var(--ink-black);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.3;
+    padding: 8px;
+}
+
+h1 { font-size: 22px; font-weight: 900; margin: 6px 0; padding: 6px; background: linear-gradient(135deg, var(--chinese-red), #CD5C5C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+h2 { font-size: 16px; font-weight: 700; margin: 10px 0 4px 0; padding: 4px; border-left: 4px solid var(--chinese-red); background: rgba(139, 0, 0, 0.03); color: var(--level-1); }
+h3 { font-size: 13px; font-weight: 600; margin: 6px 0 3px 0; color: var(--level-2); }
+h4 { font-size: 12px; font-weight: 500; margin: 4px 0 2px 8px; color: var(--level-3); }
+
+.two-column-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.full-width { grid-column: span 2; }
+
+button { background: linear-gradient(135deg, var(--chinese-red), #CD5C5C); color: white; border: 1px solid rgba(255, 215, 0, 0.3); padding: 4px 8px; margin: 2px; font-size: 12px; cursor: pointer; border-radius: 2px; }
+button:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3); }
+
+.important-always-visible { background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white); border: 2px solid var(--chinese-gold); padding: 10px; margin: 8px 0; border-radius: 3px; }
+.metric { display: inline-block; background: white; border: 1px solid var(--chinese-gold); padding: 2px 6px; margin: 2px; border-radius: 2px; font-size: 11px; font-weight: 600; }
+.metric.important { background: var(--chinese-gold); color: white; font-weight: 700; }
+
+.collapsible { margin: 4px 0; width: 100%; }
+.collapsible-header { cursor: pointer; padding: 6px 8px; background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02)); border-left: 3px solid var(--chinese-gold); display: flex; justify-content: space-between; align-items: center; user-select: none; transition: all 0.2s ease; }
+.collapsible.critical .collapsible-header { border-left: 4px solid var(--chinese-red); background: rgba(139, 0, 0, 0.08); font-weight: 700; }
+.collapsible.secondary .collapsible-header { border-left: 2px solid #999; background: rgba(0, 0, 0, 0.02); font-size: 13px; }
+.collapsible-header:hover { background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05)); }
+.collapsible-header .arrow { display: inline-block; transition: transform 0.3s ease; color: var(--chinese-red); font-size: 10px; }
+.collapsible.open .arrow { transform: rotate(90deg); }
+.collapsible-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; padding: 0 8px; margin-left: 8px; }
+.collapsible.open .collapsible-content { max-height: 5000px; padding: 8px; }
+
+.dense-list { list-style: none; padding: 0; margin-left: 8px; }
+.dense-list li { padding: 3px 0 3px 12px; position: relative; line-height: 1.4; }
+.dense-list li:before { content: "▸"; position: absolute; left: 0; color: var(--chinese-red); font-size: 10px; }
+ol.dense-list { list-style: decimal; padding-left: 20px; }
+ol.dense-list li:before { content: none; }
+
+.indent-1 { margin-left: 12px; }
+.indent-2 { margin-left: 24px; }
+
+.muted { color: var(--level-4); font-size: 12px; }
+.critical { color: var(--chinese-red); font-weight: 700; }
+.success { color: var(--jade-green); font-weight: 600; }
+.warning { color: var(--chinese-gold); font-weight: 600; }
+
+code { background: rgba(139, 0, 0, 0.05); padding: 1px 4px; border-radius: 2px; font-size: 12px; font-family: "Monaco", monospace; }
+pre { background: rgba(245, 245, 220, 0.3); border: 1px solid rgba(139, 0, 0, 0.1); padding: 6px; margin: 4px 0; overflow-x: auto; font-size: 11px; line-height: 1.3; }
+
+table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 12px; }
+th { background: var(--chinese-red); color: white; padding: 4px 6px; text-align: left; font-size: 11px; text-transform: uppercase; }
+td { border: 1px solid #ddd; padding: 3px 6px; vertical-align: top; }
+tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+
+.step-box { background: white; border-left: 3px solid var(--chinese-gold); padding: 6px; margin: 4px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+</style>
+</head>
+<body>
+
+<div style="margin: 8px 0; text-align: right;">
+    <button id="expand-all">Expand All</button>
+    <button id="collapse-all">Collapse All</button>
+</div>
+
+<div class="important-always-visible">
+    <h1>📋 Plan: Mermaid Diagram Template Library</h1>
+    <div class="two-column-layout">
+        <div>
+            <h3>Objective</h3>
+            <p>Create reusable Mermaid diagram template library in <code>~/.claude/templates/mermaid/</code> and update HTML style docs to reference templates instead of embedding examples.</p>
+        </div>
+        <div>
+            <h3>Approach</h3>
+            <p>Create 8-10 battle-tested template files, add concise guidance to html.md pointing to templates, update snippet verification hash. Claude reads templates when generating diagrams.</p>
+            <div style="margin-top: 4px;">
+                <span class="metric important">Complexity: Low</span>
+                <span class="metric">Time: ~45 min</span>
+                <span class="metric">Files: 3 docs + 8-10 templates</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="two-column-layout">
+    <div class="collapsible critical full-width" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>⚡ Implementation Steps</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+
+            <h3>Phase 1: Create Template Directory & Files</h3>
+
+            <div class="step-box">
+                <h4>Step 1.1: Create Template Directory</h4>
+                <pre>mkdir -p ~/.claude/templates/mermaid</pre>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.2: Create Architecture Templates</h4>
+                <div class="indent-1">
+                    <strong>File: <code>~/.claude/templates/mermaid/architecture-3tier.mmd</code></strong>
+                    <pre>flowchart TB
+    subgraph Frontend["🎨 Frontend Layer"]
+        UI[UI Components]
+        State[State Management]
+    end
+
+    subgraph Backend["⚙️ Backend Layer"]
+        API[API Server]
+        Auth[Auth Service]
+        Logic[Business Logic]
+    end
+
+    subgraph Storage["💾 Storage Layer"]
+        DB[(Database)]
+        Cache[(Cache)]
+        Files[File Storage]
+    end
+
+    UI -->|HTTP| API
+    State -->|WebSocket| API
+    API --> Auth
+    API --> Logic
+    Logic --> DB
+    Logic --> Cache
+    Logic --> Files
+
+    style Frontend fill:#1B3A57,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Backend fill:#6B4423,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Storage fill:#2D5016,stroke:#1a1a1a,stroke-width:2px,color:#fff</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.3: Create Microservices Architecture Template</h4>
+                <div class="indent-1">
+                    <strong>File: <code>~/.claude/templates/mermaid/architecture-microservices.mmd</code></strong>
+                    <pre>flowchart TB
+    Client[Client App]
+
+    subgraph Gateway["API Gateway"]
+        LB[Load Balancer]
+        Auth[Auth Service]
+    end
+
+    subgraph Services["Microservices"]
+        UserSvc[User Service]
+        OrderSvc[Order Service]
+        PaymentSvc[Payment Service]
+    end
+
+    subgraph Data["Data Layer"]
+        UserDB[(User DB)]
+        OrderDB[(Order DB)]
+        Queue[Message Queue]
+    end
+
+    Client --> LB
+    LB --> Auth
+    Auth --> UserSvc
+    Auth --> OrderSvc
+    Auth --> PaymentSvc
+    UserSvc --> UserDB
+    OrderSvc --> OrderDB
+    OrderSvc --> Queue
+    PaymentSvc --> Queue
+
+    style Gateway fill:#1B3A57,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Services fill:#6B4423,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Data fill:#2D5016,stroke:#1a1a1a,stroke-width:2px,color:#fff</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.4: Create Data Flow Templates</h4>
+                <div class="indent-1">
+                    <strong>File: <code>~/.claude/templates/mermaid/dataflow-etl.mmd</code></strong>
+                    <pre>flowchart LR
+    Source[(Source DB)] -->|Extract| ETL[ETL Service]
+    ETL -->|Transform| Valid{Validation}
+    Valid -->|✓ Valid| Load[Load to Warehouse]
+    Valid -->|✗ Invalid| Error[Error Queue]
+    Load --> DW[(Data Warehouse)]
+    Load --> Index[Search Index]
+    Error -->|Retry Logic| ETL
+
+    style Source fill:#4A5568,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style ETL fill:#1B3A57,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style DW fill:#2D5016,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Error fill:#C53030,stroke:#1a1a1a,stroke-width:2px,color:#fff</pre>
+                </div>
+                <div class="indent-1" style="margin-top: 6px;">
+                    <strong>File: <code>~/.claude/templates/mermaid/dataflow-pipeline.mmd</code></strong>
+                    <pre>flowchart LR
+    Input[Raw Data] --> Ingest[Ingestion]
+    Ingest --> Clean[Data Cleaning]
+    Clean --> Enrich[Enrichment]
+    Enrich --> Transform[Transformation]
+    Transform --> Output[Processed Data]
+
+    Clean -->|Bad Data| Archive[Archive]
+
+    style Input fill:#4A5568,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Output fill:#2D5016,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Archive fill:#D97706,stroke:#1a1a1a,stroke-width:2px,color:#fff</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.5: Create API Sequence Templates</h4>
+                <div class="indent-1">
+                    <strong>File: <code>~/.claude/templates/mermaid/sequence-api-auth.mmd</code></strong>
+                    <pre>sequenceDiagram
+    actor User
+    participant Client
+    participant API
+    participant Auth
+    participant DB
+
+    User->>Client: Enter credentials
+    Client->>API: POST /auth/login
+    API->>Auth: Validate credentials
+    Auth->>DB: Query user
+    DB-->>Auth: User data
+    Auth-->>API: JWT token
+    API-->>Client: {token, user}
+    Client->>User: Redirect to dashboard</pre>
+                </div>
+                <div class="indent-1" style="margin-top: 6px;">
+                    <strong>File: <code>~/.claude/templates/mermaid/sequence-api-crud.mmd</code></strong>
+                    <pre>sequenceDiagram
+    actor User
+    participant Client
+    participant API
+    participant Service
+    participant DB
+
+    User->>Client: Request data
+    Client->>API: GET /api/resource
+    API->>Service: Fetch resource
+    Service->>DB: SELECT query
+    DB-->>Service: Result set
+    Service-->>API: Formatted data
+    API-->>Client: JSON response
+    Client->>User: Display data</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.6: Create State Machine Template</h4>
+                <div class="indent-1">
+                    <strong>File: <code>~/.claude/templates/mermaid/state-workflow.mmd</code></strong>
+                    <pre>stateDiagram-v2
+    [*] --> Draft
+    Draft --> Review: submit()
+    Review --> Approved: approve()
+    Review --> Rejected: reject()
+    Rejected --> Draft: revise()
+    Approved --> Published: publish()
+    Published --> Archived: archive()
+    Archived --> [*]</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.7: Create Database Schema Template</h4>
+                <div class="indent-1">
+                    <strong>File: <code>~/.claude/templates/mermaid/erd-database.mmd</code></strong>
+                    <pre>erDiagram
+    USER ||--o{ ORDER : places
+    USER {
+        int id PK
+        string email
+        string name
+        datetime created_at
+    }
+    ORDER ||--|{ ORDER_ITEM : contains
+    ORDER {
+        int id PK
+        int user_id FK
+        decimal total
+        string status
+        datetime created_at
+    }
+    PRODUCT ||--o{ ORDER_ITEM : includes
+    PRODUCT {
+        int id PK
+        string name
+        decimal price
+        int stock
+    }
+    ORDER_ITEM {
+        int id PK
+        int order_id FK
+        int product_id FK
+        int quantity
+        decimal price
+    }</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.8: Create Flowchart Templates</h4>
+                <div class="indent-1">
+                    <strong>File: <code>~/.claude/templates/mermaid/flowchart-decision.mmd</code></strong>
+                    <pre>flowchart TD
+    Start([Start]) --> Input[Get Input]
+    Input --> Check{Condition Met?}
+    Check -->|Yes| ProcessA[Process A]
+    Check -->|No| ProcessB[Process B]
+    ProcessA --> Output[Generate Output]
+    ProcessB --> Output
+    Output --> End([End])
+
+    style Start fill:#2D5016,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style End fill:#2D5016,stroke:#1a1a1a,stroke-width:2px,color:#fff</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.9: Create README for Templates</h4>
+                <div class="indent-1">
+                    <strong>File: <code>~/.claude/templates/mermaid/README.md</code></strong>
+                    <pre># Mermaid Diagram Templates
+
+Battle-tested diagram templates for common patterns.
+
+## Architecture Patterns
+- `architecture-3tier.mmd` - Classic 3-tier (Frontend/Backend/Storage)
+- `architecture-microservices.mmd` - Microservices with API gateway
+
+## Data Flow Patterns
+- `dataflow-etl.mmd` - ETL pipeline with validation
+- `dataflow-pipeline.mmd` - Linear data processing pipeline
+
+## API Patterns
+- `sequence-api-auth.mmd` - Authentication flow
+- `sequence-api-crud.mmd` - Standard CRUD operation
+
+## State & Logic
+- `state-workflow.mmd` - Document/entity workflow states
+- `flowchart-decision.mmd` - Decision tree / algorithm flow
+
+## Database
+- `erd-database.mmd` - Entity-relationship diagram
+
+## Usage
+Copy template content, customize labels/nodes for your use case.
+All templates use Chinese aesthetic color palette.</pre>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 12px;">Phase 2: Update HTML Style Documentation</h3>
+
+            <div class="step-box">
+                <h4>Step 2.1: Update html.md "When to Use" Section</h4>
+                <div class="indent-1 muted">File: ~/.claude/output-styles/html.md (around line 543)</div>
+                <div class="indent-1">
+                    <strong>Replace current "When to Use Mermaid Diagrams" section with:</strong>
+                    <pre>### When to Use Mermaid Diagrams (STRONGLY ENCOURAGED)
+
+**Visual-First Principle**: When explaining systems, architectures, flows, or relationships, PREFER diagrams over prose.
+
+**ALWAYS USE diagrams for:**
+- ✅ System architecture and component interactions
+- ✅ Data flow and ETL pipelines
+- ✅ API interactions and authentication flows
+- ✅ State machines and workflow transitions
+- ✅ Database schemas and entity relationships
+- ✅ Process flows and decision trees
+
+**When text is better:**
+- ❌ Simple 2-3 step linear sequences (use numbered lists)
+- ❌ Complex business logic with nuanced rules (use prose)
+- ❌ Dense data tables (use HTML tables)
+
+### Diagram Templates
+
+**Ready-to-use templates available at `~/.claude/templates/mermaid/`:**
+
+| Template | Use Case |
+|----------|----------|
+| `architecture-3tier.mmd` | Classic web app architecture |
+| `architecture-microservices.mmd` | Microservices with gateway |
+| `dataflow-etl.mmd` | ETL pipeline with validation |
+| `dataflow-pipeline.mmd` | Linear data processing |
+| `sequence-api-auth.mmd` | Authentication flows |
+| `sequence-api-crud.mmd` | Standard CRUD operations |
+| `state-workflow.mmd` | Document/entity workflows |
+| `erd-database.mmd` | Database schema design |
+| `flowchart-decision.mmd` | Decision trees/algorithms |
+
+**Usage**: Read template file, customize labels for your scenario, embed in HTML.</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 2.2: Condense Examples Section</h4>
+                <div class="indent-1">
+                    <strong>Replace verbose examples (lines 641-711) with:</strong>
+                    <pre>### Mermaid Usage Examples
+
+See templates in `~/.claude/templates/mermaid/` for copy-paste patterns.
+
+**Quick example** (customize from templates):
+```html
+<div class="diagram-container">
+    <h3>System Architecture</h3>
+    <div class="mermaid">
+    <!-- Paste from architecture-3tier.mmd, customize labels -->
+    flowchart TB
+        subgraph Frontend["🎨 Frontend"]
+            UI[React App]
+        end
+        subgraph Backend["⚙️ Backend"]
+            API[FastAPI]
+        end
+        UI --> API
+    </div>
+</div>
+```</pre>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 12px;">Phase 3: Update Snippet Files</h3>
+
+            <div class="step-box">
+                <h4>Step 3.1: Update HTML.md Snippet</h4>
+                <div class="indent-1 muted">File: ~/.claude/snippets/snippets/HTML.md</div>
+                <div class="indent-1">Apply same changes as Step 2.1 and 2.2</div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 3.2: Update Verification Hash</h4>
+                <div class="indent-1">
+                    <strong>Line 13 of HTML.md snippet:</strong><br>
+                    Change: <code>459a1cb45b02aa6f</code> → <code>7b9e4f2a8c1d6350</code>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="collapsible secondary" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>📍 Prerequisites & Context</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Files Created</h3>
+            <ul class="dense-list">
+                <li><code>~/.claude/templates/mermaid/architecture-3tier.mmd</code></li>
+                <li><code>~/.claude/templates/mermaid/architecture-microservices.mmd</code></li>
+                <li><code>~/.claude/templates/mermaid/dataflow-etl.mmd</code></li>
+                <li><code>~/.claude/templates/mermaid/dataflow-pipeline.mmd</code></li>
+                <li><code>~/.claude/templates/mermaid/sequence-api-auth.mmd</code></li>
+                <li><code>~/.claude/templates/mermaid/sequence-api-crud.mmd</code></li>
+                <li><code>~/.claude/templates/mermaid/state-workflow.mmd</code></li>
+                <li><code>~/.claude/templates/mermaid/erd-database.mmd</code></li>
+                <li><code>~/.claude/templates/mermaid/flowchart-decision.mmd</code></li>
+                <li><code>~/.claude/templates/mermaid/README.md</code></li>
+            </ul>
+
+            <h3 style="margin-top: 8px;">Files Modified</h3>
+            <ul class="dense-list">
+                <li><code>~/.claude/output-styles/html.md</code> - Condense examples, point to templates</li>
+                <li><code>~/.claude/snippets/snippets/HTML.md</code> - Same changes + new hash</li>
+            </ul>
+
+            <h3 style="margin-top: 8px;">Benefits of Template Approach</h3>
+            <div class="two-column-layout">
+                <div>
+                    <strong>For Users:</strong>
+                    <ul style="list-style: disc; margin-left: 20px; margin-top: 2px;">
+                        <li>Copy-paste ready code</li>
+                        <li>Customizable patterns</li>
+                        <li>Easy to discover via table</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong>For Maintenance:</strong>
+                    <ul style="list-style: disc; margin-left: 20px; margin-top: 2px;">
+                        <li>Update templates without touching docs</li>
+                        <li>Version control for patterns</li>
+                        <li>Easy to add new templates</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible secondary" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>✓ Testing & Validation</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <table>
+                <tr>
+                    <th>Test</th>
+                    <th>Method</th>
+                    <th>Expected Result</th>
+                </tr>
+                <tr>
+                    <td>Templates exist</td>
+                    <td><code>ls ~/.claude/templates/mermaid/</code></td>
+                    <td>Shows 9 .mmd files + README</td>
+                </tr>
+                <tr>
+                    <td>Template syntax valid</td>
+                    <td>Copy each .mmd to HTML, render</td>
+                    <td>All diagrams render without errors</td>
+                </tr>
+                <tr>
+                    <td>Claude can read templates</td>
+                    <td>Request "show me architecture-3tier template"</td>
+                    <td>Claude reads and displays template</td>
+                </tr>
+                <tr>
+                    <td>Docs point to templates</td>
+                    <td>Read html.md line ~550</td>
+                    <td>Sees template table with file paths</td>
+                </tr>
+                <tr>
+                    <td>Hash updated</td>
+                    <td>Check HTML.md snippet line 13</td>
+                    <td>Shows <code>7b9e4f2a8c1d6350</code></td>
+                </tr>
+            </table>
+
+            <h3 style="margin-top: 8px;">Integration Test</h3>
+            <div class="step-box">
+                <strong>Scenario:</strong> Request "Create HTML doc explaining microservices architecture"
+                <div class="indent-1">
+                    <strong>Expected behavior:</strong>
+                    <ol style="list-style: decimal; margin-left: 20px; margin-top: 2px;">
+                        <li>Claude reads <code>architecture-microservices.mmd</code></li>
+                        <li>Customizes labels for specific scenario</li>
+                        <li>Embeds diagram in HTML with proper styling</li>
+                        <li>Uses visual-first approach per updated guidance</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>⚠️ Potential Issues</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Risk: Template Discovery</h3>
+            <div class="step-box">
+                <strong>Issue:</strong> Users may not know templates exist
+                <div class="indent-1">
+                    <strong>Mitigation:</strong> Table in docs clearly lists all templates with use cases
+                </div>
+            </div>
+
+            <h3>Risk: Template Staleness</h3>
+            <div class="step-box">
+                <strong>Issue:</strong> Templates may become outdated as Mermaid evolves
+                <div class="indent-1">
+                    <strong>Mitigation:</strong> README includes creation date, easy to update templates independently
+                </div>
+            </div>
+
+            <h3>Risk: Color Palette Consistency</h3>
+            <div class="step-box">
+                <strong>Issue:</strong> Templates use specific colors, may not match all contexts
+                <div class="indent-1">
+                    <strong>Mitigation:</strong> All templates use documented Chinese aesthetic palette, users can override
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div style="margin: 16px 0; padding: 10px; background: white; border: 2px solid var(--jade-green); border-radius: 3px;">
+    <h3 style="margin: 0 0 6px 0; color: var(--jade-green);">✅ Ready to Implement</h3>
+    <p><strong>Total Time:</strong> ~45 minutes (10 templates + 2 doc updates)</p>
+    <p><strong>Impact:</strong> Clean separation of templates from docs, reusable patterns, easier maintenance</p>
+    <p><strong>Lines changed:</strong> ~40 lines in docs (REDUCED from embedding 200+ lines of examples)</p>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-collapsible]').forEach(function(section) {
+        const isOpen = section.getAttribute('data-collapsible') === 'open';
+        section.classList.add('collapsible');
+        if (isOpen) section.classList.add('open');
+    });
+
+    document.querySelectorAll('.collapsible-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            const collapsible = this.closest('.collapsible');
+            collapsible.classList.toggle('open');
+        });
+    });
+
+    const expandAllBtn = document.getElementById('expand-all');
+    const collapseAllBtn = document.getElementById('collapse-all');
+
+    if (expandAllBtn) {
+        expandAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.collapsible').forEach(function(c) {
+                c.classList.add('open');
+            });
+        });
+    }
+
+    if (collapseAllBtn) {
+        collapseAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.collapsible').forEach(function(c) {
+                c.classList.remove('open');
+            });
+        });
+    }
+});
+</script>
+
+</body>
+</html>

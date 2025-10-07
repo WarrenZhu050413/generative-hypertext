@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Plan: Reorganize TXT and CLEAR Snippets</title>
+    <style>
+        :root {
+            --bg-primary: #faf9f7;
+            --bg-secondary: #f4f3f0;
+            --bg-accent: #e8e6e0;
+            --text-primary: #2c2c2c;
+            --text-secondary: #5a5a5a;
+            --text-muted: #8a8a8a;
+            --border-light: #d4d2ca;
+            --border-medium: #b8b6ad;
+            --accent-red: #c73e1d;
+            --accent-blue: #4a7c9e;
+            --accent-green: #5f7d4f;
+            --accent-yellow: #d4a024;
+            --accent-purple: #7d5ba6;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 2px 4px rgba(0,0,0,0.06);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+            line-height: 1.5;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            padding: 16px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1, h2, h3, h4 { font-weight: 600; margin-bottom: 8px; }
+        h1 { font-size: 24px; color: var(--accent-red); }
+        h2 { font-size: 20px; color: var(--accent-blue); margin-top: 16px; }
+        h3 { font-size: 16px; color: var(--text-primary); margin-top: 12px; }
+        p, li { font-size: 14px; margin-bottom: 8px; }
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 16px 0;
+        }
+        .full-width { grid-column: 1 / -1; }
+        .collapsible {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+        .collapsible-header {
+            padding: 10px 14px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+            font-size: 14px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+        }
+        .collapsible-header:hover { background: var(--bg-accent); }
+        .collapsible-content {
+            padding: 12px 14px;
+            border-top: 1px solid var(--border-light);
+            display: none;
+        }
+        .collapsible[data-collapsible="open"] .collapsible-content { display: block; }
+        .collapsible[data-collapsible="open"] .arrow { transform: rotate(90deg); }
+        .arrow {
+            transition: transform 0.2s;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .critical { border-left: 4px solid var(--accent-red); }
+        .important { border-left: 4px solid var(--accent-yellow); }
+        .secondary { border-left: 4px solid var(--accent-blue); }
+        .success { border-left: 4px solid var(--accent-green); }
+        .important-always-visible {
+            background: linear-gradient(135deg, #fff5f0 0%, #ffeee5 100%);
+            border: 2px solid var(--accent-red);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-md);
+        }
+        .metric {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            margin: 4px 4px 4px 0;
+        }
+        .metric.important { background: #ffe8d6; color: var(--accent-red); }
+        .metric.success { background: #e8f3e5; color: var(--accent-green); }
+        .dense-list { padding-left: 20px; margin: 8px 0; }
+        .dense-list li { margin-bottom: 6px; line-height: 1.4; }
+        .indent-1 { margin-left: 20px; font-size: 13px; }
+        .muted { color: var(--text-muted); }
+        code {
+            background: var(--bg-accent);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: "SF Mono", Monaco, monospace;
+            font-size: 13px;
+        }
+        pre {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            padding: 12px;
+            overflow-x: auto;
+            font-size: 13px;
+            margin: 8px 0;
+        }
+        button {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-left: 8px;
+        }
+        button:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div style="margin: 8px 0; text-align: right;">
+        <button id="expand-all">Expand All</button>
+        <button id="collapse-all">Collapse All</button>
+    </div>
+
+    <div class="important-always-visible">
+        <h1>📋 Task Plan: Reorganize TXT and CLEAR Snippets</h1>
+        <div class="two-column-layout">
+            <div>
+                <h3>Objective</h3>
+                <p>Create a new <code>clear/CLEAR</code> snippet for concise output style guidelines, and strip most style guidance from the existing <code>TXT</code> snippet to keep it focused on file output mechanics.</p>
+            </div>
+            <div>
+                <h3>Approach</h3>
+                <p>Extract all writing style rules from TXT snippet → Create new CLEAR snippet with those rules → Update TXT to reference CLEAR for style → Test both snippets</p>
+                <div class="metric important">Complexity: Low</div>
+                <div class="metric success">Impact: High (cleaner snippet organization)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="two-column-layout">
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>⚡ Implementation Steps</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <ol class="dense-list">
+                    <li><strong>Create new CLEAR snippet</strong>
+                        <div class="indent-1 muted">Pattern: <code>\b(clear|CLEAR|concise|brief)\b</code></div>
+                        <div class="indent-1">Extract from TXT: Writing Philosophy, Style Rules, Tone & Voice</div>
+                    </li>
+                    <li><strong>Write CLEAR snippet content</strong>
+                        <div class="indent-1">Focus: How to write concisely and clearly</div>
+                        <div class="indent-1">Include: DO/DON'T rules, tone guidelines, brevity principles</div>
+                    </li>
+                    <li><strong>Update TXT snippet</strong>
+                        <div class="indent-1">Remove: All writing style sections</div>
+                        <div class="indent-1">Keep: File output mechanics, format structure, XML/Markdown templates</div>
+                        <div class="indent-1">Add: Reference to CLEAR snippet for style guidance</div>
+                    </li>
+                    <li><strong>Test both snippets</strong>
+                        <div class="indent-1">Run test suite for CLEAR snippet</div>
+                        <div class="indent-1">Verify TXT still works for file output</div>
+                        <div class="indent-1">Test combined usage: <code>TXT CLEAR</code></div>
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="collapsible secondary" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>✓ Testing & Validation</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <ul class="dense-list">
+                    <li><strong>CLEAR snippet injection:</strong> Use test keyword and verify verification hash appears</li>
+                    <li><strong>TXT snippet still functional:</strong> Request TXT output and verify file mechanics work</li>
+                    <li><strong>Combined usage:</strong> Request <code>TXT CLEAR</code> and verify both inject properly</li>
+                    <li><strong>Content verification:</strong> Check that style rules moved correctly (no duplication)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="collapsible secondary" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>📍 Content to Extract from TXT</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h3>Move to CLEAR snippet:</h3>
+                <ul class="dense-list">
+                    <li>Writing Philosophy section (lines 9-13)</li>
+                    <li>Writing Style Rules section (lines 98-114)</li>
+                    <li>Tone & Voice section (lines 131-135)</li>
+                    <li>DO/DON'T guidelines</li>
+                </ul>
+                <h3>Keep in TXT snippet:</h3>
+                <ul class="dense-list">
+                    <li>Required Actions (file creation, opening)</li>
+                    <li>Formatting Guidelines (Markdown/XML syntax)</li>
+                    <li>Content Structure Template</li>
+                    <li>Example Output Flow</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="collapsible important" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>🎯 CLEAR Snippet Focus Areas</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>Primary Purpose:</strong> Guide concise, clear communication style</p>
+                <h3>Key Principles to Include:</h3>
+                <ul class="dense-list">
+                    <li><strong>Brevity:</strong> Minimize output tokens while maintaining quality</li>
+                    <li><strong>Directness:</strong> Answer questions directly without preamble/postamble</li>
+                    <li><strong>Clarity:</strong> Use precise language and proper structure</li>
+                    <li><strong>Active voice:</strong> Prefer active over passive constructions</li>
+                    <li><strong>Token efficiency:</strong> Remove unnecessary words without losing meaning</li>
+                </ul>
+                <h3>What NOT to include:</h3>
+                <ul class="dense-list">
+                    <li>File output mechanics (that's TXT's job)</li>
+                    <li>XML/Markdown syntax details</li>
+                    <li>Template structures</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible full-width secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>⚠️ Potential Issues & Mitigations</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Issue: Pattern conflict with existing snippets</h3>
+            <p><strong>Mitigation:</strong> Use specific pattern <code>\b(clear|CLEAR|concise|brief)\b</code> that won't conflict with common words</p>
+
+            <h3>Issue: Users may still expect style guidance in TXT</h3>
+            <p><strong>Mitigation:</strong> Add clear note in TXT snippet: "For writing style guidance, use CLEAR snippet"</p>
+
+            <h3>Issue: Duplication of content during transition</h3>
+            <p><strong>Mitigation:</strong> Carefully review both snippets after update to ensure no overlap</p>
+        </div>
+    </div>
+
+    <div class="collapsible full-width success" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📊 Post-Implementation</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Documentation Needs:</h3>
+            <ul class="dense-list">
+                <li>Update any references to TXT snippet in other documentation</li>
+                <li>Document the new CLEAR snippet in snippet registry</li>
+            </ul>
+            <h3>Follow-up Tasks:</h3>
+            <ul class="dense-list">
+                <li>Monitor usage of both snippets over next few sessions</li>
+                <li>Adjust patterns if false positives/negatives occur</li>
+                <li>Consider adding examples to CLEAR snippet if needed</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('expand-all').addEventListener('click', () => {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.setAttribute('data-collapsible', 'open');
+            });
+        });
+        document.getElementById('collapse-all').addEventListener('click', () => {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                if (!el.classList.contains('important-always-visible')) {
+                    el.setAttribute('data-collapsible', 'closed');
+                }
+            });
+        });
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const collapsible = header.parentElement;
+                const isOpen = collapsible.getAttribute('data-collapsible') === 'open';
+                collapsible.setAttribute('data-collapsible', isOpen ? 'closed' : 'open');
+            });
+        });
+    </script>
+</body>
+</html>

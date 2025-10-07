@@ -1,212 +1,177 @@
-# Nabokov Web Clipper
+# Generative Hypertext
 
-A Chrome extension for capturing web content and organizing it on an interactive visual canvas. Built with React, TypeScript, and React Flow, Nabokov combines powerful web clipping with LLM-powered features to help you curate and explore knowledge.
+**Transform any text on the web into interactive, AI-powered hyperlinks.**
 
-## ✨ Key Features
+Generative Hypertext is a Chrome extension and JavaScript library that lets you select any text and instantly generate contextual explanations, references, or continue conversations—all inline without leaving the page.
 
-- **🎯 Smart Element Selection** - Click-to-capture any element from web pages with visual highlighting
-- **🎨 Interactive Canvas** - Organize captured content on an infinite canvas with drag-and-drop
-- **🤖 AI-Powered Chat** - Built-in Claude integration for conversations with your captured content
-- **🔗 Visual Connections** - Create relationships between cards with typed connections (references, generated-from, contradicts, etc.)
-- **📥 Stash System** - Chrome Side Panel for temporarily stashing cards before adding to canvas
-- **🖼️ Image Support** - Drag-and-drop image uploads with inline display and proper aspect ratio
-- **✨ Content Beautification** - AI-powered content enhancement and restructuring
-- **🎛️ Custom Actions** - Configurable action buttons with template-based prompts (Summarize, Learn More, Critique, etc.)
-- **🔍 Advanced Filtering** - Search, filter by domain/tags/dates, with persistent filter state
-- **⌨️ Keyboard Shortcuts** - Cmd+Shift+E (stash), Ctrl+Shift+E (canvas), Ctrl+Shift+C (inline chat)
-- **💬 Floating Chat Windows** - Resizable, draggable chat windows with canvas/stash save options
-- **📝 Inline Editing** - Double-click to edit card content directly on canvas
+![Demo](docs/screenshots/demo.gif)
 
-## Quick Links
+## Features
 
-- **📚 [Documentation](./docs/README.md)** - Complete documentation index
-- **🚀 [Quick Start](./docs/QUICK_START.md)** - Get started in 5 minutes
-- **🏗️ [Architecture](./docs/architecture/DESIGN.md)** - System design and technical details
-- **🧪 [Testing Guide](./docs/testing/MANUAL_TEST_GUIDE.md)** - Manual testing procedures
-- **📋 [Project Status](./docs/project/PROJECT_STATUS.md)** - Current status and roadmap
+✨ **Inline AI Tooltips** - Hover over generated hyperlinks to see explanations
+💬 **Contextual Chat** - Continue conversations right in the tooltip
+📍 **Auto-Pin on Generation** - Tooltips automatically pin when created
+🔗 **Multi-Tooltip Support** - Have multiple conversations open simultaneously
+📝 **Markdown Support** - Rich text formatting with proper newline handling
+🎨 **Click-to-Front** - Click any tooltip to bring it to the front
+⌨️ **Keyboard Shortcuts** - Quick access with Cmd/Ctrl+Shift+K
 
-## Project Structure
+## Quick Start
 
-```
-NabokovsWeb/
-├── src/                      # Source code
-│   ├── background/           # Service worker (Manifest V3)
-│   ├── content/              # Content scripts for element selection
-│   ├── canvas/               # Canvas React app (React Flow)
-│   ├── sidepanel/            # Chrome Side Panel for stashed cards
-│   ├── components/           # Shared React components
-│   ├── services/             # API services (Claude, card generation, etc.)
-│   ├── utils/                # Utility functions (storage, sanitization, etc.)
-│   ├── types/                # TypeScript type definitions
-│   ├── config/               # Configuration (default buttons, etc.)
-│   └── manifest.json         # Chrome extension manifest
-├── docs/                     # Documentation (organized by category)
-│   ├── architecture/         # System design and technical architecture
-│   ├── implementation/       # Development guides and feature docs
-│   ├── research/             # User research and competitive analysis
-│   ├── testing/              # Test guides and reports
-│   └── project/              # Project status, roadmaps, and TODOs
-├── test-scripts/             # Manual Playwright test scripts
-│   ├── tests/                # Test scripts (.mjs)
-│   └── debug/                # Debug assets (.html, .png)
-├── tests/                    # Automated tests (Vitest + Playwright)
-│   ├── unit/                 # Unit tests
-│   ├── e2e/                  # End-to-end tests
-│   ├── fixtures/             # Test fixtures
-│   └── utils/                # Test utilities
-├── scripts/                  # Build and utility scripts
-├── public/                   # Static assets (icons, etc.)
-├── archive/                  # Deprecated/old code
-├── dist/                     # Build output (gitignored)
-└── coverage/                 # Test coverage reports (gitignored)
-```
+### As a Chrome Extension
 
-## 🚀 Getting Started
-
-### Installation
-
-1. Clone the repository:
+1. **Clone and build**:
    ```bash
-   git clone https://github.com/yourusername/NabokovsWeb.git
-   cd NabokovsWeb
-   ```
-
-2. Install dependencies:
-   ```bash
+   git clone https://github.com/yourusername/generative-hypertext.git
+   cd generative-hypertext
    npm install
+   npm run dev:symlinks  # For development
+   # OR: npm run build:unpacked  # For production
    ```
 
-3. Build the extension:
-   ```bash
-   npm run build
-   ```
-
-4. Load in Chrome:
+2. **Load in Chrome**:
    - Open `chrome://extensions`
    - Enable "Developer mode"
    - Click "Load unpacked"
-   - Select the `dist/` folder
+   - Select the `dist/unpacked/` folder
 
-### Development Commands
+3. **Use it**:
+   - On any webpage, select text
+   - Press `Cmd+Shift+K` (Mac) or `Ctrl+Shift+K` (Windows/Linux)
+   - Click "Generate Hypertext"
+   - Hover the red highlight to see the tooltip
+
+### As a Standalone Demo
+
+No build needed! Just open the demo:
 
 ```bash
-# Build extension
-npm run build              # Production build
-npm run watch:extension    # Watch mode for development
-
-# Backend server (for Claude API via subscription)
-npm run backend            # Start backend server
-npm run backend:dev        # With auto-reload
-
-# Testing
-npm test                   # Unit tests (Vitest)
-npm run test:watch         # Unit tests in watch mode
-npm run test:coverage      # With coverage report
-npm run test:e2e           # E2E tests (Playwright, headless)
-npm run test:e2e:headed    # E2E tests with browser UI
-npm run test:e2e:debug     # E2E tests in debug mode
-
-# Type checking
-npm run type-check         # TypeScript type checking
+open demo/hypertext_navigation_demo.html
 ```
 
-### Configuration
+Select "gradient descent" and press `Cmd+Shift+K` to try it out.
 
-**Claude API Setup** (optional, for AI features):
+## Development
 
-1. **Option 1: Local Backend** (Recommended - uses Claude.ai subscription)
-   - Start backend: `npm run backend`
-   - No separate API key needed if you have Claude subscription
+### Quick Setup (Recommended)
 
-2. **Option 2: Direct API** (requires separate API billing)
-   - Get API key from https://console.anthropic.com
-   - Open Canvas → Click settings icon
-   - Enter API key in "API Settings"
+Use symbolic links for instant development workflow:
 
-See `backend/README.md` for detailed backend setup instructions.
-
-## 🏗️ Architecture
-
-### Core Components
-
-- **Background Service Worker** - Handles keyboard shortcuts and extension lifecycle (Manifest V3)
-- **Content Scripts** - Injected element selector and inline chat window (Shadow DOM isolation)
-- **Canvas Page** - React Flow-based infinite canvas for visual organization
-- **Side Panel** - Chrome Side Panel for stashed cards with search/filter
-
-### Data Flow
-
-```
-User Action (Cmd+Shift+E or Ctrl+Shift+E)
-  ↓
-Background Worker sends message
-  ↓
-Content Script mounts ElementSelector
-  ↓
-User clicks element → Capture HTML + sanitize
-  ↓
-Save to chrome.storage.local
-  ↓
-Canvas auto-refreshes via storage event listener
+```bash
+npm run dev:symlinks
 ```
 
-### Cross-Context Synchronization
+Now edit source files and just reload the extension - no rebuild needed!
 
-All card operations broadcast updates via **dual event system**:
-- **Local events** (`window.dispatchEvent`) for same-context listeners
-- **Runtime messages** (`chrome.runtime.sendMessage`) for cross-context sync
+### Watch Mode
 
-This ensures Canvas and Side Panel stay synchronized in real-time.
+Automatically rebuild on file changes:
 
-## 🛠️ Technology Stack
+```bash
+npm run dev:watch
+```
 
-- **Frontend**: React 18.3.1, TypeScript 5.3, Vite 5.0
-- **Canvas**: @xyflow/react 12.3.2 (React Flow)
-- **Storage**: chrome.storage.local (~5MB limit)
-- **Styling**: @emotion/react (CSS-in-JS)
-- **LLM**: Claude API via Anthropic SDK / local backend
-- **Testing**: Vitest (unit), Playwright (E2E)
-- **Build**: @crxjs/vite-plugin (Chrome extension bundling)
+### Testing
 
-## 🧪 Testing
+```bash
+# Run all tests
+npx playwright test
 
-This project has comprehensive test coverage:
+# Run specific test suites
+npx playwright test tests/hypertext-simple.spec.mjs
+npx playwright test tests/hypertext-auto-pin.spec.mjs
+```
 
-- **215+ E2E tests** across 16 test suites covering all major features
-- **100+ unit tests** with 100% coverage for shared services
-- **Automated regression testing** to prevent feature breakage
+See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development instructions.
 
-Key test suites:
-- Card operations (CRUD, editing, tagging, starring)
-- Connection editing (relationships, types, labels)
-- Stash operations (save/restore/delete, sync)
-- Filtering (search, domains, tags, dates)
-- Beautification (AI content enhancement)
-- Custom buttons (action creation, generation)
-- Font size controls (Canvas/Side Panel sync)
+## Architecture
 
-Run `npm run test:e2e:headed` to see tests in action.
+```
+generative-hypertext/
+├── hypertext/
+│   └── hypertext-experience.js    # Core hypertext runtime (80KB)
+├── extension/
+│   └── hypertext-loader.js        # Chrome extension loader
+├── demo/
+│   └── hypertext_navigation_demo.html  # Standalone demo
+├── dist/unpacked/                 # Built extension (symlinks in dev mode)
+├── scripts/
+│   ├── build-unpacked.js          # Production build
+│   ├── setup-dev-symlinks.sh      # Development setup
+│   └── watch-and-build.js         # Watch mode
+└── tests/                         # Playwright tests
+```
 
-## 📚 Documentation
+### Key Components
 
-Comprehensive documentation is available in the `docs/` directory:
+- **`hypertext-experience.js`**: The shared runtime used by both the extension and demo
+- **Multi-tooltip architecture**: Each hypertext gets its own controller with isolated state
+- **Auto-pin system**: Tooltips automatically pin after initial generation
+- **Session management**: Tracks conversations, positions, and pinned state
 
-- **[Architecture Design](./docs/architecture/DESIGN.md)** - System design and technical details
-- **[Quick Start Guide](./docs/QUICK_START.md)** - Get started in 5 minutes
-- **[Testing Guide](./docs/testing/MANUAL_TEST_GUIDE.md)** - Manual testing procedures
-- **[Project Status](./docs/project/PROJECT_STATUS.md)** - Current status and roadmap
-- **[Implementation Guides](./docs/implementation/)** - Feature-specific development docs
+## Configuration
 
-## 🎓 Research Citation
+### Backend URL
 
-This project is inspired by [Nabokov's Cards](https://dl.acm.org/doi/abs/10.1145/3698061.3726916). I kindly thank the authors for their correspondence. 
+By default, the extension looks for an API at `http://localhost:3100`. Configure it:
 
-## 📄 License
+**In demo pages:**
+```javascript
+window.HYPERTEXT_BACKEND_URL = 'https://your-api.com';
+```
 
-MIT License - see LICENSE file for details
+**In extension:**
+Edit `extension/hypertext-loader.js` to change the default backend URL.
 
-## 🤝 Contributing
+### API Format
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+The backend should accept POST requests to `/api/stream` and return Server-Sent Events:
 
-For development guidelines, see [CLAUDE.md](./CLAUDE.md) for project instructions and architecture details.
+```javascript
+data: {"delta": {"text": "{\"pill\":\"Term\",\"mode\":\"explanation\",\"text\":\"Explanation here...\"}"}}
+
+data: [DONE]
+```
+
+## Browser Support
+
+- Chrome/Chromium 88+
+- Edge 88+
+- Other Chromium-based browsers
+
+## Project History
+
+This project evolved from an experiment in augmented reading experiences. Key milestones:
+
+- **Initial prototype**: Single-tooltip inline chat
+- **Multi-tooltip refactor**: Support for multiple simultaneous conversations
+- **Auto-pin feature**: Tooltips persist after generation
+- **Markdown support**: Rich text with proper formatting
+- **Development tooling**: Symlink-based dev mode for instant iteration
+
+See [docs/archive/](docs/archive/) for detailed implementation notes.
+
+## Contributing
+
+Contributions welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details
+
+## Credits
+
+Created by Warren Zhu
+Inspired by concepts from hypertext research and modern note-taking tools
+
+## Links
+
+- [Development Guide](DEVELOPMENT.md)
+- [Claude.md Guidelines](CLAUDE.md)
+- [Issue Tracker](https://github.com/yourusername/generative-hypertext/issues)

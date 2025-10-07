@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan: Recursive Hypertext (Hypertext within Hypertext Tooltips)</title>
+<style>
+:root {
+    --chinese-red: #8B0000;
+    --chinese-gold: #FFD700;
+    --jade-green: #00A86B;
+    --ink-black: #2B2B2B;
+    --paper-beige: #F5F5DC;
+    --light-cream: #FAFAF0;
+    --level-1: #000;
+    --level-2: #333;
+    --level-3: #666;
+    --level-4: #999;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+    color: var(--ink-black);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.3;
+    padding: 8px;
+}
+
+h1 {
+    font-size: 22px;
+    font-weight: 900;
+    margin: 6px 0;
+    padding: 6px;
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 10px 0 4px 0;
+    padding: 4px;
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.03);
+    color: var(--level-1);
+}
+
+h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 6px 0 3px 0;
+    color: var(--level-2);
+}
+
+h4 {
+    font-size: 12px;
+    font-weight: 500;
+    margin: 4px 0 2px 8px;
+    color: var(--level-3);
+}
+
+.two-column-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+}
+
+.full-width { grid-column: span 2; }
+
+button {
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    color: white;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    padding: 4px 8px;
+    margin: 2px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 2px;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+}
+
+.important-always-visible {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+    border: 2px solid var(--chinese-gold);
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 3px;
+}
+
+.metric {
+    display: inline-block;
+    background: white;
+    border: 1px solid var(--chinese-gold);
+    padding: 2px 6px;
+    margin: 2px;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.metric.important {
+    background: var(--chinese-gold);
+    color: white;
+    font-weight: 700;
+}
+
+.collapsible { margin: 4px 0; width: 100%; }
+.collapsible-header {
+    cursor: pointer;
+    padding: 6px 8px;
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+    border-left: 3px solid var(--chinese-gold);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.collapsible.critical .collapsible-header {
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+.collapsible.secondary .collapsible-header {
+    border-left: 2px solid #999;
+    background: rgba(0, 0, 0, 0.02);
+    font-size: 13px;
+}
+
+.collapsible-header:hover {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+}
+
+.collapsible-header .arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    color: var(--chinese-red);
+    font-size: 10px;
+}
+
+.collapsible.open .arrow {
+    transform: rotate(90deg);
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 8px;
+    margin-left: 8px;
+}
+
+.collapsible.open .collapsible-content {
+    max-height: 5000px;
+    padding: 8px;
+}
+
+.dense-list {
+    list-style: none;
+    padding: 0;
+    margin-left: 8px;
+}
+
+.dense-list li {
+    padding: 3px 0 3px 12px;
+    position: relative;
+    line-height: 1.4;
+}
+
+.dense-list li:before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--chinese-red);
+    font-size: 10px;
+}
+
+ol.dense-list {
+    list-style: decimal;
+    padding-left: 20px;
+}
+
+ol.dense-list li:before {
+    content: none;
+}
+
+.indent-1 { margin-left: 12px; }
+.indent-2 { margin-left: 24px; }
+.indent-3 { margin-left: 36px; }
+
+.muted { color: var(--level-4); font-size: 12px; }
+.critical { color: var(--chinese-red); font-weight: 700; }
+.critical-issue {
+    background: rgba(139, 0, 0, 0.05);
+    border: 2px solid var(--chinese-red);
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 3px;
+}
+.success { color: var(--jade-green); font-weight: 600; }
+.warning { color: var(--chinese-gold); font-weight: 600; }
+
+code {
+    background: rgba(139, 0, 0, 0.05);
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 12px;
+    font-family: "Monaco", "Courier New", monospace;
+}
+
+pre {
+    background: rgba(245, 245, 220, 0.3);
+    border: 1px solid rgba(139, 0, 0, 0.1);
+    padding: 6px;
+    margin: 4px 0;
+    overflow-x: auto;
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0;
+    font-size: 12px;
+}
+
+th {
+    background: var(--chinese-red);
+    color: white;
+    padding: 4px 6px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+td {
+    border: 1px solid #ddd;
+    padding: 3px 6px;
+    vertical-align: top;
+}
+
+tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+
+.step-box {
+    background: white;
+    border-left: 3px solid var(--chinese-gold);
+    padding: 6px;
+    margin: 4px 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.phase-header {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+    padding: 6px;
+    margin: 8px 0 4px 0;
+    font-weight: 700;
+    border-left: 4px solid var(--chinese-red);
+}
+</style>
+</head>
+<body>
+
+<div style="margin: 8px 0; text-align: right;">
+    <button id="expand-all">Expand All</button>
+    <button id="collapse-all">Collapse All</button>
+</div>
+
+<div class="important-always-visible">
+    <h1>📋 Plan: Recursive Hypertext (Hypertext within Hypertext Tooltips)</h1>
+    <div class="two-column-layout">
+        <div>
+            <h3>Objective</h3>
+            <p>Enable hypertext tooltips to function within other hypertext tooltips, creating a recursive navigation experience where users can explore nested concepts without leaving their current context.</p>
+        </div>
+        <div>
+            <h3>Approach</h3>
+            <p>Implement per-instance state management with CSS stacking contexts (avoiding z-index overflow), container-scoped event listeners, and lifecycle-based cleanup. Reuse existing selection logic for markdown link interception.</p>
+            <div style="margin-top: 4px;">
+                <span class="metric important">Complexity: High</span>
+                <span class="metric">Time: 3-4 days</span>
+                <span class="metric">Impact: Very High</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Codex Review Summary -->
+<div class="critical-issue">
+    <h2>🔍 Codex Review Summary</h2>
+    <div class="two-column-layout">
+        <div>
+            <h4>Critical Issues Identified</h4>
+            <ul class="dense-list">
+                <li><strong>Z-index overflow:</strong> Base 2147483000 + 1000/level = immediate overflow</li>
+                <li><strong>Event listener conflicts:</strong> Document-level handlers break when scoped to containers</li>
+                <li><strong>Global state collisions:</strong> <code>activeChatSession</code>, <code>activeSelection</code> would clobber</li>
+                <li><strong>Vague positioning logic:</strong> Parent-relative clamping underspecified</li>
+                <li><strong>Missing accessibility:</strong> Focus trapping, ARIA chaining, ESC handling</li>
+            </ul>
+        </div>
+        <div>
+            <h4>Architectural Improvements Made</h4>
+            <ul class="dense-list">
+                <li>CSS stacking contexts (position: relative) instead of z-index math</li>
+                <li>Instance-scoped state with coordinated lifecycle management</li>
+                <li>Hybrid event model: document-level with instance filtering</li>
+                <li>Concrete positioning algorithm with transform handling</li>
+                <li>Lifecycle hooks replace arbitrary 30s timeout</li>
+                <li>Full accessibility specification added</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="two-column-layout">
+    <!-- Prerequisites & Context -->
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📍 Prerequisites & Context</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Current Architecture</h3>
+            <ul class="dense-list">
+                <li><strong>File:</strong> hypertext/hypertext-experience.js (2466 lines)</li>
+                <li><strong>Global state:</strong> sessions Map, controllers Map, activeChatSession (lines 1616-1627)</li>
+                <li><strong>Z-index base:</strong> 2147483000 (line 712, near max int32)</li>
+                <li><strong>Event listeners:</strong> Document-level mousedown/scroll/resize (lines 2414-2416)</li>
+                <li><strong>Markdown rendering:</strong> marked.js + DOMPurify already loaded (lines 1521-1603)</li>
+                <li><strong>Link rendering:</strong> Already supported in .hx-chat-tooltip__content (lines 560-568)</li>
+            </ul>
+
+            <h3>Key Functions</h3>
+            <table>
+                <tr>
+                    <th>Function</th>
+                    <th>Lines</th>
+                    <th>Purpose</th>
+                </tr>
+                <tr>
+                    <td><code>createHypertextExperience</code></td>
+                    <td>1497-2461</td>
+                    <td>Main factory; creates instance with event handlers</td>
+                </tr>
+                <tr>
+                    <td><code>createTooltipController</code></td>
+                    <td>918-1397</td>
+                    <td>Per-tooltip UI controller with drag/resize</td>
+                </tr>
+                <tr>
+                    <td><code>renderConversation</code></td>
+                    <td>803-916</td>
+                    <td>Renders messages with markdown</td>
+                </tr>
+                <tr>
+                    <td><code>positionTooltip</code></td>
+                    <td>752-801</td>
+                    <td>Calculates tooltip position relative to anchor</td>
+                </tr>
+            </table>
+
+            <h3>Constraints</h3>
+            <ul class="dense-list">
+                <li>Cannot modify z-index beyond 2147483647 (signed 32-bit max)</li>
+                <li>Document-level listeners must remain for global behaviors</li>
+                <li>Existing single-instance assumptions throughout codebase</li>
+                <li>Markdown rendering pipeline expects flat DOM structure</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Right Column: Testing & Validation -->
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>✓ Testing & Validation</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Unit Tests (Playwright)</h3>
+            <ol class="dense-list">
+                <li><strong>Nesting detection:</strong> Verify <code>isNested()</code> returns true inside .hx-chat-tooltip__content</li>
+                <li><strong>Stacking context:</strong> Create 3 nested tooltips, verify DOM order determines stacking</li>
+                <li><strong>Event isolation:</strong> Click outside nested tooltip, verify only child closes (not parent)</li>
+                <li><strong>Selection within tooltip:</strong> Select text in nested tooltip, verify palette appears</li>
+                <li><strong>Link interception:</strong> Click markdown link in tooltip, verify hypertext triggers (not navigation)</li>
+            </ol>
+
+            <h3>Integration Tests</h3>
+            <ol class="dense-list">
+                <li><strong>3-level nesting:</strong> Generate hypertext → hover pill → generate from result → repeat</li>
+                <li><strong>Positioning at viewport edges:</strong> Open nested tooltip near right edge, verify clamping</li>
+                <li><strong>Lifecycle cleanup:</strong> Close parent tooltip, verify nested controllers destroyed</li>
+                <li><strong>Memory leak test:</strong> Create/destroy 50 nested tooltips, check heap size</li>
+            </ol>
+
+            <h3>Accessibility Tests</h3>
+            <ul class="dense-list">
+                <li><strong>Focus trap:</strong> Tab through nested tooltip, verify focus stays within active tooltip</li>
+                <li><strong>ESC key:</strong> Press ESC with nested tooltip open, verify child closes first</li>
+                <li><strong>ARIA announcements:</strong> Screen reader announces "nested level 2" when appropriate</li>
+                <li><strong>Keyboard navigation:</strong> Arrow keys navigate between nested tooltips</li>
+            </ul>
+
+            <h3>Visual/Manual Tests</h3>
+            <ul class="dense-list">
+                <li>Open demo/hypertext_navigation_demo.html, verify nested tooltips render correctly</li>
+                <li>Test drag/resize on nested tooltips, verify clamping to parent bounds</li>
+                <li>Verify streaming indicator works in nested tooltips</li>
+                <li>Test pin button in nested context, verify parent remains unaffected</li>
+            </ul>
+
+            <h3>Success Criteria</h3>
+            <div class="step-box">
+                <strong>All tests pass:</strong>
+                <ul style="list-style: disc; margin-left: 20px; margin-top: 4px;">
+                    <li>Zero errors in console</li>
+                    <li>No z-index overflow warnings</li>
+                    <li>Memory stable after 100 create/destroy cycles</li>
+                    <li>Accessibility audit (axe-core) passes</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Implementation Steps -->
+<div class="collapsible critical" data-collapsible="open">
+    <div class="collapsible-header">
+        <span>⚡ Implementation Steps (9 Phases)</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+
+        <!-- Phase 1 -->
+        <div class="phase-header">Phase 1: Instance-Scoped State Architecture</div>
+        <div class="step-box">
+            <h4>1.1 Create Instance State Container</h4>
+            <p><strong>File:</strong> hypertext/hypertext-experience.js, lines 1497-1514 (createHypertextExperience)</p>
+            <p><strong>Action:</strong> Wrap all global state in instance object:</p>
+            <pre>const instance = {
+  id: `hx-instance-${Date.now()}`,
+  nestingLevel: 0,
+  parentInstance: null,
+  document: doc,
+  window: win,
+  sessions: new Map(),
+  controllers: new Map(),
+  activeChatSession: null,
+  activeSelection: '',
+  activeRange: null,
+  // ... all current globals
+};</pre>
+            <p><strong>Update:</strong> Replace all direct global references with <code>instance.sessions</code>, <code>instance.activeSelection</code>, etc.</p>
+        </div>
+
+        <div class="step-box">
+            <h4>1.2 Add Nesting Detection</h4>
+            <p><strong>Function:</strong> New utility <code>detectNestingContext(doc)</code></p>
+            <pre>function detectNestingContext(doc) {
+  const body = doc.body;
+  if (!body) return { isNested: false, level: 0, parentTooltip: null };
+
+  // Check if document is inside .hx-chat-tooltip__content
+  const rootElement = body.parentElement || body;
+  const parentTooltip = rootElement.closest?.('.hx-chat-tooltip__content');
+
+  if (parentTooltip) {
+    const parentInstance = findInstanceByTooltipElement(parentTooltip);
+    const level = parentInstance ? parentInstance.nestingLevel + 1 : 1;
+    return { isNested: true, level, parentTooltip, parentInstance };
+  }
+
+  return { isNested: false, level: 0, parentTooltip: null };
+}</pre>
+            <p><strong>Call site:</strong> Top of <code>createHypertextExperience</code>, store result in instance</p>
+        </div>
+
+        <div class="step-box">
+            <h4>1.3 Instance Registry</h4>
+            <p><strong>Global:</strong> Create WeakMap for instance lookup</p>
+            <pre>const globalInstanceRegistry = new WeakMap(); // doc → instance
+const globalTooltipRegistry = new WeakMap(); // tooltip element → instance
+
+function registerInstance(doc, instance) {
+  globalInstanceRegistry.set(doc, instance);
+  instance.controllers.forEach(ctrl => {
+    globalTooltipRegistry.set(ctrl.element, instance);
+  });
+}</pre>
+            <p><strong>Usage:</strong> Enables finding parent instance during nesting detection</p>
+        </div>
+
+        <!-- Phase 2 -->
+        <div class="phase-header">Phase 2: CSS Stacking Contexts (Z-Index Fix)</div>
+        <div class="step-box">
+            <h4>2.1 Update Tooltip CSS</h4>
+            <p><strong>File:</strong> hypertext/hypertext-experience.js, lines 115-133 (.hx-chat-tooltip)</p>
+            <p><strong>Change:</strong> Remove fixed z-index, use stacking context:</p>
+            <pre>.hx-chat-tooltip {
+  position: absolute;
+  /* REMOVED: z-index: 2147483000; */
+  /* NEW: Rely on DOM order within stacking context */
+  isolation: isolate; /* Creates new stacking context */
+  ...
+}</pre>
+        </div>
+
+        <div class="step-box">
+            <h4>2.2 Parent Container Isolation</h4>
+            <p><strong>Action:</strong> When nested, wrap tooltip in isolation container</p>
+            <pre>function createTooltipWrapper(tooltip, isNested) {
+  if (!isNested) return tooltip;
+
+  const wrapper = doc.createElement('div');
+  wrapper.className = 'hx-stacking-container';
+  wrapper.style.position = 'relative';
+  wrapper.style.zIndex = '0'; // Creates stacking context
+  wrapper.style.isolation = 'isolate';
+  wrapper.appendChild(tooltip);
+  return wrapper;
+}</pre>
+            <p><strong>Result:</strong> Nested tooltips stack above parent via DOM order, no z-index math</p>
+        </div>
+
+        <div class="step-box">
+            <h4>2.3 Update bringToFront Logic</h4>
+            <p><strong>File:</strong> Lines 982-989 (bringToFront in createTooltipController)</p>
+            <p><strong>Change:</strong> Remove z-index manipulation, use DOM reordering:</p>
+            <pre>function bringToFront() {
+  const parent = tooltip.parentElement;
+  if (parent) {
+    // Move to end of parent's children (top of stacking order)
+    parent.appendChild(tooltip);
+  }
+}</pre>
+        </div>
+
+        <!-- Phase 3 -->
+        <div class="phase-header">Phase 3: Hybrid Event Model</div>
+        <div class="step-box">
+            <h4>3.1 Keep Document-Level Listeners</h4>
+            <p><strong>File:</strong> Lines 2411-2416 (event registration)</p>
+            <p><strong>Change:</strong> Keep existing document listeners, add instance filtering:</p>
+            <pre>doc.addEventListener('mousedown', handleMouseDown);
+// handleMouseDown now checks if target is within this instance's tooltips
+
+function handleMouseDown(event) {
+  // Filter: only process if event is in our instance's tooltip tree
+  const targetInstance = findInstanceByElement(event.target);
+  if (targetInstance !== instance) return; // Not our event
+
+  // Existing logic...
+  if (palette.style.display === 'block' && !palette.contains(event.target)) {
+    hidePalette();
+  }
+  // etc.
+}</pre>
+        </div>
+
+        <div class="step-box">
+            <h4>3.2 Event Propagation Control</h4>
+            <p><strong>Action:</strong> For nested instances, stop propagation on certain events:</p>
+            <pre>function handleTooltipClick(event) {
+  if (instance.nestingLevel > 0) {
+    // Prevent parent tooltips from receiving this event
+    event.stopPropagation();
+  }
+  // Process event normally
+}</pre>
+            <p><strong>Apply to:</strong> Click, mousedown on .hx-chat-tooltip</p>
+        </div>
+
+        <div class="step-box">
+            <h4>3.3 Scroll/Resize Coordination</h4>
+            <p><strong>Issue:</strong> Nested tooltip scroll should update position, but parent scroll handler also fires</p>
+            <p><strong>Solution:</strong> Check if scroll target is within our stacking context:</p>
+            <pre>const handleScroll = (event) => {
+  // Only reposition if scroll happened in our viewport
+  const scrollTarget = event.target;
+  const isOurViewport = scrollTarget === win ||
+                        scrollTarget === doc ||
+                        instance.controllers.has(scrollTarget.closest?.('.hx-chat-tooltip'));
+
+  if (!isOurViewport) return;
+
+  // Existing repositioning logic
+  controllers.forEach((controller, sessionId) => { ... });
+};</pre>
+        </div>
+
+        <!-- Phase 4 -->
+        <div class="phase-header">Phase 4: Concrete Positioning Algorithm</div>
+        <div class="step-box">
+            <h4>4.1 Parent-Relative Viewport Calculation</h4>
+            <p><strong>File:</strong> Lines 752-801 (positionTooltip function)</p>
+            <p><strong>Add:</strong> Detect if nested and calculate viewport bounds relative to parent:</p>
+            <pre>function getEffectiveViewport(win, doc, instance) {
+  if (!instance.isNested || !instance.parentTooltip) {
+    // Standard viewport
+    return {
+      scrollX: win.scrollX,
+      scrollY: win.scrollY,
+      width: win.innerWidth,
+      height: win.innerHeight
+    };
+  }
+
+  // Nested: constrain to parent tooltip bounds
+  const parentRect = instance.parentTooltip.getBoundingClientRect();
+  return {
+    scrollX: 0, // Relative to parent
+    scrollY: 0,
+    width: parentRect.width,
+    height: parentRect.height,
+    offsetX: parentRect.left,
+    offsetY: parentRect.top
+  };
+}</pre>
+        </div>
+
+        <div class="step-box">
+            <h4>4.2 Update clampToViewport Function</h4>
+            <p><strong>File:</strong> Lines 734-750 (clampToViewport)</p>
+            <p><strong>Change:</strong> Accept viewport parameter, handle relative offsets:</p>
+            <pre>function clampToViewport(left, top, width, height, options = {}) {
+  const { win, doc, margin, viewport } = options;
+  const vp = viewport || getEffectiveViewport(win, doc, instance);
+
+  const minLeft = vp.scrollX + margin;
+  const minTop = vp.scrollY + margin;
+  const maxLeft = vp.scrollX + vp.width - width - margin;
+  const maxTop = vp.scrollY + vp.height - height - margin;
+
+  let clampedLeft = Math.min(Math.max(left, minLeft), Math.max(minLeft, maxLeft));
+  let clampedTop = Math.min(Math.max(top, minTop), Math.max(minTop, maxTop));
+
+  // If nested, add parent offset
+  if (vp.offsetX !== undefined) {
+    clampedLeft += vp.offsetX;
+    clampedTop += vp.offsetY;
+  }
+
+  return { left: Math.round(clampedLeft), top: Math.round(clampedTop) };
+}</pre>
+        </div>
+
+        <div class="step-box">
+            <h4>4.3 Transform Handling</h4>
+            <p><strong>Issue:</strong> Parent tooltip might have CSS transforms (during drag/animation)</p>
+            <p><strong>Solution:</strong> Calculate cumulative transform matrix:</p>
+            <pre>function getTransformedBounds(element) {
+  const rect = element.getBoundingClientRect();
+  let el = element.parentElement;
+  let offsetX = 0, offsetY = 0;
+
+  while (el && el !== document.body) {
+    const transform = window.getComputedStyle(el).transform;
+    if (transform && transform !== 'none') {
+      const matrix = new DOMMatrix(transform);
+      offsetX += matrix.m41; // translateX
+      offsetY += matrix.m42; // translateY
+    }
+    el = el.parentElement;
+  }
+
+  return {
+    left: rect.left + offsetX,
+    top: rect.top + offsetY,
+    width: rect.width,
+    height: rect.height
+  };
+}</pre>
+            <p><strong>Use in:</strong> positionTooltip when calculating anchor rect</p>
+        </div>
+
+        <!-- Phase 5 -->
+        <div class="phase-header">Phase 5: Markdown Link Interception (Reuse Selection Logic)</div>
+        <div class="step-box">
+            <h4>5.1 Post-Render Link Processing</h4>
+            <p><strong>File:</strong> Lines 843-860 (renderConversation, after markdown rendering)</p>
+            <p><strong>Add:</strong> After <code>content.innerHTML = renderMarkdown(text)</code>, process links:</p>
+            <pre>function interceptMarkdownLinks(contentElement, session, instance) {
+  const links = contentElement.querySelectorAll('a[href]');
+
+  links.forEach(link => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Reuse existing selection logic
+      const selectionText = link.textContent.trim();
+      const href = link.getAttribute('href');
+
+      // Trigger hypertext generation for this link
+      // Use link text as subject, or href if text is empty
+      const subject = selectionText || href;
+
+      // Call existing applyHypertext with pre-populated context
+      instance.applyHypertextFromLink({
+        subject,
+        url: href,
+        parentSession: session
+      });
+    });
+  });
+}</pre>
+            <p><strong>Call site:</strong> In renderConversation, after appending item to fragment</p>
+        </div>
+
+        <div class="step-box">
+            <h4>5.2 Create applyHypertextFromLink Function</h4>
+            <p><strong>New function:</strong> Wrapper around applyHypertext for link-triggered hypertext</p>
+            <pre>function applyHypertextFromLink({ subject, url, parentSession }) {
+  // Create synthetic range/selection from link text
+  const tempSpan = doc.createElement('span');
+  tempSpan.textContent = subject;
+  tempSpan.style.display = 'inline';
+
+  // Insert into parent tooltip content area
+  const parentContent = parentSession.wrapper?.closest('.hx-chat-tooltip__content');
+  if (!parentContent) return;
+
+  parentContent.appendChild(tempSpan);
+
+  // Simulate selection
+  const range = doc.createRange();
+  range.selectNodeContents(tempSpan);
+
+  activeRange = range;
+  activeSelection = subject;
+
+  // Populate instruction with URL context
+  const instruction = `Explain or expand on: ${subject}${url ? ` (source: ${url})` : ''}`;
+
+  // Trigger hypertext generation
+  applyHypertext(instruction);
+
+  // Cleanup temp span after generation starts
+  setTimeout(() => tempSpan.remove(), 100);
+}</pre>
+        </div>
+
+        <!-- Phase 6 -->
+        <div class="phase-header">Phase 6: Text Selection Support Inside Tooltips</div>
+        <div class="step-box">
+            <h4>6.1 Remove user-select: none</h4>
+            <p><strong>File:</strong> Lines 2-570 (BASE_STYLES)</p>
+            <p><strong>Verify:</strong> .hx-chat-tooltip__content does NOT have <code>user-select: none</code></p>
+            <p><strong>Current state:</strong> Already selectable (no explicit user-select restriction)</p>
+        </div>
+
+        <div class="step-box">
+            <h4>6.2 Selection Change Listener Scope</h4>
+            <p><strong>File:</strong> Lines 2314-2322 (handleSelectionChange)</p>
+            <p><strong>Change:</strong> Handle selections inside tooltips:</p>
+            <pre>const handleSelectionChange = () => {
+  const sel = win.getSelection ? win.getSelection() : doc.getSelection?.();
+  if (!sel || sel.isCollapsed) {
+    if (!palettePinned) hidePalette();
+    return;
+  }
+
+  const range = sel.getRangeAt(0).cloneRange();
+  const selectedText = sel.toString();
+
+  // Check if selection is inside a tooltip
+  const isInsideTooltip = range.commonAncestorContainer.closest?.('.hx-chat-tooltip__content');
+
+  if (isInsideTooltip) {
+    // Cache for palette opening, but don't auto-show palette yet
+    cacheSelection(range, selectedText);
+  } else {
+    // Normal page selection
+    cacheSelection(range, selectedText);
+  }
+};</pre>
+        </div>
+
+        <div class="step-box">
+            <h4>6.3 Prevent Dismissal on Selection Drag</h4>
+            <p><strong>Issue:</strong> Dragging to select text might trigger tooltip mousedown → scheduleClose</p>
+            <p><strong>Fix:</strong> In handleMouseDown, ignore if selection is being made:</p>
+            <pre>function handleMouseDown(event) {
+  // Don't trigger close if user is selecting text
+  if (event.detail > 1) return; // Double/triple click
+  if (window.getSelection()?.toString().length > 0) return; // Active selection
+
+  // Existing logic...
+}</pre>
+        </div>
+
+        <!-- Phase 7 -->
+        <div class="phase-header">Phase 7: Lifecycle-Based Cleanup (Replace 30s Timeout)</div>
+        <div class="step-box">
+            <h4>7.1 Add Lifecycle Hooks to Controller</h4>
+            <p><strong>File:</strong> Lines 918-1397 (createTooltipController)</p>
+            <p><strong>Add:</strong> onClose lifecycle hook:</p>
+            <pre>const controllerApi = {
+  element: tooltip,
+  render,
+  show,
+  hide,
+  destroy() {
+    cleanup();
+    tooltip.remove();
+
+    // NEW: Cascade destroy to nested instances
+    if (instance.childInstances) {
+      instance.childInstances.forEach(child => child.destroy());
+      instance.childInstances.clear();
+    }
+
+    if (typeof onDestroy === 'function') {
+      onDestroy(session);
+    }
+  }
+};</pre>
+        </div>
+
+        <div class="step-box">
+            <h4>7.2 Parent-Child Lifecycle Tracking</h4>
+            <p><strong>Add to instance state:</strong></p>
+            <pre>const instance = {
+  ...existingState,
+  childInstances: new Set(), // Track nested instances
+  parentInstance: parentInstanceRef, // From nesting detection
+
+  destroy() {
+    // Destroy all child instances first
+    this.childInstances.forEach(child => child.destroy());
+    this.childInstances.clear();
+
+    // Cleanup this instance
+    this.controllers.forEach(ctrl => ctrl.destroy());
+    this.controllers.clear();
+    this.sessions.clear();
+
+    // Remove from parent's child tracking
+    if (this.parentInstance) {
+      this.parentInstance.childInstances.delete(this);
+    }
+
+    // Remove event listeners
+    doc.removeEventListener('selectionchange', handleSelectionChange);
+    // ... all other listeners
+  }
+};</pre>
+        </div>
+
+        <div class="step-box">
+            <h4>7.3 Memory Leak Prevention</h4>
+            <p><strong>Action:</strong> When parent tooltip closes, cascade destroy to children:</p>
+            <pre>function closeChat({ force, sessionId } = {}) {
+  // ... existing close logic
+
+  if (controller) {
+    controller.destroy(); // This now cascades to children via lifecycle hooks
+  }
+
+  // ... rest of existing logic
+}</pre>
+            <p><strong>Remove:</strong> Any arbitrary timeouts for nested cleanup</p>
+        </div>
+
+        <!-- Phase 8 -->
+        <div class="phase-header">Phase 8: Accessibility Implementation</div>
+        <div class="step-box">
+            <h4>8.1 Focus Trap for Active Tooltip</h4>
+            <p><strong>New function:</strong> Trap focus within active tooltip</p>
+            <pre>function installFocusTrap(tooltip) {
+  const focusableElements = tooltip.querySelectorAll(
+    'a[href], button:not([disabled]), textarea, input, [tabindex]:not([tabindex="-1"])'
+  );
+
+  const firstFocusable = focusableElements[0];
+  const lastFocusable = focusableElements[focusableElements.length - 1];
+
+  tooltip.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+
+    if (e.shiftKey && document.activeElement === firstFocusable) {
+      e.preventDefault();
+      lastFocusable.focus();
+    } else if (!e.shiftKey && document.activeElement === lastFocusable) {
+      e.preventDefault();
+      firstFocusable.focus();
+    }
+  });
+}</pre>
+            <p><strong>Call in:</strong> createTooltipController after building tooltip</p>
+        </div>
+
+        <div class="step-box">
+            <h4>8.2 ESC Key Hierarchy</h4>
+            <p><strong>File:</strong> Lines 2364-2374 (handleEscapeKey)</p>
+            <p><strong>Change:</strong> Close deepest nested tooltip first:</p>
+            <pre>const handleEscapeKey = event => {
+  if (event.key !== 'Escape') return;
+
+  // Find deepest active nested instance
+  let deepestInstance = instance;
+  while (deepestInstance.childInstances.size > 0) {
+    const activeChild = Array.from(deepestInstance.childInstances)
+      .find(child => child.activeChatSession);
+    if (!activeChild) break;
+    deepestInstance = activeChild;
+  }
+
+  // Close deepest tooltip
+  if (deepestInstance.activeChatSession) {
+    deepestInstance.closeChat({ force: true });
+    event.stopPropagation(); // Prevent parent ESC handlers
+    return;
+  }
+
+  // Fallback to palette
+  if (palette.style.display === 'block') {
+    hidePalette();
+  }
+};</pre>
+        </div>
+
+        <div class="step-box">
+            <h4>8.3 ARIA Attributes for Nesting</h4>
+            <p><strong>File:</strong> Lines 631-673 (buildTooltip)</p>
+            <p><strong>Add:</strong> After building tooltip HTML:</p>
+            <pre>function buildTooltip(doc, idSuffix = '', nestingLevel = 0) {
+  // ... existing build logic
+
+  if (nestingLevel > 0) {
+    tooltip.setAttribute('aria-level', String(nestingLevel));
+    tooltip.setAttribute('aria-label', `Nested hypertext dialog, level ${nestingLevel}`);
+  }
+
+  return { tooltip, ... };
+}</pre>
+        </div>
+
+        <div class="step-box">
+            <h4>8.4 Screen Reader Announcements</h4>
+            <p><strong>Add:</strong> Live region for nesting notifications</p>
+            <pre>function createAriaLiveRegion(doc) {
+  const region = doc.createElement('div');
+  region.className = 'hx-sr-only';
+  region.setAttribute('role', 'status');
+  region.setAttribute('aria-live', 'polite');
+  region.setAttribute('aria-atomic', 'true');
+  doc.body.appendChild(region);
+  return region;
+}
+
+// Use when opening nested tooltip:
+function announceNesting(level) {
+  const region = doc.getElementById('hx-aria-live') || createAriaLiveRegion(doc);
+  region.textContent = `Opened nested hypertext at level ${level}`;
+  setTimeout(() => region.textContent = '', 3000);
+}</pre>
+        </div>
+
+        <!-- Phase 9 -->
+        <div class="phase-header">Phase 9: Failure Mode Mitigations</div>
+        <div class="step-box">
+            <h4>9.1 Recursive Loop Prevention</h4>
+            <p><strong>Issue:</strong> Hypertext pill links to itself → infinite nesting</p>
+            <p><strong>Solution:</strong> Track subject ancestry, prevent duplicates:</p>
+            <pre>function canCreateNestedHypertext(subject, parentSession) {
+  const ancestry = [];
+  let current = parentSession;
+
+  while (current) {
+    if (current.subject === subject) {
+      console.warn(`[Hypertext] Prevented recursive loop for subject: ${subject}`);
+      return false;
+    }
+    ancestry.push(current.subject);
+    current = current.parentSession; // Add parent tracking to session
+  }
+
+  // Also check nesting depth limit
+  if (ancestry.length >= 5) {
+    console.warn(`[Hypertext] Max nesting depth (5) reached`);
+    return false;
+  }
+
+  return true;
+}</pre>
+            <p><strong>Call before:</strong> applyHypertext in nested context</p>
+        </div>
+
+        <div class="step-box">
+            <h4>9.2 Event Propagation Deadlock Prevention</h4>
+            <p><strong>Issue:</strong> stopPropagation on close event might prevent parent from updating</p>
+            <p><strong>Solution:</strong> Use custom event bubbling with instance filtering:</p>
+            <pre>// Instead of stopPropagation, dispatch custom event that parent can opt into
+function notifyParentOfClose(childInstance) {
+  if (childInstance.parentInstance) {
+    const event = new CustomEvent('hypertext:childClosed', {
+      detail: { childId: childInstance.id }
+    });
+    childInstance.parentInstance.document.dispatchEvent(event);
+  }
+}
+
+// Parent listens for this event to update UI if needed
+doc.addEventListener('hypertext:childClosed', (e) => {
+  // Update parent state, but don't close parent
+  console.log(`Child ${e.detail.childId} closed`);
+});</pre>
+        </div>
+
+        <div class="step-box">
+            <h4>9.3 Clipping Inside Scrollable Parents</h4>
+            <p><strong>Issue:</strong> Nested tooltip might be clipped by overflow: hidden on parent</p>
+            <p><strong>Solution:</strong> Detect and warn, or use portal pattern:</p>
+            <pre>function checkClippingRisk(tooltip, parentTooltip) {
+  let el = tooltip.parentElement;
+  while (el && el !== parentTooltip) {
+    const computed = window.getComputedStyle(el);
+    if (computed.overflow === 'hidden' || computed.overflow === 'clip') {
+      console.warn('[Hypertext] Nested tooltip may be clipped by ancestor overflow');
+
+      // Fallback: use portal (append to body, position absolutely)
+      usePortalPositioning(tooltip, parentTooltip);
+      return;
+    }
+    el = el.parentElement;
+  }
+}
+
+function usePortalPositioning(tooltip, relativeTo) {
+  // Move tooltip to body, but position relative to parent
+  doc.body.appendChild(tooltip);
+  tooltip.style.position = 'fixed';
+  // Calculate position relative to relativeTo element
+  const rect = relativeTo.getBoundingClientRect();
+  tooltip.style.left = `${rect.left + 20}px`;
+  tooltip.style.top = `${rect.top + 20}px`;
+}</pre>
+        </div>
+
+    </div>
+</div>
+
+<!-- Potential Issues & Mitigations -->
+<div class="two-column-layout">
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>⚠️ Potential Issues</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Issue: Performance with Deep Nesting</h3>
+            <p><strong>Problem:</strong> 5+ levels of nesting = many active event listeners and DOM nodes</p>
+            <p><strong>Mitigation:</strong></p>
+            <ul class="dense-list">
+                <li>Limit depth to 5 levels (hard cap)</li>
+                <li>Use event delegation instead of per-element listeners where possible</li>
+                <li>Implement virtual scrolling for conversation list if >50 messages</li>
+            </ul>
+
+            <h3>Issue: Memory Leaks in Long Sessions</h3>
+            <p><strong>Problem:</strong> User creates 100+ nested tooltips, leaves page open for hours</p>
+            <p><strong>Mitigation:</strong></p>
+            <ul class="dense-list">
+                <li>Lifecycle hooks cascade destroy to all children (Phase 7)</li>
+                <li>WeakMap registry auto-GCs when document destroyed</li>
+                <li>Add manual "Clear All Hypertext" button for user control</li>
+            </ul>
+
+            <h3>Issue: Selection Conflict Between Levels</h3>
+            <p><strong>Problem:</strong> User selects text spanning parent and child tooltip</p>
+            <p><strong>Mitigation:</strong></p>
+            <ul class="dense-list">
+                <li>Selection change handler detects if range spans multiple tooltips</li>
+                <li>If span detected, clamp selection to deepest tooltip only</li>
+                <li>Show warning toast: "Cannot select across nested tooltips"</li>
+            </ul>
+
+            <h3>Issue: Positioning Jitter During Parent Drag</h3>
+            <p><strong>Problem:</strong> Dragging parent tooltip causes nested child to reposition constantly</p>
+            <p><strong>Mitigation:</strong></p>
+            <ul class="dense-list">
+                <li>During drag, freeze child positions (set position: fixed temporarily)</li>
+                <li>On drag end, recalculate and restore position: absolute</li>
+                <li>Use requestAnimationFrame to throttle reposition calls</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>🔧 Alternative Approaches Considered</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Alternative 1: IFrame-Based Isolation</h3>
+            <table>
+                <tr>
+                    <th>Pros</th>
+                    <th>Cons</th>
+                </tr>
+                <tr>
+                    <td>
+                        <ul style="list-style: disc; margin-left: 16px;">
+                            <li>Complete JS/CSS isolation</li>
+                            <li>No event conflicts</li>
+                            <li>Separate document contexts</li>
+                        </ul>
+                    </td>
+                    <td>
+                        <ul style="list-style: disc; margin-left: 16px;">
+                            <li>Breaks copy/paste across frames</li>
+                            <li>Complex style synchronization</li>
+                            <li>Cross-origin issues if backend URL differs</li>
+                            <li>Screen reader issues with nested frames</li>
+                        </ul>
+                    </td>
+                </tr>
+            </table>
+            <p><strong>Verdict:</strong> <span class="critical">Rejected</span> - Complexity outweighs benefits</p>
+
+            <h3>Alternative 2: Modal Stack Pattern</h3>
+            <p><strong>Idea:</strong> Instead of nested tooltips, open new tooltips as siblings, use modal stack</p>
+            <table>
+                <tr>
+                    <th>Pros</th>
+                    <th>Cons</th>
+                </tr>
+                <tr>
+                    <td>
+                        <ul style="list-style: disc; margin-left: 16px;">
+                            <li>Simpler positioning (no parent bounds)</li>
+                            <li>No z-index/clipping issues</li>
+                        </ul>
+                    </td>
+                    <td>
+                        <ul style="list-style: disc; margin-left: 16px;">
+                            <li>Loses visual hierarchy context</li>
+                            <li>User can't see parent while viewing child</li>
+                            <li>Not truly "recursive" UX</li>
+                        </ul>
+                    </td>
+                </tr>
+            </table>
+            <p><strong>Verdict:</strong> <span class="warning">Fallback option</span> - If recursive approach proves too complex</p>
+
+            <h3>Alternative 3: Single-Instance with View Stack</h3>
+            <p><strong>Idea:</strong> One hypertext instance, push/pop views like a navigation stack</p>
+            <p><strong>Verdict:</strong> <span class="critical">Rejected</span> - Doesn't support simultaneous view of parent/child</p>
+        </div>
+    </div>
+</div>
+
+<!-- Post-Implementation -->
+<div class="collapsible secondary full-width" data-collapsible="closed">
+    <div class="collapsible-header">
+        <span>📊 Post-Implementation</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <div class="two-column-layout">
+            <div>
+                <h3>Documentation Needs</h3>
+                <ul class="dense-list">
+                    <li><strong>README update:</strong> Add "Recursive Hypertext" section with GIF demo</li>
+                    <li><strong>API docs:</strong> Document <code>nestingLevel</code>, <code>parentInstance</code> properties</li>
+                    <li><strong>Migration guide:</strong> Note that z-index behavior changed (if anyone was customizing)</li>
+                    <li><strong>Accessibility guide:</strong> Document keyboard navigation through nested tooltips</li>
+                </ul>
+            </div>
+
+            <div>
+                <h3>Follow-Up Tasks</h3>
+                <ul class="dense-list">
+                    <li>Create demo video showing 3-level nesting</li>
+                    <li>Add nesting depth indicator to tooltip header (optional)</li>
+                    <li>Implement "breadcrumb" navigation for deep nests (Phase 2 feature)</li>
+                    <li>Add telemetry to track nesting depth usage patterns</li>
+                </ul>
+            </div>
+        </div>
+
+        <h3>Performance Monitoring</h3>
+        <div class="step-box">
+            <p><strong>Metrics to track:</strong></p>
+            <ul style="list-style: disc; margin-left: 20px; margin-top: 4px;">
+                <li>Average nesting depth per session</li>
+                <li>Memory usage after 100 create/destroy cycles</li>
+                <li>Time to open nested tooltip (should be <50ms)</li>
+                <li>Accessibility audit score (should be 100)</li>
+            </ul>
+        </div>
+
+        <h3>Future Enhancements</h3>
+        <ul class="dense-list">
+            <li><strong>Minimap:</strong> Visual overview showing nesting hierarchy</li>
+            <li><strong>Collapse subtree:</strong> Button to close all children at once</li>
+            <li><strong>Export nested conversation:</strong> Flatten hierarchy for sharing</li>
+            <li><strong>Smart positioning:</strong> ML-based optimal placement to avoid overlap</li>
+        </ul>
+    </div>
+</div>
+
+<div style="margin: 16px 0; padding: 10px; background: white; border: 2px solid var(--chinese-gold); border-radius: 3px;">
+    <h3 style="margin: 0 0 6px 0; color: var(--chinese-red);">📌 Implementation Checklist</h3>
+    <div class="two-column-layout">
+        <div>
+            <strong>Before Starting:</strong>
+            <ul style="list-style: disc; margin-left: 20px; margin-top: 4px;">
+                <li>Backup hypertext-experience.js</li>
+                <li>Create feature branch: recursive-hypertext</li>
+                <li>Set up Playwright test suite</li>
+            </ul>
+        </div>
+        <div>
+            <strong>After Each Phase:</strong>
+            <ul style="list-style: disc; margin-left: 20px; margin-top: 4px;">
+                <li>Run Playwright tests</li>
+                <li>Test manually in demo page</li>
+                <li>Check console for errors/warnings</li>
+                <li>Commit with descriptive message</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-create collapsibles
+    document.querySelectorAll('[data-collapsible]').forEach(function(section) {
+        const isOpen = section.getAttribute('data-collapsible') === 'open';
+        section.classList.add('collapsible');
+        if (isOpen) section.classList.add('open');
+    });
+
+    // Handle clicks
+    document.querySelectorAll('.collapsible-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            const collapsible = this.closest('.collapsible');
+            collapsible.classList.toggle('open');
+        });
+    });
+
+    // Expand/collapse all
+    const expandAllBtn = document.getElementById('expand-all');
+    const collapseAllBtn = document.getElementById('collapse-all');
+
+    if (expandAllBtn) {
+        expandAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.collapsible').forEach(function(c) {
+                c.classList.add('open');
+            });
+        });
+    }
+
+    if (collapseAllBtn) {
+        collapseAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.collapsible').forEach(function(c) {
+                c.classList.remove('open');
+            });
+        });
+    }
+});
+</script>
+
+</body>
+</html>

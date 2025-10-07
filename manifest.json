@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Hypertext Navigator",
+  "description": "Inline hypertext annotations with floating chat tooltips.",
+  "version": "0.1.0",
+  "commands": {
+    "toggle-hypertext": {
+      "description": "Trigger hypertext generation",
+      "suggested_key": {
+        "default": "Ctrl+Shift+K",
+        "mac": "Command+Shift+K"
+      }
+    }
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "extension/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "hypertext/hypertext-experience.js",
+        "extension/hypertext-loader.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

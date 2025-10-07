@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan: Hypertext Module TypeScript + React Refactor</title>
+<style>
+:root {
+    --chinese-red: #8B0000;
+    --chinese-gold: #FFD700;
+    --jade-green: #00A86B;
+    --ink-black: #2B2B2B;
+    --paper-beige: #F5F5DC;
+    --light-cream: #FAFAF0;
+    --level-1: #000;
+    --level-2: #333;
+    --level-3: #666;
+    --level-4: #999;
+}
+
+body {
+    background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+    color: var(--ink-black);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.3;
+    padding: 12px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: 900;
+    margin: 8px 0;
+    padding: 8px;
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 10px 0 6px 0;
+    padding: 6px;
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.03);
+    color: var(--level-1);
+}
+
+h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 6px 0 3px 0;
+    color: var(--level-2);
+}
+
+h4 {
+    font-size: 12px;
+    font-weight: 500;
+    margin: 4px 0 2px 8px;
+    color: var(--level-3);
+}
+
+.important-always-visible {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+    border: 2px solid var(--chinese-gold);
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+}
+
+.two-column-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 10px 0;
+}
+
+.collapsible {
+    margin: 6px 0;
+    border: 1px solid rgba(139, 0, 0, 0.15);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.collapsible-header {
+    cursor: pointer;
+    padding: 8px 10px;
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.collapsible-header:hover {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+}
+
+.collapsible-header .arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    color: var(--chinese-red);
+    font-size: 11px;
+}
+
+.collapsible.open .arrow {
+    transform: rotate(90deg);
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 10px;
+}
+
+.collapsible.open .collapsible-content {
+    max-height: 10000px;
+    padding: 10px;
+}
+
+.collapsible.critical .collapsible-header {
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+.collapsible.secondary .collapsible-header {
+    border-left: 2px solid #999;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.collapsible.full-width {
+    grid-column: span 2;
+}
+
+.metric {
+    display: inline-block;
+    background: white;
+    border: 1px solid var(--chinese-gold);
+    padding: 3px 8px;
+    margin: 2px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.metric.important {
+    background: var(--jade-green);
+    color: white;
+    border-color: var(--jade-green);
+}
+
+code {
+    background: rgba(139, 0, 0, 0.05);
+    padding: 2px 5px;
+    border-radius: 2px;
+    font-family: Monaco, Menlo, monospace;
+    font-size: 11px;
+}
+
+pre {
+    background: rgba(139, 0, 0, 0.03);
+    border: 1px solid rgba(139, 0, 0, 0.15);
+    border-radius: 3px;
+    padding: 8px;
+    overflow-x: auto;
+    font-size: 11px;
+}
+
+ul, ol {
+    margin: 6px 0 6px 20px;
+    padding: 0;
+}
+
+li {
+    margin: 3px 0;
+    line-height: 1.4;
+}
+
+.dense-list {
+    list-style: none;
+    padding: 0;
+    margin: 4px 0;
+}
+
+.dense-list li {
+    padding: 4px 0;
+    border-bottom: 1px dashed rgba(139, 0, 0, 0.1);
+}
+
+.dense-list li:last-child {
+    border-bottom: none;
+}
+
+.indent-1 {
+    margin-left: 16px;
+}
+
+.indent-2 {
+    margin-left: 32px;
+}
+
+.muted {
+    color: var(--level-3);
+    font-size: 11px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 12px;
+}
+
+th {
+    background: var(--chinese-red);
+    color: white;
+    padding: 6px 8px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+td {
+    border: 1px solid #ddd;
+    padding: 5px 8px;
+    vertical-align: top;
+}
+
+tr:nth-child(even) {
+    background: rgba(0,0,0,0.02);
+}
+
+.warning {
+    background: rgba(255, 165, 0, 0.1);
+    border-left: 3px solid orange;
+    padding: 6px;
+    margin: 6px 0;
+}
+
+button {
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    color: white;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 3px;
+    padding: 4px 10px;
+    margin: 4px 2px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+}
+</style>
+</head>
+<body>
+
+<div style="margin: 8px 0; text-align: right;">
+    <button id="expand-all">Expand All</button>
+    <button id="collapse-all">Collapse All</button>
+</div>
+
+<div class="important-always-visible">
+    <h1>📋 Hypertext Module: TypeScript + React Refactor</h1>
+    <div class="two-column-layout">
+        <div>
+            <h3>Objective</h3>
+            <p>Refactor <code>hypertext-experience.js</code> (2100 lines vanilla JS) into modular TypeScript + React components, sharing interfaces with NabokovsWeb extension codebase.</p>
+            <div class="metric">Current: 2100 LOC vanilla JS</div>
+            <div class="metric">Target: ~800 LOC TS/React</div>
+        </div>
+        <div>
+            <h3>Approach</h3>
+            <p>Extract interfaces → Create React components → Integrate with NabokovsWeb types → Maintain backward compatibility → Comprehensive testing</p>
+            <div class="metric important">Complexity: HIGH</div>
+            <div class="metric">Duration: ~8-12 hours</div>
+        </div>
+    </div>
+</div>
+
+<div class="two-column-layout">
+    <!-- Left Column: Core Implementation -->
+    <div class="collapsible critical" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>⚡ Phase 1: Interface Design</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>1.1 Analyze Current Data Structures</strong>
+                    <div class="indent-1 muted">File: hypertext/hypertext-experience.js:912-923</div>
+                    <div class="indent-1">Extract session model from lines 832-847</div>
+                    <div class="indent-1">Document message format (lines 1399-1412)</div>
+                    <div class="indent-1">Map pill states (lines 925)</div>
+                </li>
+                <li><strong>1.2 Create Core Type Definitions</strong>
+                    <div class="indent-1 muted">New file: ../NabokovsWeb/src/types/hypertext.ts</div>
+                    <div class="indent-1">Define <code>HypertextSession</code> interface</div>
+                    <div class="indent-1">Define <code>HypertextMessage</code> interface</div>
+                    <div class="indent-1">Define <code>HypertextResult</code> interface</div>
+                    <div class="indent-1">Define <code>PillState</code> enum</div>
+                    <div class="indent-1">Define <code>HypertextConfig</code> interface</div>
+                </li>
+                <li><strong>1.3 Export from Index</strong>
+                    <div class="indent-1 muted">File: ../NabokovsWeb/src/types/index.ts</div>
+                    <div class="indent-1">Add exports for hypertext types</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="collapsible critical" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>🧩 Phase 2: React Component Architecture</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>2.1 HypertextPalette Component</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/components/HypertextPalette.tsx</div>
+                    <div class="indent-1">Extract palette UI (lines 599-619)</div>
+                    <div class="indent-1">Convert to controlled React component</div>
+                    <div class="indent-1">Props: onGenerate, selectedText, visible</div>
+                </li>
+                <li><strong>2.2 HypertextTooltip Component</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/components/HypertextTooltip.tsx</div>
+                    <div class="indent-1">Extract tooltip UI (lines 621-689)</div>
+                    <div class="indent-1">Implement drag/resize with react-rnd</div>
+                    <div class="indent-1">Props: session, onSend, onRegenerate, position</div>
+                </li>
+                <li><strong>2.3 HypertextHighlight Component</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/components/HypertextHighlight.tsx</div>
+                    <div class="indent-1">Replace span creation (line 778-787)</div>
+                    <div class="indent-1">Handle click/hover interactions</div>
+                    <div class="indent-1">Props: session, onClick, children</div>
+                </li>
+                <li><strong>2.4 HypertextProvider Context</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/components/HypertextProvider.tsx</div>
+                    <div class="indent-1">Manage global hypertext state</div>
+                    <div class="indent-1">Provide session registry</div>
+                    <div class="indent-1">Handle selection events</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="collapsible critical" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>🔧 Phase 3: Service Layer</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>3.1 Hypertext API Service</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/services/hypertextAPIService.ts</div>
+                    <div class="indent-1">Extract streamHypertext (lines 1096-1156)</div>
+                    <div class="indent-1">Extract parseHypertextJson (lines 734-754)</div>
+                    <div class="indent-1">Handle SSE streaming</div>
+                </li>
+                <li><strong>3.2 Session Management Service</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/services/hypertextSessionService.ts</div>
+                    <div class="indent-1">Session CRUD operations</div>
+                    <div class="indent-1">Message history management</div>
+                    <div class="indent-1">State persistence</div>
+                </li>
+                <li><strong>3.3 Context Provider Service</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/services/hypertextContextService.ts</div>
+                    <div class="indent-1">Extract buildDefaultContext (lines 563-589)</div>
+                    <div class="indent-1">Handle custom context providers</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="collapsible critical" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>🎨 Phase 4: Styling Migration</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>4.1 Extract CSS Variables</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/styles/hypertextTheme.ts</div>
+                    <div class="indent-1">Convert BASE_STYLES (lines 2-560)</div>
+                    <div class="indent-1">Create Emotion theme object</div>
+                </li>
+                <li><strong>4.2 Component Styles</strong>
+                    <div class="indent-1">Use Emotion styled components</div>
+                    <div class="indent-1">Maintain existing visual design</div>
+                    <div class="indent-1">Add responsive breakpoints</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📍 Phase 5: Hooks & State Management</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>5.1 useHypertextSession Hook</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/shared/hooks/useHypertextSession.ts</div>
+                    <div class="indent-1">Manage individual session state</div>
+                    <div class="indent-1">Handle message streaming</div>
+                    <div class="indent-1">Return: session, sendMessage, regenerate</div>
+                </li>
+                <li><strong>5.2 useSelection Hook</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/shared/hooks/useSelection.ts</div>
+                    <div class="indent-1">Listen to document selection events</div>
+                    <div class="indent-1">Extract selection range & text</div>
+                    <div class="indent-1">Return: selection, range, clearSelection</div>
+                </li>
+                <li><strong>5.3 useHotkey Hook</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/shared/hooks/useHotkey.ts</div>
+                    <div class="indent-1">Register keyboard shortcuts</div>
+                    <div class="indent-1">Default: Cmd/Ctrl+Shift+K</div>
+                </li>
+                <li><strong>5.4 useMarkdown Hook</strong>
+                    <div class="indent-1 muted">New: ../NabokovsWeb/src/shared/hooks/useMarkdown.ts</div>
+                    <div class="indent-1">Load marked & DOMPurify libs</div>
+                    <div class="indent-1">Render markdown safely</div>
+                    <div class="indent-1">Return: renderMarkdown, isReady</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>✓ Phase 6: Testing Strategy</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h4>6.1 Unit Tests (Vitest)</h4>
+            <ul class="dense-list">
+                <li><code>tests/unit/hypertext/hypertextAPIService.test.ts</code> - API service</li>
+                <li><code>tests/unit/hypertext/hypertextSessionService.test.ts</code> - Session management</li>
+                <li><code>tests/unit/hypertext/parseHypertextJson.test.ts</code> - JSON parsing</li>
+                <li><code>tests/unit/components/HypertextPalette.test.tsx</code> - Palette UI</li>
+                <li><code>tests/unit/components/HypertextTooltip.test.tsx</code> - Tooltip UI</li>
+            </ul>
+            <h4>6.2 Integration Tests (Playwright)</h4>
+            <ul class="dense-list">
+                <li><code>tests/e2e/hypertext-selection-flow.spec.ts</code> - Selection → palette → generation</li>
+                <li><code>tests/e2e/hypertext-tooltip-interaction.spec.ts</code> - Hover, click, chat</li>
+                <li><code>tests/e2e/hypertext-persistence.spec.ts</code> - State preservation</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>🔄 Phase 7: Migration Strategy</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>7.1 Maintain Dual Versions</strong>
+                    <div class="indent-1">Keep vanilla JS in <code>hypertext/hypertext-experience.js</code></div>
+                    <div class="indent-1">Add React version to <code>../NabokovsWeb/src/components/</code></div>
+                    <div class="indent-1">Create adapter for backward compatibility</div>
+                </li>
+                <li><strong>7.2 Demo Page Updates</strong>
+                    <div class="indent-1">Create <code>demo/simple_chat_page_react.html</code></div>
+                    <div class="indent-1">Update <code>demo/hypertext_navigation_demo.html</code> to use React</div>
+                </li>
+                <li><strong>7.3 Gradual Deprecation</strong>
+                    <div class="indent-1">Phase 1: Both versions coexist (1-2 weeks)</div>
+                    <div class="indent-1">Phase 2: Mark vanilla JS as deprecated</div>
+                    <div class="indent-1">Phase 3: Remove after all consumers migrated</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📦 Phase 8: Build Configuration</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <ol class="dense-list">
+                <li><strong>8.1 Update package.json</strong>
+                    <div class="indent-1">Add React dependencies to current repo</div>
+                    <div class="indent-1">Add TypeScript & build tooling</div>
+                    <div class="indent-1">Create build script for standalone bundle</div>
+                </li>
+                <li><strong>8.2 Create Vite Config</strong>
+                    <div class="indent-1 muted">New: vite.config.hypertext.ts</div>
+                    <div class="indent-1">Build UMD bundle for standalone use</div>
+                    <div class="indent-1">Build ESM bundle for NabokovsWeb import</div>
+                </li>
+                <li><strong>8.3 TypeScript Config</strong>
+                    <div class="indent-1 muted">New: tsconfig.hypertext.json</div>
+                    <div class="indent-1">Configure path aliases matching NabokovsWeb</div>
+                    <div class="indent-1">Enable strict mode</div>
+                </li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<div class="collapsible full-width secondary" data-collapsible="closed">
+    <div class="collapsible-header">
+        <span>📋 Detailed Type Definitions</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <h3>Core Interfaces (../NabokovsWeb/src/types/hypertext.ts)</h3>
+        <pre><code>export interface HypertextSession {
+  id: string;
+  subject: string;
+  context: string;
+  wrapper: HTMLElement | null;
+  messages: HypertextMessage[];
+  lastResult: HypertextResult | null;
+  lastUserMessage: string | null;
+  lastInstructions: string;
+  isStreaming: boolean;
+  draft: string;
+  isPinned: boolean;
+  tooltipPosition: { left: number; top: number } | null;
+  tooltipSize: { width: number; height: number } | null;
+  lastUpdatedAt: number;
+}
+
+export interface HypertextMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  display?: string | { explanation: string; url?: string };
+  timestamp: number;
+}
+
+export interface HypertextResult {
+  pillText: string;
+  mode: 'inline' | 'reference';
+  explanation?: string;
+  url?: string;
+}
+
+export enum PillState {
+  Loading = 'loading',
+  ReadyInline = 'ready-inline',
+  ReadyReference = 'ready-reference',
+  ReadyUrl = 'ready-url',
+  Error = 'error'
+}
+
+export interface HypertextConfig {
+  backendUrl: string;
+  contextProvider?: (session: HypertextSession, opts: { truncateContext: boolean }) => string;
+  hotkey?: (event: KeyboardEvent) => boolean;
+  selectionValidator?: (range: Range, text: string) => boolean;
+  autoOpenTooltipOnHover?: boolean;
+  chatPageUrl?: string;
+}</code></pre>
+    </div>
+</div>
+
+<div class="collapsible full-width secondary" data-collapsible="closed">
+    <div class="collapsible-header">
+        <span>⚠️ Potential Issues & Mitigations</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <table>
+            <tr>
+                <th>Issue</th>
+                <th>Risk Level</th>
+                <th>Mitigation Strategy</th>
+            </tr>
+            <tr>
+                <td><strong>Selection API Complexity</strong><br/>Document selection events are tricky with React</td>
+                <td><span class="metric">HIGH</span></td>
+                <td>Use refs to access DOM directly; wrap in useEffect for event listeners; test extensively across browsers</td>
+            </tr>
+            <tr>
+                <td><strong>Drag/Resize State Management</strong><br/>Complex pointer event handling with React</td>
+                <td><span class="metric">MEDIUM</span></td>
+                <td>Use react-rnd library (already in NabokovsWeb deps); fallback to react-draggable if needed</td>
+            </tr>
+            <tr>
+                <td><strong>Streaming State Updates</strong><br/>SSE chunk handling can cause re-render issues</td>
+                <td><span class="metric">MEDIUM</span></td>
+                <td>Use useReducer for message state; debounce renders during streaming; implement optimistic UI updates</td>
+            </tr>
+            <tr>
+                <td><strong>Bundle Size</strong><br/>React + deps may increase bundle significantly</td>
+                <td><span class="metric">LOW</span></td>
+                <td>Use code splitting; lazy load tooltip component; externalize React for CDN usage; measure with bundlephobia</td>
+            </tr>
+            <tr>
+                <td><strong>Backward Compatibility</strong><br/>Existing vanilla JS consumers need migration path</td>
+                <td><span class="metric">MEDIUM</span></td>
+                <td>Create wrapper that exposes same API as vanilla JS; provide migration guide; version both implementations</td>
+            </tr>
+            <tr>
+                <td><strong>Markdown Rendering</strong><br/>Security concerns with user-generated markdown</td>
+                <td><span class="metric">HIGH</span></td>
+                <td>Use DOMPurify (already in deps); whitelist allowed tags; test XSS scenarios; add CSP headers in demo</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div class="collapsible full-width secondary" data-collapsible="closed">
+    <div class="collapsible-header">
+        <span>📊 Success Criteria & Validation</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <div class="two-column-layout">
+            <div>
+                <h3>Functional Requirements</h3>
+                <ul class="dense-list">
+                    <li>✓ Cmd+Shift+K opens palette on selection</li>
+                    <li>✓ Generate button creates hyperlink pill</li>
+                    <li>✓ Hover over pill shows tooltip with chat</li>
+                    <li>✓ Click pill opens full chat page</li>
+                    <li>✓ Tooltip drag/resize persists across reopens</li>
+                    <li>✓ Streaming indicator shows during generation</li>
+                    <li>✓ Pin button prevents auto-close</li>
+                    <li>✓ Text size controls work (A-, A+)</li>
+                    <li>✓ Regenerate button creates new response</li>
+                    <li>✓ Follow-up messages maintain context</li>
+                </ul>
+            </div>
+            <div>
+                <h3>Non-Functional Requirements</h3>
+                <ul class="dense-list">
+                    <li>✓ TypeScript: 100% type coverage</li>
+                    <li>✓ Tests: >80% code coverage</li>
+                    <li>✓ Performance: <100ms first render</li>
+                    <li>✓ Bundle: <50KB gzipped (excluding React)</li>
+                    <li>✓ A11y: WCAG 2.1 AA compliance</li>
+                    <li>✓ Browsers: Chrome, Firefox, Safari support</li>
+                    <li>✓ Documentation: JSDoc for all public APIs</li>
+                    <li>✓ Migration: Backward compatible wrapper</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="collapsible full-width secondary" data-collapsible="closed">
+    <div class="collapsible-header">
+        <span>📚 Documentation & Follow-up Tasks</span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <h3>Documentation to Create</h3>
+        <ol class="dense-list">
+            <li><code>../NabokovsWeb/docs/HYPERTEXT_ARCHITECTURE.md</code> - Component architecture diagram</li>
+            <li><code>../NabokovsWeb/docs/HYPERTEXT_API.md</code> - Public API reference</li>
+            <li><code>MIGRATION_GUIDE.md</code> - Vanilla JS → React migration steps</li>
+            <li><code>../NabokovsWeb/src/types/hypertext.ts</code> - Inline JSDoc comments</li>
+        </ol>
+
+        <h3>Future Enhancements</h3>
+        <ul class="dense-list">
+            <li>Add keyboard navigation (Tab, Arrow keys) for tooltip</li>
+            <li>Implement tooltip docking to viewport edges</li>
+            <li>Add animation options (spring, fade, slide)</li>
+            <li>Create Storybook stories for all components</li>
+            <li>Add telemetry hooks for usage analytics</li>
+            <li>Support custom pill renderers</li>
+            <li>Add collaborative session sharing</li>
+        </ul>
+    </div>
+</div>
+
+<div class="warning" style="margin-top: 16px;">
+    <strong>⚠️ Critical Path Dependencies:</strong>
+    <ul style="margin: 6px 0 0 16px;">
+        <li>Phase 1 must complete before Phase 2 (interfaces needed for component props)</li>
+        <li>Phase 2 must complete before Phase 6 (components needed for testing)</li>
+        <li>Phase 7 requires all previous phases complete</li>
+        <li>Backend must remain running on <code>localhost:3100</code> during development</li>
+    </ul>
+</div>
+
+<script>
+// Collapsible functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const collapsibles = document.querySelectorAll('.collapsible');
+
+    collapsibles.forEach(col => {
+        const header = col.querySelector('.collapsible-header');
+        const initialState = col.dataset.collapsible;
+
+        if (initialState === 'open') {
+            col.classList.add('open');
+        }
+
+        header.addEventListener('click', () => {
+            col.classList.toggle('open');
+        });
+    });
+
+    document.getElementById('expand-all').addEventListener('click', () => {
+        collapsibles.forEach(col => col.classList.add('open'));
+    });
+
+    document.getElementById('collapse-all').addEventListener('click', () => {
+        collapsibles.forEach(col => col.classList.remove('open'));
+    });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unskilled and Unaware: The Dunning-Kruger Effect</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --chinese-red: #8B0000;
+            --chinese-gold: #FFD700;
+            --jade-green: #00A86B;
+            --ink-black: #2B2B2B;
+            --paper-beige: #F5F5DC;
+            --light-cream: #FAFAF0;
+            --level-1: #000;
+            --level-2: #333;
+            --level-3: #666;
+            --level-4: #999;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+            color: var(--ink-black);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            line-height: 1.3;
+            font-size: 13px;
+            width: 100vw;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            padding: 8px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 900;
+            margin: 8px 0;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 14px;
+            color: var(--level-3);
+            margin-bottom: 12px;
+            font-style: italic;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 12px 0 6px 0;
+            padding: 6px 8px;
+            border-left: 4px solid var(--chinese-red);
+            background: rgba(139, 0, 0, 0.05);
+            color: var(--level-1);
+        }
+
+        h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 8px 0 4px 8px;
+            color: var(--level-2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h4 {
+            font-size: 12px;
+            font-weight: 600;
+            margin: 4px 0 2px 16px;
+            color: var(--level-2);
+        }
+
+        .hero-quote {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), white);
+            border: 3px solid var(--chinese-gold);
+            padding: 16px;
+            margin: 12px 0;
+            border-radius: 4px;
+            font-size: 16px;
+            font-style: italic;
+            text-align: center;
+            color: var(--chinese-red);
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 8px 0;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid rgba(139, 0, 0, 0.2);
+            border-radius: 3px;
+            padding: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .card.critical {
+            border: 2px solid var(--chinese-red);
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+        }
+
+        .card.success {
+            border-left: 4px solid var(--jade-green);
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            padding: 12px;
+            border-radius: 4px;
+            text-align: center;
+            margin: 6px 0;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 900;
+            display: block;
+            margin: 4px 0;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+
+        .collapsible {
+            margin: 6px 0;
+            width: 100%;
+        }
+
+        .collapsible-header {
+            cursor: pointer;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.06), rgba(255, 215, 0, 0.03));
+            border-left: 3px solid var(--chinese-gold);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .collapsible-header:hover {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.12), rgba(255, 215, 0, 0.06));
+        }
+
+        .collapsible-header .arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+            color: var(--chinese-red);
+            font-weight: bold;
+        }
+
+        .collapsible.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 12px;
+        }
+
+        .collapsible.open .collapsible-content {
+            max-height: 5000px;
+            padding: 12px;
+        }
+
+        ul, ol {
+            margin: 6px 0 6px 24px;
+            padding: 0;
+        }
+
+        li {
+            margin: 3px 0;
+            line-height: 1.4;
+        }
+
+        .prediction-box {
+            background: rgba(0, 168, 107, 0.1);
+            border-left: 4px solid var(--jade-green);
+            padding: 8px 12px;
+            margin: 6px 0;
+        }
+
+        .finding-box {
+            background: rgba(139, 0, 0, 0.05);
+            border-left: 4px solid var(--chinese-red);
+            padding: 8px 12px;
+            margin: 6px 0;
+        }
+
+        .mermaid {
+            background: white;
+            padding: 16px;
+            border-radius: 4px;
+            margin: 12px 0;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 12px;
+            background: white;
+        }
+
+        th {
+            background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+            color: white;
+            padding: 6px 8px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .key-insight {
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.08), rgba(255, 215, 0, 0.08));
+            border: 2px solid var(--chinese-gold);
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .key-insight:before {
+            content: "💡 ";
+            font-size: 18px;
+        }
+
+        code {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .paradox {
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(139, 0, 0, 0.1));
+            border: 2px dashed var(--chinese-red);
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 4px;
+            font-style: italic;
+        }
+
+        .authors {
+            text-align: center;
+            font-size: 13px;
+            color: var(--level-2);
+            margin: 8px 0;
+        }
+
+        strong {
+            color: var(--chinese-red);
+            font-weight: 700;
+        }
+
+        .visual-comparison {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .quartile-card {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .quartile-card.bottom {
+            border-color: var(--chinese-red);
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), white);
+        }
+
+        .quartile-card.top {
+            border-color: var(--jade-green);
+            background: linear-gradient(135deg, rgba(0, 168, 107, 0.1), white);
+        }
+
+        .quartile-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .quartile-stat {
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--chinese-red);
+            margin: 4px 0;
+        }
+
+        .quartile-desc {
+            font-size: 10px;
+            color: var(--level-3);
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Unskilled and Unaware of It</h1>
+        <div class="subtitle">How Difficulties in Recognizing One's Own Incompetence Lead to Inflated Self-Assessments</div>
+        <div class="authors"><strong>Justin Kruger & David Dunning</strong> • Cornell University • 1999</div>
+
+        <div class="hero-quote">
+            "Ignorance more frequently begets confidence than does knowledge"
+            <div style="font-size: 12px; margin-top: 8px; font-weight: 400;">— Charles Darwin, 1871</div>
+        </div>
+
+        <!-- Core Thesis -->
+        <div class="key-insight">
+            <strong>The Dual Burden of Incompetence:</strong> People who lack knowledge in a domain suffer twice—they perform poorly <em>and</em> lack the metacognitive ability to realize it. The same skills needed for competence are required to recognize incompetence.
+        </div>
+
+        <!-- Visual Overview -->
+        <div class="mermaid">
+graph TD
+    A[Lack of Skill/Knowledge] --> B[Poor Performance]
+    A --> C[Deficient Metacognitive Skills]
+    C --> D[Cannot Recognize Own Errors]
+    C --> E[Cannot Recognize Others' Competence]
+    D --> F[Inflated Self-Assessment]
+    E --> F
+    F --> G[Believe They Are Above Average]
+
+    style A fill:#8B0000,stroke:#FFD700,stroke-width:3px,color:#fff
+    style F fill:#FFD700,stroke:#8B0000,stroke-width:2px
+    style G fill:#CD5C5C,stroke:#8B0000,stroke-width:2px,color:#fff
+        </div>
+
+        <!-- Four Predictions -->
+        <h2>Four Key Predictions</h2>
+        <div class="two-column">
+            <div class="prediction-box">
+                <h4>Prediction 1: Dramatic Overestimation</h4>
+                Incompetent individuals will grossly overestimate their ability compared to objective criteria and their peers.
+            </div>
+            <div class="prediction-box">
+                <h4>Prediction 2: Metacognitive Deficits</h4>
+                The incompetent will be less able to recognize competence—both their own and others'.
+            </div>
+            <div class="prediction-box">
+                <h4>Prediction 3: Social Comparison Failure</h4>
+                The incompetent cannot use social comparison to gain insight, as they can't recognize superior performance.
+            </div>
+            <div class="prediction-box">
+                <h4>Prediction 4: Competence Begets Calibration</h4>
+                Making incompetent people competent will paradoxically help them realize their previous poor performance.
+            </div>
+        </div>
+
+        <!-- The Studies -->
+        <h2>Four Studies Across Different Domains</h2>
+
+        <div class="visual-comparison">
+            <div class="card">
+                <h3 style="margin: 0 0 8px 0; font-size: 13px;">Study 1</h3>
+                <div style="font-weight: 700; color: var(--chinese-red); margin: 4px 0;">Humor</div>
+                <div style="font-size: 11px; color: var(--level-3);">65 participants rated jokes; compared to professional comedians</div>
+            </div>
+            <div class="card">
+                <h3 style="margin: 0 0 8px 0; font-size: 13px;">Study 2</h3>
+                <div style="font-weight: 700; color: var(--chinese-red); margin: 4px 0;">Logical Reasoning</div>
+                <div style="font-size: 11px; color: var(--level-3);">45 participants; LSAT-style questions</div>
+            </div>
+            <div class="card">
+                <h3 style="margin: 0 0 8px 0; font-size: 13px;">Study 3</h3>
+                <div style="font-weight: 700; color: var(--chinese-red); margin: 4px 0;">Grammar</div>
+                <div style="font-size: 11px; color: var(--level-3);">84 participants; American Standard Written English</div>
+            </div>
+            <div class="card">
+                <h3 style="margin: 0 0 8px 0; font-size: 13px;">Study 4</h3>
+                <div style="font-weight: 700; color: var(--chinese-red); margin: 4px 0;">Logic (Wason Task)</div>
+                <div style="font-size: 11px; color: var(--level-3);">140 participants; with training intervention</div>
+            </div>
+        </div>
+
+        <!-- Key Findings Visualization -->
+        <h2>The Striking Pattern: Bottom Quartile Overestimation</h2>
+
+        <div class="visual-comparison">
+            <div class="quartile-card bottom">
+                <div class="quartile-label">Bottom Quartile</div>
+                <div class="quartile-stat">12th</div>
+                <div class="quartile-desc">Actual Percentile</div>
+                <div style="font-size: 24px; margin: 8px 0;">↓</div>
+                <div class="quartile-stat">58th</div>
+                <div class="quartile-desc">Perceived Percentile</div>
+                <div style="margin-top: 8px; font-weight: 700; color: var(--chinese-red);">+46 points!</div>
+            </div>
+            <div class="quartile-card">
+                <div class="quartile-label">2nd Quartile</div>
+                <div class="quartile-stat">~37th</div>
+                <div class="quartile-desc">Actual</div>
+                <div style="font-size: 24px; margin: 8px 0;">↓</div>
+                <div class="quartile-stat">~55th</div>
+                <div class="quartile-desc">Perceived</div>
+                <div style="margin-top: 8px; font-weight: 600; color: var(--level-2);">+18 points</div>
+            </div>
+            <div class="quartile-card">
+                <div class="quartile-label">3rd Quartile</div>
+                <div class="quartile-stat">~62nd</div>
+                <div class="quartile-desc">Actual</div>
+                <div style="font-size: 24px; margin: 8px 0;">↓</div>
+                <div class="quartile-stat">~68th</div>
+                <div class="quartile-desc">Perceived</div>
+                <div style="margin-top: 8px; font-weight: 600; color: var(--level-3);">+6 points</div>
+            </div>
+            <div class="quartile-card top">
+                <div class="quartile-label">Top Quartile</div>
+                <div class="quartile-stat">87th</div>
+                <div class="quartile-desc">Actual Percentile</div>
+                <div style="font-size: 24px; margin: 8px 0;">↑</div>
+                <div class="quartile-stat">72nd</div>
+                <div class="quartile-desc">Perceived Percentile</div>
+                <div style="margin-top: 8px; font-weight: 700; color: var(--jade-green);">-15 points</div>
+            </div>
+        </div>
+
+        <div class="key-insight">
+            Bottom quartile participants were <strong>4× more miscalibrated</strong> than top quartile participants. They believed they were above average when they actually scored in the 12th percentile!
+        </div>
+
+        <!-- Detailed Study Results -->
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><strong>Study 1: Humor Recognition</strong></span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <div class="two-column">
+                    <div class="finding-box">
+                        <h4>Method</h4>
+                        • 30 jokes rated on 1-11 scale<br>
+                        • Compared to 8 professional comedians (α = .76)<br>
+                        • Self-assessment of percentile rank
+                    </div>
+                    <div class="finding-box">
+                        <h4>Key Finding</h4>
+                        • Overall: 16 percentile point overestimation (p < .0001)<br>
+                        • Bottom quartile: Actual 12th → Perceived 58th<br>
+                        • Top quartile: <em>Underestimated</em> by 14 points
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Correlation: Perceived vs. Actual Ability</span>
+                    <span class="stat-number">r = .39***</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><strong>Study 2: Logical Reasoning (LSAT)</strong></span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <div class="two-column">
+                    <div class="finding-box">
+                        <h4>Method</h4>
+                        • 20 LSAT-style logical reasoning questions<br>
+                        • Three self-assessments: ability, percentile, raw score<br>
+                        • Objective performance criteria
+                    </div>
+                    <div class="finding-box">
+                        <h4>Key Finding</h4>
+                        • Bottom quartile: Actual 12th → Perceived 68th (ability)<br>
+                        • Overestimated raw score by 48% (14.2 vs. 9.6)<br>
+                        • Top quartile: Underestimated by 18 points
+                    </div>
+                </div>
+                <table>
+                    <tr>
+                        <th>Quartile</th>
+                        <th>Actual Score</th>
+                        <th>Perceived Score</th>
+                        <th>Δ</th>
+                    </tr>
+                    <tr>
+                        <td>Bottom</td>
+                        <td>9.6 / 20</td>
+                        <td>14.2 / 20</td>
+                        <td style="color: var(--chinese-red); font-weight: 700;">+4.6</td>
+                    </tr>
+                    <tr>
+                        <td>Top</td>
+                        <td>16.9 / 20</td>
+                        <td>14.0 / 20</td>
+                        <td style="color: var(--jade-green); font-weight: 700;">-2.9</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><strong>Study 3: Grammar + Metacognitive Assessment</strong></span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h3>Phase 1: Standard Assessment</h3>
+                <div class="finding-box">
+                    • 20 American Standard Written English questions<br>
+                    • Bottom quartile: Actual 10th → Perceived 67th (ability)<br>
+                    • Overestimated raw score by 40% (12.9 vs. 9.2)
+                </div>
+
+                <h3>Phase 2: The Metacognitive Test</h3>
+                <div class="key-insight">
+                    <strong>Critical Finding:</strong> Bottom-quartile participants brought back 4-6 weeks later to grade 5 peer tests
+                </div>
+
+                <div class="two-column">
+                    <div class="card critical">
+                        <h4>Bottom Quartile Performance</h4>
+                        • <strong>Lower grading accuracy:</strong> r = .37 (vs. .66 for top quartile)<br>
+                        • <strong>After seeing superior work:</strong> Did NOT revise self-assessments downward<br>
+                        • <strong>Metacognitive deficit confirmed:</strong> Cannot recognize competence in others
+                    </div>
+                    <div class="card success">
+                        <h4>Top Quartile Performance</h4>
+                        • <strong>Higher grading accuracy:</strong> r = .66<br>
+                        • <strong>After seeing poor work:</strong> Revised estimates UP by 10 percentile points<br>
+                        • <strong>False consensus effect:</strong> Had assumed others were equally competent
+                    </div>
+                </div>
+
+                <div class="mermaid">
+graph LR
+    A[Bottom Quartile] -->|Cannot recognize| B[Superior Performance]
+    B -->|Therefore| C[No Self-Assessment Update]
+    C --> D[Remains Miscalibrated]
+
+    E[Top Quartile] -->|Recognizes| F[Inferior Performance]
+    F -->|Therefore| G[Upward Self-Assessment]
+    G --> H[Becomes Better Calibrated]
+
+    style A fill:#CD5C5C,stroke:#8B0000,stroke-width:2px,color:#fff
+    style D fill:#8B0000,stroke:#FFD700,stroke-width:2px,color:#fff
+    style E fill:#00A86B,stroke:#FFD700,stroke-width:2px,color:#fff
+    style H fill:#00A86B,stroke:#8B0000,stroke-width:2px,color:#fff
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><strong>Study 4: The Training Intervention (Competence Begets Calibration)</strong></span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <div class="paradox">
+                    <strong>The Paradox:</strong> To make incompetent people realize their incompetence, you must first make them competent. Once they gain metacognitive skills, they recognize their previous errors—but they're no longer incompetent!
+                </div>
+
+                <h3>Method</h3>
+                <div class="two-column">
+                    <div class="card">
+                        <h4>Pre-Training Assessment</h4>
+                        • 10 Wason selection tasks<br>
+                        • Self-assessment of ability & performance<br>
+                        • Random assignment to training/control
+                    </div>
+                    <div class="card">
+                        <h4>Training Packet</h4>
+                        • 10-minute logical reasoning training<br>
+                        • Techniques for testing syllogisms<br>
+                        • Control group: unrelated filler task
+                    </div>
+                </div>
+
+                <h3>Critical Metacognitive Task</h3>
+                <div class="finding-box">
+                    <strong>Participants identified which specific test problems they answered correctly vs. incorrectly</strong>
+                </div>
+
+                <h3>Results: Training Transformed Metacognitive Ability</h3>
+
+                <table>
+                    <tr>
+                        <th>Group</th>
+                        <th>Metacognitive Accuracy (out of 10)</th>
+                        <th>Change in Self-Assessment</th>
+                    </tr>
+                    <tr style="background: rgba(139, 0, 0, 0.1);">
+                        <td><strong>Bottom Quartile - Trained</strong></td>
+                        <td>9.3 (93%)</td>
+                        <td style="color: var(--jade-green); font-weight: 700;">▼ Corrected downward significantly</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Bottom Quartile - Untrained</strong></td>
+                        <td>3.5 (35%)</td>
+                        <td style="color: var(--chinese-red); font-weight: 700;">▲ Increased overestimation!</td>
+                    </tr>
+                    <tr style="background: rgba(0, 168, 107, 0.1);">
+                        <td><strong>Top Quartile - Any Condition</strong></td>
+                        <td>9.9 (99%)</td>
+                        <td>Already well-calibrated</td>
+                    </tr>
+                </table>
+
+                <div class="two-column" style="margin-top: 12px;">
+                    <div class="stat-box">
+                        <span class="stat-label">Bottom Quartile: Before Training</span>
+                        <span class="stat-number">55th</span>
+                        <span class="stat-label" style="opacity: 0.8;">Perceived Ability Percentile</span>
+                    </div>
+                    <div class="stat-box" style="background: linear-gradient(135deg, var(--jade-green), #00C87C);">
+                        <span class="stat-label">Bottom Quartile: After Training</span>
+                        <span class="stat-number">44th</span>
+                        <span class="stat-label" style="opacity: 0.8;">More Accurate! (Actual: 14th)</span>
+                    </div>
+                </div>
+
+                <div class="key-insight">
+                    <strong>Mediational Analysis Confirmed:</strong> Improved metacognitive skills fully mediated the effect of training on self-assessment accuracy (β = -.68 to -.97, p < .01). Training alone didn't improve calibration—it was the metacognitive competence gained.
+                </div>
+
+                <div class="mermaid">
+graph TD
+    A[Training Intervention] --> B[Improved Logical Reasoning]
+    B --> C[Gained Metacognitive Skills]
+    C --> D[Can Now Distinguish Correct from Incorrect]
+    D --> E[Realize Previous Errors]
+    E --> F[More Accurate Self-Assessment]
+
+    G[No Training] --> H[Poor Logical Reasoning Persists]
+    H --> I[Metacognitive Deficits Persist]
+    I --> J[Cannot Monitor Performance]
+    J --> K[Inflated Self-Assessment Persists]
+
+    style A fill:#00A86B,stroke:#FFD700,stroke-width:3px,color:#fff
+    style C fill:#FFD700,stroke:#8B0000,stroke-width:2px
+    style F fill:#00A86B,stroke:#8B0000,stroke-width:2px,color:#fff
+    style K fill:#8B0000,stroke:#FFD700,stroke-width:2px,color:#fff
+                </div>
+            </div>
+        </div>
+
+        <!-- Theoretical Framework -->
+        <h2>The Metacognitive Skills Framework</h2>
+
+        <div class="mermaid">
+graph TB
+    subgraph "Competent Individual"
+        A1[Has Domain Knowledge] --> B1[Performs Well]
+        A1 --> C1[Has Metacognitive Skills]
+        C1 --> D1[Monitors Own Performance]
+        C1 --> E1[Recognizes Others' Competence]
+        D1 --> F1[Accurate Self-Assessment]
+        E1 --> F1
+    end
+
+    subgraph "Incompetent Individual"
+        A2[Lacks Domain Knowledge] --> B2[Performs Poorly]
+        A2 --> C2[Lacks Metacognitive Skills]
+        C2 --> D2[Cannot Monitor Own Performance]
+        C2 --> E2[Cannot Recognize Others' Competence]
+        D2 --> F2[Inflated Self-Assessment]
+        E2 --> F2
+        F2 --> G2[Believes Above Average]
+    end
+
+    style F1 fill:#00A86B,stroke:#8B0000,stroke-width:2px,color:#fff
+    style G2 fill:#8B0000,stroke:#FFD700,stroke-width:2px,color:#fff
+        </div>
+
+        <div class="key-insight">
+            <strong>It Takes One to Know One:</strong> The same knowledge that underlies the ability to produce correct judgment is the knowledge that underlies the ability to recognize correct judgment. To lack the former is to be deficient in the latter.
+        </div>
+
+        <!-- The Burden of Expertise -->
+        <h2>The Asymmetric Burdens</h2>
+
+        <div class="two-column">
+            <div class="card critical">
+                <h3 style="margin: 0 0 8px 0;">Burden of the Incompetent</h3>
+                <strong>Dual Burden:</strong>
+                <ul style="margin-top: 6px;">
+                    <li>Perform poorly</li>
+                    <li>Cannot realize they performed poorly</li>
+                    <li>Overestimate by ~46 percentile points</li>
+                    <li>Miscalibration stems from <em>error about self</em></li>
+                </ul>
+            </div>
+            <div class="card success">
+                <h3 style="margin: 0 0 8px 0;">Burden of the Expert</h3>
+                <strong>Single Burden:</strong>
+                <ul style="margin-top: 6px;">
+                    <li>Perform well</li>
+                    <li>But assume others do too (false consensus)</li>
+                    <li>Underestimate by ~15 percentile points</li>
+                    <li>Miscalibration stems from <em>error about others</em></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="finding-box" style="margin-top: 12px;">
+            <strong>Key Difference:</strong> Top quartile participants <em>corrected</em> their self-assessments upward when shown peers' inferior performance (Study 3). Bottom quartile participants did <em>not</em> correct downward when shown superior performance—they lacked the metacognitive ability to recognize it.
+        </div>
+
+        <!-- Why Don't They Learn? -->
+        <h2>Why Don't Incompetent People Learn From Experience?</h2>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><strong>Four Reasons Negative Feedback Fails</strong></span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <div class="two-column">
+                    <div class="card">
+                        <h4>1. Social Norms Against Negative Feedback</h4>
+                        People rarely receive direct negative feedback in everyday life. "If you don't have something nice to say, don't say anything at all."
+                    </div>
+                    <div class="card">
+                        <h4>2. Task Structures Preclude Feedback</h4>
+                        Some tasks don't provide self-correcting information (like McArthur Wheeler's lemon juice robbery attempt).
+                    </div>
+                    <div class="card">
+                        <h4>3. Attributional Ambiguity</h4>
+                        Failure can be attributed to lack of skill, effort, or luck. People often choose explanations other than incompetence.
+                    </div>
+                    <div class="card">
+                        <h4>4. Cannot Leverage Social Comparison</h4>
+                        To learn from others, you must recognize competence when you see it. The incompetent cannot.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Domain Considerations -->
+        <h2>When Does Incompetence Lead to Unawareness?</h2>
+
+        <div class="mermaid">
+graph LR
+    A[Domain Type] --> B{Knowledge = Competence?}
+    B -->|Yes| C[Grammar, Logic, Humor]
+    B -->|No| D[Basketball, Art Production]
+
+    C --> E[Lack of Knowledge = <br/>Lack of Metacognition]
+    E --> F[UNAWARENESS]
+
+    D --> G[Can Have Knowledge<br/>Without Skill]
+    G --> H[AWARENESS of Limits]
+
+    style F fill:#8B0000,stroke:#FFD700,stroke-width:3px,color:#fff
+    style H fill:#00A86B,stroke:#8B0000,stroke-width:2px,color:#fff
+        </div>
+
+        <div class="two-column">
+            <div class="finding-box">
+                <h4>Domains Where Unawareness Occurs</h4>
+                <strong>Knowledge = Competence = Metacognition</strong>
+                <ul style="margin-top: 6px;">
+                    <li>Grammar & Language</li>
+                    <li>Logical Reasoning</li>
+                    <li>Humor Recognition</li>
+                    <li>Social Competence</li>
+                    <li>Critical Thinking</li>
+                </ul>
+            </div>
+            <div class="finding-box">
+                <h4>Domains Where Awareness Can Occur</h4>
+                <strong>Knowledge ≠ Physical Competence</strong>
+                <ul style="margin-top: 6px;">
+                    <li>Sports (coaches vs. players)</li>
+                    <li>Art Production</li>
+                    <li>Musical Performance</li>
+                    <li>Surgical Skill</li>
+                </ul>
+                <div style="margin-top: 8px; font-size: 11px; color: var(--level-3);">
+                    Art appraisers know fine calligraphy but can't produce it—they're aware of their limits.
+                </div>
+            </div>
+        </div>
+
+        <!-- Implications -->
+        <h2>Broader Implications</h2>
+
+        <div class="collapsible open">
+            <div class="collapsible-header">
+                <span><strong>Connection to Above-Average Effect</strong></span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <div class="key-insight">
+                    The metacognitive deficits of the unskilled help explain the widespread "above-average effect"—where the average person believes they're above average.
+                </div>
+                <div class="stat-box" style="margin: 12px 0;">
+                    <span class="stat-label">Across All Four Studies</span>
+                    <span class="stat-number">Bottom Quartile</span>
+                    <span class="stat-label">Believed They Were <strong>Above Average</strong></span>
+                    <div style="margin-top: 8px; font-size: 14px;">(Z = 4.64, p < .0001)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="collapsible">
+            <div class="collapsible-header">
+                <span><strong>Relation to Overconfidence Research</strong></span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <div class="two-column">
+                    <div class="card">
+                        <h4>Traditional Overconfidence Finding</h4>
+                        Confidence exceeds accuracy, especially for <em>difficult tasks</em>
+                    </div>
+                    <div class="card">
+                        <h4>Dunning-Kruger Contribution</h4>
+                        Overconfidence also depends on properties of the <em>person</em> (skill level), not just the task
+                    </div>
+                </div>
+                <div class="finding-box" style="margin-top: 8px;">
+                    <strong>Rebuttal to Gigerenzer:</strong> Even when estimating raw scores (not single-event probabilities), participants overestimated: Z = 4.94, p < .0001
+                </div>
+            </div>
+        </div>
+
+        <!-- The McArthur Wheeler Story -->
+        <h2>The Cautionary Tale</h2>
+
+        <div class="card critical" style="margin: 12px 0;">
+            <h3 style="margin: 0 0 8px 0;">McArthur Wheeler's Lemon Juice Hypothesis</h3>
+            <div class="two-column">
+                <div>
+                    <strong>The Crime:</strong>
+                    <ul style="margin-top: 6px;">
+                        <li>Robbed two Pittsburgh banks in 1995</li>
+                        <li>Broad daylight, no disguise</li>
+                        <li>Rubbed lemon juice on his face</li>
+                        <li>Believed it made him invisible to cameras</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong>The Outcome:</strong>
+                    <ul style="margin-top: 6px;">
+                        <li>Caught same night via surveillance footage</li>
+                        <li>When shown the tapes: <em>"But I wore the juice!"</em></li>
+                        <li>Genuinely shocked he was visible</li>
+                        <li>Inspired this entire research program</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="margin-top: 12px; padding: 8px; background: rgba(139, 0, 0, 0.1); border-radius: 3px; font-style: italic;">
+                Wheeler's incompetence had a dual burden: Not only did his plan fail, but his incompetence robbed him of the ability to realize his plan would fail.
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <h2>Summary of Key Findings</h2>
+
+        <table>
+            <tr>
+                <th>Finding</th>
+                <th>Evidence</th>
+                <th>Implication</th>
+            </tr>
+            <tr>
+                <td><strong>Massive Overestimation</strong></td>
+                <td>Bottom quartile: +46 percentile points average across studies</td>
+                <td>Incompetent believe they're above average</td>
+            </tr>
+            <tr>
+                <td><strong>Metacognitive Deficit</strong></td>
+                <td>Bottom quartile: 35% accuracy identifying own errors (Study 4); r = .37 grading peers (Study 3)</td>
+                <td>Cannot recognize competence/incompetence</td>
+            </tr>
+            <tr>
+                <td><strong>Social Comparison Failure</strong></td>
+                <td>Shown superior work, bottom quartile didn't revise estimates (Study 3)</td>
+                <td>Cannot learn from observing others</td>
+            </tr>
+            <tr>
+                <td><strong>Competence → Calibration</strong></td>
+                <td>Training improved metacognition (93%) and self-assessment accuracy (Study 4)</td>
+                <td>Must become competent to recognize incompetence</td>
+            </tr>
+            <tr>
+                <td><strong>Expert Underestimation</strong></td>
+                <td>Top quartile: -15 percentile points (false consensus)</td>
+                <td>Assume others are equally skilled; correctable via social comparison</td>
+            </tr>
+        </table>
+
+        <!-- Final Quotes -->
+        <div class="hero-quote" style="margin-top: 24px;">
+            "It is one of the essential features of such incompetence that the person so afflicted is incapable of knowing that he is incompetent. To have such knowledge would already be to remedy a good portion of the offense."
+            <div style="font-size: 12px; margin-top: 8px; font-weight: 400;">— William Ian Miller, 1993</div>
+        </div>
+
+        <div class="paradox">
+            <strong>The Ultimate Paradox:</strong> One way to make people recognize their incompetence is to make them competent. Once they gain the metacognitive skills to recognize their own incompetence, they are no longer incompetent. "To have such knowledge would already be to remedy a good portion of the offense."
+        </div>
+
+        <div style="text-align: center; margin: 24px 0; padding: 16px; background: white; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="font-size: 11px; color: var(--level-3); margin-bottom: 4px;">PUBLISHED IN</div>
+            <div style="font-weight: 700; color: var(--chinese-red);">Journal of Personality and Social Psychology</div>
+            <div style="font-size: 12px; color: var(--level-2);">1999, Vol. 77, No. 6, 1121-1134</div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#FFD700',
+                primaryTextColor: '#2B2B2B',
+                primaryBorderColor: '#8B0000',
+                lineColor: '#8B0000',
+                secondaryColor: '#F5F5DC',
+                tertiaryColor: '#FAFAF0'
+            }
+        });
+
+        // Collapsible functionality
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const collapsible = this.parentElement;
+                collapsible.classList.toggle('open');
+            });
+        });
+    </script>
+</body>
+</html>

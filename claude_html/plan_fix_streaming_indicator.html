@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Plan: Fix Streaming Indicator Position & Styling</title>
+    <style>
+        :root {
+            --color-bg: #faf8f5;
+            --color-surface: #fff;
+            --color-border: #d4cfc7;
+            --color-text: #2d2d2d;
+            --color-text-muted: #6b6b6b;
+            --color-accent: #b8391f;
+            --color-accent-light: #e8ddd8;
+            --color-success: #2d7a3e;
+            --color-warning: #c87d1f;
+            --color-info: #1f5f8b;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+            --radius: 6px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-bg);
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h2, h3, h4 {
+            margin: 0 0 12px 0;
+            line-height: 1.3;
+            font-weight: 600;
+        }
+        h1 { font-size: 24px; color: var(--color-accent); }
+        h2 { font-size: 18px; margin-top: 20px; }
+        h3 { font-size: 16px; margin-top: 16px; }
+
+        p { margin: 0 0 12px 0; }
+
+        .important-always-visible {
+            background: var(--color-surface);
+            border: 2px solid var(--color-accent);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .collapsible {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .collapsible.critical { border-left: 4px solid var(--color-accent); }
+        .collapsible.secondary { border-left: 4px solid var(--color-info); }
+        .collapsible.full-width { grid-column: 1 / -1; }
+
+        .collapsible-header {
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            background: linear-gradient(to bottom, #fff, #fafafa);
+        }
+
+        .collapsible-header:hover {
+            background: var(--color-accent-light);
+        }
+
+        .collapsible-content {
+            padding: 16px;
+            display: none;
+        }
+
+        .collapsible[data-collapsible="open"] .collapsible-content {
+            display: block;
+        }
+
+        .collapsible[data-collapsible="open"] .arrow {
+            transform: rotate(90deg);
+        }
+
+        .arrow {
+            transition: transform 0.2s;
+            font-size: 14px;
+        }
+
+        .dense-list {
+            margin: 0;
+            padding-left: 24px;
+        }
+
+        .dense-list li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .indent-1 {
+            margin-left: 20px;
+            font-size: 13px;
+        }
+
+        .muted {
+            color: var(--color-text-muted);
+        }
+
+        .metric {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .metric.important {
+            background: var(--color-accent-light);
+            color: var(--color-accent);
+        }
+
+        code {
+            font-family: "SF Mono", Consolas, monospace;
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: var(--radius);
+            overflow-x: auto;
+            font-size: 13px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            background: var(--color-surface);
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        button:hover {
+            background: var(--color-accent-light);
+        }
+    </style>
+</head>
+<body>
+    <div style="margin: 8px 0; text-align: right;">
+        <button id="expand-all">Expand All</button>
+        <button id="collapse-all">Collapse All</button>
+    </div>
+
+    <div class="important-always-visible">
+        <h1>📋 Task Plan: Fix Streaming Indicator Position & Styling</h1>
+        <div class="two-column-layout">
+            <div>
+                <h3>Objective</h3>
+                <p>Fix the "Generating…" streaming indicator to:</p>
+                <ol style="margin: 8px 0; padding-left: 20px;">
+                    <li>Appear at the <strong>bottom</strong> (after all messages), not top</li>
+                    <li>Use visual styling to indicate loading state (background color)</li>
+                </ol>
+            </div>
+            <div>
+                <h3>Approach</h3>
+                <p>Change <code>fragment.insertBefore()</code> to <code>fragment.appendChild()</code> and add CSS styling similar to NabokovsWeb's element chat for loading state.</p>
+                <div class="metric important">Complexity: Low</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="two-column-layout">
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>⚡ Implementation Steps</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <ol class="dense-list">
+                    <li><strong>Step 1:</strong> Fix streaming indicator position
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js:1307</div>
+                        <div class="indent-1">
+                            • Change <code>fragment.insertBefore(streamingItem, fragment.firstChild)</code><br>
+                            • To <code>fragment.appendChild(streamingItem)</code><br>
+                            • This places streaming indicator at bottom instead of top
+                        </div>
+                    </li>
+                    <li><strong>Step 2:</strong> Add CSS class for streaming state
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js:134-406 (BASE_STYLES)</div>
+                        <div class="indent-1">
+                            • Add new CSS class <code>.hx-chat-tooltip__item--streaming</code><br>
+                            • Background: <code>rgba(177, 60, 60, 0.05)</code> (light red tint)<br>
+                            • Content background: <code>rgba(177, 60, 60, 0.08)</code>
+                        </div>
+                    </li>
+                    <li><strong>Step 3:</strong> Apply streaming class to indicator
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js:1298</div>
+                        <div class="indent-1">
+                            • Change <code>streamingItem.className = 'hx-chat-tooltip__item'</code><br>
+                            • To <code>streamingItem.className = 'hx-chat-tooltip__item hx-chat-tooltip__item--streaming'</code>
+                        </div>
+                    </li>
+                    <li><strong>Step 4:</strong> Update test expectations
+                        <div class="indent-1 muted">File: tests/hypertext-demo.spec.mjs</div>
+                        <div class="indent-1">
+                            • No changes needed - streaming indicator already expected at bottom<br>
+                            • Verify tests still pass
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="collapsible secondary" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>✓ Testing & Validation</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <ul class="dense-list">
+                    <li><strong>Manual Test 1:</strong> Open demo, create hypertext, click "Generate Hypertext"</li>
+                    <li><strong>Verify:</strong> "Generating…" appears at BOTTOM of chat (after user message)</li>
+                    <li><strong>Verify:</strong> Streaming indicator has light red/pink background tint</li>
+                    <li><strong>Verify:</strong> After generation completes, assistant message appears at bottom</li>
+                    <li><strong>Manual Test 2:</strong> Send follow-up message while response is generating</li>
+                    <li><strong>Verify:</strong> Streaming indicator still at bottom</li>
+                    <li><strong>Playwright Test:</strong> Run existing tests to ensure no regressions
+                        <div class="indent-1"><code>npx playwright test tests/hypertext-demo.spec.mjs</code></div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>📍 Prerequisites & Context</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h3>Current Implementation</h3>
+                <ul class="dense-list">
+                    <li>Streaming indicator uses <code>fragment.insertBefore(streamingItem, fragment.firstChild)</code></li>
+                    <li>This inserts at the beginning (top), making it appear above user message</li>
+                    <li>No visual distinction for streaming state (same style as regular messages)</li>
+                </ul>
+
+                <h3>Reference Implementation</h3>
+                <ul class="dense-list">
+                    <li>NabokovsWeb/src/components/ElementChatWindow.tsx:1653-1680</li>
+                    <li>Uses <code>rgba(177, 60, 60, 0.05)</code> for message background</li>
+                    <li>Uses <code>rgba(177, 60, 60, 0.08)</code> for content background</li>
+                    <li>Renders streaming indicator AFTER all messages</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>⚠️ Potential Issues & Mitigations</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h3>Edge Cases</h3>
+                <ul class="dense-list">
+                    <li><strong>Issue:</strong> Scroll position after streaming indicator appears
+                        <br><strong>Mitigation:</strong> Already handled by <code>scrollTop = scrollHeight</code> (line 1311)
+                    </li>
+                    <li><strong>Issue:</strong> Multiple rapid messages during streaming
+                        <br><strong>Mitigation:</strong> <code>isStreaming</code> flag prevents multiple indicators
+                    </li>
+                    <li><strong>Issue:</strong> CSS color may not match existing palette
+                        <br><strong>Mitigation:</strong> Using same red tint as existing border colors (<code>--hx-border</code>)
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>🔍 Technical Details</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>CSS for Streaming Indicator</h3>
+            <pre>
+.hx-chat-tooltip__item--streaming {
+  background: rgba(177, 60, 60, 0.05);
+  border-radius: 6px;
+}
+
+.hx-chat-tooltip__item--streaming .hx-chat-tooltip__content {
+  background: rgba(177, 60, 60, 0.08);
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+            </pre>
+
+            <h3>Code Change</h3>
+            <pre>
+// OLD (line 1307):
+fragment.insertBefore(streamingItem, fragment.firstChild);
+
+// NEW:
+fragment.appendChild(streamingItem);
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const collapsible = header.parentElement;
+                const isOpen = collapsible.getAttribute('data-collapsible') === 'open';
+                collapsible.setAttribute('data-collapsible', isOpen ? 'closed' : 'open');
+            });
+        });
+
+        document.getElementById('expand-all').addEventListener('click', () => {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.setAttribute('data-collapsible', 'open');
+            });
+        });
+
+        document.getElementById('collapse-all').addEventListener('click', () => {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.setAttribute('data-collapsible', 'closed');
+            });
+        });
+    </script>
+</body>
+</html>

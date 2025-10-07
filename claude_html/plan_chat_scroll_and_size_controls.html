@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Plan: Chat Scroll Direction & Continuous Size Controls</title>
+    <style>
+        :root {
+            --color-bg: #faf8f5;
+            --color-surface: #fff;
+            --color-border: #d4cfc7;
+            --color-text: #2d2d2d;
+            --color-text-muted: #6b6b6b;
+            --color-accent: #b8391f;
+            --color-accent-light: #e8ddd8;
+            --color-success: #2d7a3e;
+            --color-warning: #c87d1f;
+            --color-info: #1f5f8b;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+            --radius: 6px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-bg);
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h2, h3, h4 {
+            margin: 0 0 12px 0;
+            line-height: 1.3;
+            font-weight: 600;
+        }
+        h1 { font-size: 24px; color: var(--color-accent); }
+        h2 { font-size: 18px; margin-top: 20px; }
+        h3 { font-size: 16px; margin-top: 16px; }
+
+        p { margin: 0 0 12px 0; }
+
+        .important-always-visible {
+            background: var(--color-surface);
+            border: 2px solid var(--color-accent);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .collapsible {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .collapsible.critical { border-left: 4px solid var(--color-accent); }
+        .collapsible.secondary { border-left: 4px solid var(--color-info); }
+        .collapsible.full-width { grid-column: 1 / -1; }
+
+        .collapsible-header {
+            padding: 12px 16px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            background: linear-gradient(to bottom, #fff, #fafafa);
+        }
+
+        .collapsible-header:hover {
+            background: var(--color-accent-light);
+        }
+
+        .collapsible-content {
+            padding: 16px;
+            display: none;
+        }
+
+        .collapsible[data-collapsible="open"] .collapsible-content {
+            display: block;
+        }
+
+        .collapsible[data-collapsible="open"] .arrow {
+            transform: rotate(90deg);
+        }
+
+        .arrow {
+            transition: transform 0.2s;
+            font-size: 14px;
+        }
+
+        .dense-list {
+            margin: 0;
+            padding-left: 24px;
+        }
+
+        .dense-list li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .indent-1 {
+            margin-left: 20px;
+            font-size: 13px;
+        }
+
+        .muted {
+            color: var(--color-text-muted);
+        }
+
+        .metric {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .metric.important {
+            background: var(--color-accent-light);
+            color: var(--color-accent);
+        }
+
+        code {
+            font-family: "SF Mono", Consolas, monospace;
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: var(--radius);
+            overflow-x: auto;
+            font-size: 13px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            background: var(--color-surface);
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        button:hover {
+            background: var(--color-accent-light);
+        }
+    </style>
+</head>
+<body>
+    <div style="margin: 8px 0; text-align: right;">
+        <button id="expand-all">Expand All</button>
+        <button id="collapse-all">Collapse All</button>
+    </div>
+
+    <div class="important-always-visible">
+        <h1>📋 Task Plan: Chat Scroll Direction & Continuous Size Controls</h1>
+        <div class="two-column-layout">
+            <div>
+                <h3>Objective</h3>
+                <p>Modify the hypertext chat interface to:</p>
+                <ol style="margin: 8px 0; padding-left: 20px;">
+                    <li>Scroll downward (newest messages at bottom) instead of upward</li>
+                    <li>Replace binary size toggle with continuous +/- size controls</li>
+                </ol>
+            </div>
+            <div>
+                <h3>Approach</h3>
+                <p>Update <code>hypertext-experience.js</code> to reverse message ordering and implement granular font size controls with multiple preset levels.</p>
+                <div class="metric important">Complexity: Low-Medium</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="two-column-layout">
+        <div class="collapsible critical" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>⚡ Implementation Steps</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <ol class="dense-list">
+                    <li><strong>Step 1:</strong> Modify chat message rendering to show newest at bottom
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js:1203-1281</div>
+                        <div class="indent-1">
+                            • Remove <code>.reverse()</code> from line 1210<br>
+                            • Change <code>scrollTop = 0</code> to <code>scrollTop = scrollHeight</code> on line 1263
+                        </div>
+                    </li>
+                    <li><strong>Step 2:</strong> Define size level constants
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js (after line 713)</div>
+                        <div class="indent-1">
+                            • Add array: <code>['small', 'normal', 'large', 'xlarge']</code><br>
+                            • Map to font sizes: 12px, 13px, 15.5px, 18px
+                        </div>
+                    </li>
+                    <li><strong>Step 3:</strong> Update CSS to support all size levels
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js:134-136</div>
+                        <div class="indent-1">
+                            • Add rules for <code>[data-size="small"]</code>, <code>[data-size="xlarge"]</code><br>
+                            • Update textarea size mappings
+                        </div>
+                    </li>
+                    <li><strong>Step 4:</strong> Replace single size toggle button with +/- buttons
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js:482, 473-507</div>
+                        <div class="indent-1">
+                            • Replace single button with two: "A-" (decrease) and "A+" (increase)<br>
+                            • Update button classes and styling
+                        </div>
+                    </li>
+                    <li><strong>Step 5:</strong> Implement size increment/decrement logic
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js:682-688</div>
+                        <div class="indent-1">
+                            • Create <code>changeFontSize(delta)</code> function<br>
+                            • Clamp within array bounds<br>
+                            • Update both listeners to call this function
+                        </div>
+                    </li>
+                    <li><strong>Step 6:</strong> Update storage and preferences
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js:715-738</div>
+                        <div class="indent-1">
+                            • Ensure <code>readStoredTextSize()</code> handles all four sizes<br>
+                            • Default to 'normal' if invalid value
+                        </div>
+                    </li>
+                    <li><strong>Step 7:</strong> Update button state rendering
+                        <div class="indent-1 muted">File: hypertext/hypertext-experience.js:732-738</div>
+                        <div class="indent-1">
+                            • Disable "A-" when at minimum<br>
+                            • Disable "A+" when at maximum<br>
+                            • Update aria-labels accordingly
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="collapsible secondary" data-collapsible="open">
+            <div class="collapsible-header">
+                <span>✓ Testing & Validation</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <ul class="dense-list">
+                    <li><strong>Manual Test 1:</strong> Open <code>demo/hypertext_navigation_demo.html</code></li>
+                    <li><strong>Manual Test 2:</strong> Create hypertext link, send multiple messages</li>
+                    <li><strong>Verify:</strong> Newest messages appear at bottom, scroll automatically goes to bottom</li>
+                    <li><strong>Manual Test 3:</strong> Click "A-" multiple times, verify sizes decrease</li>
+                    <li><strong>Manual Test 4:</strong> Click "A+" multiple times, verify sizes increase</li>
+                    <li><strong>Verify:</strong> Buttons disable at min/max bounds</li>
+                    <li><strong>Persistence Test:</strong> Change size, refresh page, verify size persists</li>
+                    <li><strong>Playwright Test:</strong> Run existing hypertext-demo.spec.mjs to ensure no regressions</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>📍 Prerequisites & Context</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h3>Files to Examine</h3>
+                <ul class="dense-list">
+                    <li><code>hypertext/hypertext-experience.js</code> — Main UI logic</li>
+                    <li><code>demo/simple_chat_page.html</code> — Full chat page (already scrolls correctly)</li>
+                    <li><code>tests/hypertext-demo.spec.mjs</code> — Existing regression tests</li>
+                </ul>
+
+                <h3>Current Implementation</h3>
+                <ul class="dense-list">
+                    <li>Binary toggle between 'normal' and 'large' sizes</li>
+                    <li>Single button with "A⇵" / "A⇳" label</li>
+                    <li>Messages reversed and scrolled to top (newest first)</li>
+                    <li>LocalStorage key: <code>hypertext:inlineSize</code></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="collapsible secondary" data-collapsible="closed">
+            <div class="collapsible-header">
+                <span>⚠️ Potential Issues & Mitigations</span>
+                <span class="arrow">▶</span>
+            </div>
+            <div class="collapsible-content">
+                <h3>Edge Cases</h3>
+                <ul class="dense-list">
+                    <li><strong>Issue:</strong> Users with stored 'large' size will need migration
+                        <br><strong>Mitigation:</strong> In <code>readStoredTextSize()</code>, map 'large' → 'large' (no change needed)
+                    </li>
+                    <li><strong>Issue:</strong> Scrolling to bottom during streaming may cause jitter
+                        <br><strong>Mitigation:</strong> Keep scroll at bottom only when user hasn't manually scrolled up
+                    </li>
+                    <li><strong>Issue:</strong> Button layout may wrap on narrow tooltips
+                        <br><strong>Mitigation:</strong> Use compact button labels and ensure min-width is sufficient
+                    </li>
+                    <li><strong>Issue:</strong> Rapidly clicking +/- may cause layout shifts
+                        <br><strong>Mitigation:</strong> Debounce size changes or use CSS transitions
+                    </li>
+                </ul>
+
+                <h3>Accessibility Concerns</h3>
+                <ul class="dense-list">
+                    <li>Ensure buttons have proper <code>aria-label</code> attributes</li>
+                    <li>Announce size changes to screen readers</li>
+                    <li>Maintain keyboard navigation between buttons</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapsible full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📊 Post-Implementation</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Documentation Needs</h3>
+            <ul class="dense-list">
+                <li>Update <code>CLAUDE.md</code> if size control pattern is notable</li>
+                <li>No README changes needed (internal UI improvement)</li>
+            </ul>
+
+            <h3>Follow-up Tasks</h3>
+            <ul class="dense-list">
+                <li>Consider adding keyboard shortcuts (Cmd+= / Cmd+- for size)</li>
+                <li>Evaluate if simple_chat_page.html needs matching +/- controls</li>
+                <li>Consider exposing size levels as configuration options</li>
+            </ul>
+
+            <h3>Maintenance Considerations</h3>
+            <ul class="dense-list">
+                <li>Size levels are now hardcoded; future changes require updating multiple locations</li>
+                <li>Consider extracting size config to top-level constant</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="collapsible full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>🔍 Technical Details</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Size Level Mapping</h3>
+            <pre>
+const SIZE_LEVELS = ['small', 'normal', 'large', 'xlarge'];
+const SIZE_TO_INDEX = { small: 0, normal: 1, large: 2, xlarge: 3 };
+const DEFAULT_SIZE = 'normal';
+
+CSS Mappings:
+- small: 11px (body), 12px (textarea)
+- normal: 13px (body), 12.5px (textarea)
+- large: 15.5px (body), 14px (textarea)
+- xlarge: 18px (body), 16px (textarea)
+            </pre>
+
+            <h3>Button HTML Structure (Revised)</h3>
+            <pre>
+&lt;button class="hx-chat-tooltip__size-btn"
+        data-action="decrease-size"
+        aria-label="Decrease text size"&gt;A-&lt;/button&gt;
+&lt;button class="hx-chat-tooltip__size-btn"
+        data-action="increase-size"
+        aria-label="Increase text size"&gt;A+&lt;/button&gt;
+            </pre>
+        </div>
+    </div>
+
+    <script>
+        // Collapsible functionality
+        document.querySelectorAll('.collapsible-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const collapsible = header.parentElement;
+                const isOpen = collapsible.getAttribute('data-collapsible') === 'open';
+                collapsible.setAttribute('data-collapsible', isOpen ? 'closed' : 'open');
+            });
+        });
+
+        // Expand/Collapse all
+        document.getElementById('expand-all').addEventListener('click', () => {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.setAttribute('data-collapsible', 'open');
+            });
+        });
+
+        document.getElementById('collapse-all').addEventListener('click', () => {
+            document.querySelectorAll('.collapsible').forEach(el => {
+                el.setAttribute('data-collapsible', 'closed');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bug Fix Verification</title>
+</head>
+<body>
+    <h1>Bug Fix Verification Test</h1>
+    <p id="test-content">Vladimir Nabokov was a Russian-American novelist, poet, translator, and entomologist. His first nine novels were in Russian.</p>
+
+    <div id="results" style="margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 5px;">
+        <h2>Test Results</h2>
+        <div id="output"></div>
+    </div>
+
+    <script src="../hypertext/hypertext-experience.js"></script>
+    <script>
+        // Mock backend
+        let responseQueue = [];
+
+        window.fetch = async (url, options) => {
+            if (url.includes('/api/hypertext')) {
+                const response = responseQueue.shift() || {
+                    pillText: 'Test',
+                    mode: 'reference',
+                    explanation: 'This is a test explanation with enough text to select for nested hypertext generation.',
+                    url: 'https://example.com/test'
+                };
+
+                const stream = new ReadableStream({
+                    start(controller) {
+                        const chunk = JSON.stringify({ delta: { text: JSON.stringify(response) } });
+                        controller.enqueue(new TextEncoder().encode(`data: ${chunk}\n\n`));
+                        controller.enqueue(new TextEncoder().encode(`data: [DONE]\n\n`));
+                        controller.close();
+                    }
+                });
+
+                return {
+                    ok: true,
+                    body: stream,
+                    headers: new Headers({ 'Content-Type': 'text/event-stream' })
+                };
+            }
+            return { ok: false };
+        };
+
+        // Initialize
+        window.createHypertextExperience(document, window, {
+            backendUrl: '/api/hypertext',
+            chatPageUrl: '/demo/simple_chat_page.html'
+        });
+
+        const output = document.getElementById('output');
+        function log(msg, status = 'info') {
+            const color = status === 'pass' ? 'green' : status === 'fail' ? 'red' : 'black';
+            output.innerHTML += `<div style="color: ${color}; margin: 5px 0;">${msg}</div>`;
+            console.log(msg);
+        }
+
+        async function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function runTests() {
+            log('=== STARTING BUG FIX VERIFICATION ===');
+
+            // Test Bug #1: Pin State Restoration
+            log('');
+            log('TEST BUG #1: Pin state restoration when child closes', 'info');
+            log('------------------------------------------------------');
+
+            try {
+                // Generate level 0
+                log('Step 1: Generate level 0 hypertext');
+                const p = document.getElementById('test-content');
+                const range = document.createRange();
+                range.selectNodeContents(p);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+
+                const event = new KeyboardEvent('keydown', {
+                    key: 'k',
+                    code: 'KeyK',
+                    metaKey: true,
+                    shiftKey: true,
+                    bubbles: true
+                });
+                document.dispatchEvent(event);
+
+                await sleep(200);
+                document.querySelector('#hx-generate-button')?.click();
+                await sleep(3000);
+
+                const tooltip0 = document.querySelector('.hx-chat-tooltip');
+                if (!tooltip0) {
+                    log('FAIL: Level 0 tooltip not created', 'fail');
+                    return;
+                }
+                log('PASS: Level 0 tooltip created', 'pass');
+
+                // Check initial pin state (should be auto-pinned from generation)
+                log('Step 2: Check auto-pin after generation');
+                let pinned = tooltip0.dataset.pinned;
+                log(`Level 0 pinned status: ${pinned}`);
+
+                // Manually unpin for the test
+                log('Step 3: Manually unpin level 0');
+                const pinButton = tooltip0.querySelector('[data-action="pin"]');
+                pinButton?.click();
+                await sleep(300);
+
+                pinned = tooltip0.dataset.pinned;
+                log(`Level 0 pinned after manual unpin: ${pinned}`);
+                if (pinned !== 'false') {
+                    log('FAIL: Manual unpin did not work', 'fail');
+                    return;
+                }
+
+                // Generate nested hypertext
+                log('Step 4: Generate level 1 nested hypertext');
+                const content = tooltip0.querySelector('.hx-chat-tooltip__content');
+                const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+                let textNode = null;
+                while (walker.nextNode()) {
+                    if (walker.currentNode.textContent.trim().length > 15) {
+                        textNode = walker.currentNode;
+                        break;
+                    }
+                }
+
+                if (!textNode) {
+                    log('FAIL: Could not find text in tooltip', 'fail');
+                    return;
+                }
+
+                const range2 = document.createRange();
+                range2.setStart(textNode, 0);
+                range2.setEnd(textNode, Math.min(20, textNode.textContent.length));
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range2);
+
+                document.dispatchEvent(event);
+                await sleep(200);
+                document.querySelector('#hx-generate-button')?.click();
+                await sleep(3000);
+
+                const tooltips = document.querySelectorAll('.hx-chat-tooltip');
+                log(`Tooltip count: ${tooltips.length}`);
+
+                if (tooltips.length !== 2) {
+                    log('FAIL: Level 1 tooltip not created', 'fail');
+                    return;
+                }
+                log('PASS: Level 1 tooltip created', 'pass');
+
+                // Verify parent is auto-pinned
+                log('Step 5: Verify parent is auto-pinned when child created');
+                pinned = tooltip0.dataset.pinned;
+                log(`Level 0 pinned after child created: ${pinned}`);
+
+                if (pinned !== 'true') {
+                    log('FAIL: Parent was not auto-pinned when child created', 'fail');
+                    return;
+                }
+                log('PASS: Parent auto-pinned when child created', 'pass');
+
+                // Close child
+                log('Step 6: Close level 1 child tooltip');
+                const tooltip1 = tooltips[1];
+                const closeButton = tooltip1.querySelector('[data-action="close"]');
+                closeButton?.click();
+                await sleep(500);
+
+                // CRITICAL CHECK: Parent should be unpinned
+                log('Step 7: CRITICAL CHECK - Parent should be UNPINNED');
+                pinned = tooltip0.dataset.pinned;
+                log(`Level 0 pinned after child closed: ${pinned}`);
+
+                if (pinned === 'false') {
+                    log('✅ BUG #1 FIXED: Parent correctly unpinned after child closed', 'pass');
+                } else {
+                    log('❌ BUG #1 STILL BROKEN: Parent is still pinned', 'fail');
+                }
+
+            } catch (error) {
+                log(`ERROR in Bug #1 test: ${error.message}`, 'fail');
+                console.error(error);
+            }
+
+            // Clean up
+            await sleep(500);
+            document.querySelectorAll('.hx-chat-tooltip').forEach(t => t.remove());
+            document.querySelectorAll('.hx-highlight').forEach(h => h.replaceWith(document.createTextNode(h.textContent)));
+            await sleep(500);
+
+            // Test Bug #2: Cascade Delete
+            log('');
+            log('TEST BUG #2: Cascade delete when closing pinned parent', 'info');
+            log('------------------------------------------------------');
+
+            try {
+                // Generate level 0
+                log('Step 1: Generate level 0 hypertext');
+                const p = document.getElementById('test-content');
+                const range = document.createRange();
+                range.selectNodeContents(p);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+
+                const event = new KeyboardEvent('keydown', {
+                    key: 'k',
+                    code: 'KeyK',
+                    metaKey: true,
+                    shiftKey: true,
+                    bubbles: true
+                });
+                document.dispatchEvent(event);
+
+                await sleep(200);
+                document.querySelector('#hx-generate-button')?.click();
+                await sleep(3000);
+
+                const tooltip0 = document.querySelector('.hx-chat-tooltip');
+                if (!tooltip0) {
+                    log('FAIL: Level 0 tooltip not created', 'fail');
+                    return;
+                }
+
+                // Generate nested hypertext
+                log('Step 2: Generate level 1 nested hypertext');
+                const content = tooltip0.querySelector('.hx-chat-tooltip__content');
+                const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+                let textNode = null;
+                while (walker.nextNode()) {
+                    if (walker.currentNode.textContent.trim().length > 15) {
+                        textNode = walker.currentNode;
+                        break;
+                    }
+                }
+
+                const range2 = document.createRange();
+                range2.setStart(textNode, 0);
+                range2.setEnd(textNode, Math.min(20, textNode.textContent.length));
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range2);
+
+                document.dispatchEvent(event);
+                await sleep(200);
+                document.querySelector('#hx-generate-button')?.click();
+                await sleep(3000);
+
+                let tooltips = document.querySelectorAll('.hx-chat-tooltip');
+                log(`Tooltip count before close: ${tooltips.length}`);
+
+                if (tooltips.length !== 2) {
+                    log('FAIL: Expected 2 tooltips', 'fail');
+                    return;
+                }
+
+                // Verify parent is pinned
+                log('Step 3: Verify parent is pinned');
+                const pinned = tooltip0.dataset.pinned;
+                log(`Level 0 pinned: ${pinned}`);
+
+                if (pinned !== 'true') {
+                    log('WARNING: Parent not pinned, test may not be valid', 'fail');
+                }
+
+                // Close parent
+                log('Step 4: Close parent tooltip (level 0)');
+                const closeButton = tooltip0.querySelector('[data-action="close"]');
+                closeButton?.click();
+                await sleep(500);
+
+                // CRITICAL CHECK: All tooltips should be closed
+                log('Step 5: CRITICAL CHECK - All tooltips should be closed');
+                tooltips = document.querySelectorAll('.hx-chat-tooltip');
+                log(`Tooltip count after close: ${tooltips.length}`);
+
+                if (tooltips.length === 0) {
+                    log('✅ BUG #2 FIXED: All tooltips correctly cascade deleted', 'pass');
+                } else {
+                    log(`❌ BUG #2 STILL BROKEN: ${tooltips.length} tooltips remain`, 'fail');
+                }
+
+            } catch (error) {
+                log(`ERROR in Bug #2 test: ${error.message}`, 'fail');
+                console.error(error);
+            }
+
+            log('');
+            log('=== VERIFICATION COMPLETE ===');
+        }
+
+        // Expose for manual trigger
+        window.runBugfixTests = runTests;
+    </script>
+</body>
+</html>

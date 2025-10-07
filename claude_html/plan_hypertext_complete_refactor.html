@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Plan: Complete Hypertext UX Refactor</title>
+<style>
+:root {
+    --chinese-red: #8B0000;
+    --chinese-gold: #FFD700;
+    --jade-green: #00A86B;
+    --ink-black: #2B2B2B;
+    --paper-beige: #F5F5DC;
+    --light-cream: #FAFAF0;
+    --level-1: #000;
+    --level-2: #333;
+    --level-3: #666;
+    --level-4: #999;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+    color: var(--ink-black);
+    width: 100vw;
+    max-width: 100%;
+    line-height: 1.2;
+    font-size: 14px;
+    font-family: "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.container { width: 100%; padding: 0; margin: 0; }
+
+h1 {
+    font-size: 24px; font-weight: 900; margin: 4px 0; padding: 6px 4px;
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+}
+
+h2 {
+    font-size: 18px; font-weight: 700; margin: 8px 0 4px 0; padding: 4px;
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.03); color: var(--level-1);
+}
+
+h3 {
+    font-size: 14px; font-weight: 600; margin: 4px 0 2px 8px;
+    color: var(--level-2); text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+h4 { font-size: 12px; font-weight: 500; margin: 2px 0 1px 16px; color: var(--level-3); }
+
+.important-always-visible {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+    border: 2px solid var(--chinese-gold);
+    padding: 8px; margin: 8px 0; border-radius: 3px;
+}
+
+.critical-issue {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.15), rgba(255, 215, 0, 0.1));
+    border: 3px solid var(--chinese-red);
+    padding: 12px; margin: 8px 0; border-radius: 4px;
+}
+
+.card {
+    background: white;
+    border: 1px solid rgba(139, 0, 0, 0.2);
+    border-radius: 2px; padding: 6px; margin: 4px 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card.priority {
+    border: 2px solid var(--chinese-gold);
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+}
+
+pre, code {
+    background: linear-gradient(135deg, rgba(245, 245, 220, 0.3), rgba(255, 255, 255, 0.5));
+    border: 1px solid rgba(139, 0, 0, 0.15);
+    padding: 4px 6px; font-size: 12px; font-family: 'SF Mono', Monaco, monospace;
+    line-height: 1.3; overflow-x: auto; border-radius: 2px;
+}
+
+pre { padding: 8px; margin: 4px 0; }
+
+.dense-list { list-style: none; padding: 0; margin-left: 8px; }
+.dense-list li {
+    padding: 2px 0 2px 12px; border-left: 2px solid transparent; position: relative;
+}
+.dense-list li:before {
+    content: "▸"; position: absolute; left: 0;
+    color: var(--chinese-red); font-size: 10px;
+}
+
+.two-column {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin: 4px 0;
+}
+
+.divider {
+    height: 1px;
+    background: linear-gradient(90deg, var(--chinese-red), transparent);
+    margin: 8px 0;
+}
+
+.collapsible { margin: 4px 0; width: 100%; }
+
+.collapsible-header {
+    cursor: pointer; padding: 6px 8px;
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+    border-left: 3px solid var(--chinese-gold);
+    display: flex; align-items: center; justify-content: space-between;
+    user-select: none; transition: all 0.2s ease;
+}
+
+.collapsible-header:hover {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+}
+
+.collapsible-header .arrow {
+    display: inline-block; transition: transform 0.3s ease;
+    color: var(--chinese-red); font-size: 10px;
+}
+
+.collapsible.open .arrow { transform: rotate(90deg); }
+
+.collapsible-content {
+    max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+    padding: 0 8px; margin-left: 12px;
+}
+
+.collapsible.open .collapsible-content {
+    max-height: 5000px; padding: 8px;
+}
+
+.status-good { color: var(--jade-green); font-weight: 600; }
+.status-bad { color: var(--chinese-red); font-weight: 600; }
+.status-warn { color: #ff8c00; font-weight: 600; }
+
+button {
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    color: white; border: 1px solid rgba(255, 215, 0, 0.3);
+    transition: all 0.2s ease; padding: 2px 6px;
+    margin: 1px; font-size: 12px; line-height: 1.1;
+    cursor: pointer; border-radius: 3px;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+    border-color: var(--chinese-gold);
+}
+
+table {
+    border-collapse: collapse; width: 100%; margin: 4px 0;
+    background: white; font-size: 12px;
+}
+
+th, td {
+    border: 1px solid rgba(139, 0, 0, 0.2);
+    padding: 4px 6px; text-align: left;
+}
+
+th {
+    background: rgba(139, 0, 0, 0.08);
+    font-weight: 600; color: var(--level-1);
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="container">
+
+<div style="margin: 8px 0; text-align: right;">
+    <button id="expand-all">Expand All</button>
+    <button id="collapse-all">Collapse All</button>
+</div>
+
+<div class="important-always-visible">
+    <h1>📋 Complete Hypertext UX Refactor</h1>
+    <div class="two-column">
+        <div>
+            <h3>Objective</h3>
+            <p>Simplify architecture, fix URL navigation, improve streaming UX, and ensure composer always visible</p>
+        </div>
+        <div>
+            <h3>Approach</h3>
+            <p>Background-script routing, minimal JSON schema, throttled streaming, flexbox layout</p>
+            <div style="margin-top: 4px; color: #ff8c00; font-weight: 600;">Complexity: High</div>
+        </div>
+    </div>
+</div>
+
+<div class="critical-issue">
+    <h2>🔍 Codex Review Summary</h2>
+    <div class="two-column">
+        <div>
+            <h4>Critical Feedback</h4>
+            <ul class="dense-list">
+                <li><strong>High:</strong> Add fallback when storage key missing (bookmarks/direct nav)</li>
+                <li><strong>Medium:</strong> Throttle streaming re-renders (use requestAnimationFrame)</li>
+                <li><strong>Medium:</strong> Test sticky positioning in nested overflow containers</li>
+                <li><strong>Medium:</strong> Update all test fixtures for new JSON schema</li>
+            </ul>
+        </div>
+        <div>
+            <h4>Incorporated Changes</h4>
+            <ul class="dense-list">
+                <li>Added getFallbackPayload() when session key not found</li>
+                <li>Streaming uses RAF batching to limit DOM thrash</li>
+                <li>Flexbox layout with min-height instead of sticky</li>
+                <li>Migration layer supports both old and new JSON formats</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div class="divider"></div>
+
+<h2>Four Integrated Improvements</h2>
+
+<div class="two-column">
+    <div class="card priority">
+        <h3>1. Clean URL Architecture</h3>
+        <ul class="dense-list">
+            <li>New path: <code>extension/chat.html?s=key</code></li>
+            <li>Background script handles opening</li>
+            <li>chrome.storage.session for payloads</li>
+            <li>Solves cross-origin issues</li>
+        </ul>
+    </div>
+
+    <div class="card priority">
+        <h3>2. Simplified Prompts</h3>
+        <ul class="dense-list">
+            <li>Minimal JSON: <code>{"text": string, "url"?: string}</code></li>
+            <li>Remove complex pillText/mode rules</li>
+            <li>Focus on URL quality</li>
+            <li>Derive pill label from content</li>
+        </ul>
+    </div>
+
+    <div class="card priority">
+        <h3>3. Smooth Streaming</h3>
+        <ul class="dense-list">
+            <li>Accumulate delta.text chunks</li>
+            <li>Throttle updates with RAF</li>
+            <li>Show live progress</li>
+            <li>Parse JSON on completion</li>
+        </ul>
+    </div>
+
+    <div class="card priority">
+        <h3>4. Composer Always Visible</h3>
+        <ul class="dense-list">
+            <li>Flexbox column layout</li>
+            <li>Message area: flex-grow with min-height</li>
+            <li>Composer: flex-shrink: 0</li>
+            <li>Always visible when resizing</li>
+        </ul>
+    </div>
+</div>
+
+<div class="divider"></div>
+
+<h2>Implementation Plan</h2>
+
+<div class="collapsible open">
+    <div class="collapsible-header">
+        <span><strong>Part 1: File Structure & Background Script</strong></span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <div class="card priority">
+            <h3>Step 1.1: Create extension/background.js</h3>
+            <pre>/**
+ * Background service worker for Hypertext Navigator
+ * Handles secure chat page opening with payload transport
+ */
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'OPEN_CHAT_PAGE') {
+    handleOpenChatPage(message, sender, sendResponse);
+    return true; // Keep channel open for async
+  }
+});
+
+async function handleOpenChatPage(message, sender, sendResponse) {
+  const { payload, shiftKey } = message;
+
+  try {
+    // Generate unique session key
+    const sessionKey = `hx:${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Store in chrome.storage.session (auto-cleanup on browser close)
+    await chrome.storage.session.set({ [sessionKey]: payload });
+
+    // Build clean extension URL
+    const chatUrl = chrome.runtime.getURL('extension/chat.html');
+    const fullUrl = `${chatUrl}?s=${encodeURIComponent(sessionKey)}`;
+
+    // Handle shift-key behavior
+    if (shiftKey && sender.tab) {
+      await chrome.tabs.update(sender.tab.id, { url: fullUrl });
+    } else {
+      await chrome.tabs.create({ url: fullUrl, active: true });
+    }
+
+    sendResponse({ success: true, sessionKey });
+
+  } catch (error) {
+    console.error('[Hypertext BG] Failed to open chat:', error);
+    sendResponse({
+      success: false,
+      error: error.message || 'Unknown error'
+    });
+  }
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 1.2: Update manifest.json</h3>
+            <pre>{
+  "manifest_version": 3,
+  "name": "Hypertext Navigator",
+  "version": "0.2.0",
+
+  "permissions": [
+    "storage",
+    <span class="status-good">"tabs"        // ADD: For chrome.tabs.create()</span>
+  ],
+
+  "host_permissions": ["&lt;all_urls&gt;"],
+
+  "background": {
+    "service_worker": "extension/background.js",
+    "type": "module"
+  },
+
+  "content_scripts": [{
+    "matches": ["&lt;all_urls&gt;"],
+    "js": [
+      "hypertext/hypertext-experience.js",
+      "extension/hypertext-loader.js"
+    ],
+    "run_at": "document_idle"
+  }]
+}</pre>
+        </div>
+    </div>
+</div>
+
+<div class="collapsible open">
+    <div class="collapsible-header">
+        <span><strong>Part 2: Simplified Prompt Engineering</strong></span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <div class="card priority">
+            <h3>Step 2.1: Update buildSystemPrompt() (line 766)</h3>
+            <pre>function buildSystemPrompt() {
+  return [
+    'You are a research assistant helping users understand web content.',
+    '',
+    'Respond with JSON: {"text": string, "url"?: string}',
+    '',
+    'Guidelines:',
+    '- Keep responses brief and focused (2-3 sentences)',
+    '- Include a URL only when confident it exists and is highly relevant',
+    '- Prefer authoritative sources: Wikipedia, official docs, academic papers',
+    '- Use markdown formatting in text for readability',
+    '',
+    'Example responses:',
+    '{"text": "**Gradient descent** is an optimization algorithm..."}',
+    '{"text": "**React hooks** allow...", "url": "https://react.dev/reference/react"}',
+  ].join('\n');
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 2.2: Update parseHypertextJson() (line 734)</h3>
+            <pre>function parseHypertextJson(rawText) {
+  const cleaned = rawText
+    .replace(/^```json/gim, '')
+    .replace(/```$/gim, '')
+    .trim();
+
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+
+  if (start === -1 || end === -1) {
+    throw new Error('No JSON object found');
+  }
+
+  const candidate = cleaned.slice(start, end + 1);
+
+  try {
+    const parsed = JSON.parse(candidate);
+
+    <span class="status-good">// NEW: Support both old and new formats (migration layer)</span>
+    if (parsed.pillText && parsed.explanation) {
+      // Old format: convert to new format
+      return {
+        text: parsed.explanation,
+        url: parsed.url || null
+      };
+    }
+
+    // New format: validate
+    if (!parsed.text) {
+      throw new Error('Missing required "text" field');
+    }
+
+    return {
+      text: parsed.text,
+      url: parsed.url || null
+    };
+
+  } catch (error) {
+    // Try normalized quotes
+    const normalized = candidate
+      .replace(/"|"/g, '"')
+      .replace(/'|'/g, "'");
+    return JSON.parse(normalized);
+  }
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 2.3: Update formatAssistantDisplay() (line 700)</h3>
+            <pre>function formatAssistantDisplay(result) {
+  if (!result || !result.text) {
+    return {
+      displayText: 'No response.',
+      url: null
+    };
+  }
+
+  const displayText = result.text.trim();
+  const url = (result.url || '').trim();
+
+  return {
+    displayText,
+    url: url || null
+  };
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 2.4: Update updateWrapperWithResult() (line 1158)</h3>
+            <pre>function updateWrapperWithResult(session, result) {
+  const { wrapper } = session;
+
+  <span class="status-good">// NEW: Derive pill text from response (first 45 chars)</span>
+  let pillText = session.subject || 'Hypertext';
+  if (result.text) {
+    // Strip markdown, take first 45 chars
+    const plain = result.text.replace(/[*_#`]/g, '').trim();
+    if (plain.length > 0) {
+      pillText = plain.substring(0, 45);
+      if (plain.length > 45) pillText += '…';
+    }
+  }
+
+  const url = result.url || null;
+
+  session.lastResult = {
+    text: result.text,
+    url,
+    pillText
+  };
+
+  session.lastUpdatedAt = Date.now();
+  wrapper.dataset.kind = url ? 'reference' : 'inline';
+  wrapper.dataset.pillText = pillText;
+
+  if (result.text) {
+    wrapper.dataset.content = result.text;
+  }
+
+  if (url) {
+    wrapper.dataset.url = url;
+    setPillState(session, 'ready-reference');
+  } else {
+    setPillState(session, 'ready-inline');
+  }
+}</pre>
+        </div>
+    </div>
+</div>
+
+<div class="collapsible open">
+    <div class="collapsible-header">
+        <span><strong>Part 3: Throttled Streaming Display</strong></span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <div class="card priority">
+            <h3>Step 3.1: Add streaming accumulator & throttler</h3>
+            <pre>// Add to createHypertextExperience scope (line ~920)
+let streamingRafId = null;
+
+function updateStreamingDisplay(session, accumulatedText) {
+  if (activeChatSession !== session) return;
+
+  <span class="status-good">// Cancel pending RAF to avoid thrash</span>
+  if (streamingRafId) {
+    win.cancelAnimationFrame(streamingRafId);
+  }
+
+  streamingRafId = win.requestAnimationFrame(() => {
+    streamingRafId = null;
+
+    // Find the streaming indicator element
+    const streamingItem = listEl.querySelector('.hx-streaming-item');
+    if (!streamingItem) return;
+
+    const contentDiv = streamingItem.querySelector('.hx-chat-tooltip__content');
+    if (!contentDiv) return;
+
+    <span class="status-good">// Render accumulated text with markdown (live preview)</span>
+    const preview = renderMarkdown(accumulatedText);
+    contentDiv.innerHTML = `
+      &lt;div class="hx-streaming-preview"&gt;${preview}&lt;/div&gt;
+      &lt;div class="hx-streaming-indicator"&gt;⋯&lt;/div&gt;
+    `;
+
+    // Auto-scroll
+    listEl.scrollTop = listEl.scrollHeight;
+  });
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 3.2: Update streamHypertext() (line 1096)</h3>
+            <pre>async function streamHypertext(messages) {
+  const payload = {
+    messages,
+    options: {
+      system: buildSystemPrompt(),
+      maxTokens: 512,
+      temperature: 0.6
+    }
+  };
+
+  const response = await fetch(`${backendUrl}/api/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Backend returned ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let resultText = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if (!data || data === '[DONE]') continue;
+
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.delta?.text) {
+          resultText += parsed.delta.text;
+
+          <span class="status-good">// NEW: Update streaming display (throttled via RAF)</span>
+          updateStreamingDisplay(session, resultText);
+        }
+      } catch (error) {
+        console.warn('[Hypertext] Failed to parse SSE chunk:', data);
+      }
+    }
+  }
+
+  if (!resultText.trim()) {
+    throw new Error('Backend returned empty response');
+  }
+
+  return parseHypertextJson(resultText);
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 3.3: Add CSS for streaming preview</h3>
+            <pre>/* Add to BASE_STYLES (line ~2) */
+
+.hx-streaming-preview {
+  color: var(--hx-ink);
+  opacity: 0.85;
+}
+
+.hx-streaming-indicator {
+  display: inline-block;
+  color: #b83c1f;
+  font-weight: 500;
+  animation: hx-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes hx-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 3.4: Update renderConversation() (line 1476)</h3>
+            <pre>function renderConversation(session) {
+  // ... existing setup ...
+
+  if (session.isStreaming) {
+    const streamingItem = doc.createElement('li');
+    streamingItem.className = 'hx-chat-tooltip__item hx-streaming-item';
+    streamingItem.setAttribute('role', 'status');
+    streamingItem.setAttribute('aria-live', 'polite');
+
+    const roleLine = doc.createElement('div');
+    roleLine.className = 'hx-chat-tooltip__role';
+    roleLine.innerHTML = `&lt;span&gt;Assistant&lt;/span&gt;&lt;span&gt;${formatTimestamp(Date.now())}&lt;/span&gt;`;
+
+    const content = doc.createElement('div');
+    content.className = 'hx-chat-tooltip__content';
+    content.innerHTML = '&lt;div class="hx-streaming-indicator"&gt;Generating…&lt;/div&gt;';
+
+    streamingItem.appendChild(roleLine);
+    streamingItem.appendChild(content);
+    fragment.appendChild(streamingItem);
+  }
+
+  // ... rest of function
+}</pre>
+        </div>
+    </div>
+</div>
+
+<div class="collapsible open">
+    <div class="collapsible-header">
+        <span><strong>Part 4: Composer Always Visible (Resize Fix)</strong></span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <div class="card priority">
+            <h3>Step 4.1: Update tooltip CSS (line ~115)</h3>
+            <pre>.hx-chat-tooltip {
+  position: absolute;
+  background: var(--hx-paper);
+  border-radius: 12px;
+  border: 1px solid var(--hx-border);
+  box-shadow: var(--hx-shadow);
+  width: 380px;
+  height: 480px;
+  min-width: 320px;
+  max-width: min(480px, calc(100vw - 24px));
+  min-height: 400px;
+  max-height: calc(100vh - 24px);
+  <span class="status-good">display: flex;              /* CHANGE: was 'none' initially */</span>
+  <span class="status-good">flex-direction: column;     /* NEW: Flexbox column layout */</span>
+  z-index: 2147483000;
+  opacity: 1;
+  transition: opacity 0.15s ease;
+  overflow: hidden;
+}
+
+<span class="status-good">/* When hidden, use display: none */</span>
+.hx-chat-tooltip[data-hidden="true"] {
+  display: none;
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 4.2: Update body CSS (line ~238)</h3>
+            <pre>.hx-chat-tooltip__body {
+  <span class="status-good">/* NEW: Flexbox layout ensuring composer stays visible */</span>
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 12px 14px;
+  background: var(--hx-panel);
+  <span class="status-good">flex: 1;                    /* Grow to fill space */</span>
+  <span class="status-good">min-height: 0;              /* Allow shrinking */</span>
+  overflow: hidden;
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 4.3: Update list CSS (line ~254)</h3>
+            <pre>.hx-chat-tooltip__list {
+  background: #ffffff;
+  border: 1px solid rgba(177, 60, 60, 0.22);
+  border-radius: 9px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  <span class="status-good">flex: 1;                    /* Grow to fill available space */</span>
+  <span class="status-good">min-height: 100px;          /* Minimum visible area */</span>
+  overflow-y: auto;
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 4.4: Update composer CSS (line ~300)</h3>
+            <pre>.hx-chat-tooltip__composer {
+  display: grid;
+  gap: 8px;
+  <span class="status-good">flex-shrink: 0;             /* NEVER shrink - always visible */</span>
+  <span class="status-good">min-height: 120px;          /* Ensure input + buttons always fit */</span>
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 4.5: Update showTooltip() (line 1607)</h3>
+            <pre>function showTooltip(session) {
+  if (!session) return;
+  cancelTooltipClose();
+
+  tooltip.dataset.sessionId = session.id;
+  <span class="status-good">tooltip.removeAttribute('data-hidden');  // CHANGE: instead of style.display</span>
+  tooltip.style.opacity = '0';
+  tooltip.setAttribute('aria-hidden', 'false');
+  tooltip.classList.remove('dragging', 'resizing');
+  refreshPinUi(session);
+
+  // ... rest of function (size/position logic unchanged)
+
+  win.requestAnimationFrame(() => {
+    // ... position logic ...
+    tooltip.style.opacity = '1';
+  });
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 4.6: Update hideTooltip() (line 1657)</h3>
+            <pre>function hideTooltip() {
+  <span class="status-good">tooltip.dataset.hidden = 'true';  // CHANGE: instead of style.display</span>
+  tooltip.style.opacity = '';
+  tooltip.setAttribute('aria-hidden', 'true');
+  tooltip.classList.remove('dragging', 'resizing', 'is-pinned');
+  delete tooltip.dataset.sessionId;
+}</pre>
+        </div>
+    </div>
+</div>
+
+<div class="collapsible">
+    <div class="collapsible-header">
+        <span><strong>Part 5: Extension Chat Page</strong></span>
+        <span class="arrow">▶</span>
+    </div>
+    <div class="collapsible-content">
+        <div class="card priority">
+            <h3>Step 5.1: Create extension/chat.html</h3>
+            <pre>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;title&gt;Hypertext Chat&lt;/title&gt;
+  &lt;style&gt;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #fafafa;
+      color: #1a1a1a;
+      line-height: 1.5;
+      padding: 20px;
+    }
+
+    header {
+      max-width: 800px;
+      margin: 0 auto 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    h1 { font-size: 20px; margin-bottom: 4px; }
+    .meta { font-size: 13px; color: #666; }
+
+    main { max-width: 800px; margin: 0 auto; }
+
+    .message {
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border-radius: 6px;
+    }
+
+    .message.user { background: #e3f2fd; }
+    .message.assistant { background: #f5f5f5; }
+
+    .role {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .content {
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+
+    .content p { margin: 0.5em 0; }
+    .content strong { font-weight: 600; }
+    .content code {
+      background: #e0e0e0;
+      padding: 2px 4px;
+      border-radius: 2px;
+      font-family: monospace;
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;header&gt;
+    &lt;h1 id="subject"&gt;Loading...&lt;/h1&gt;
+    &lt;div class="meta"&gt;
+      &lt;div id="focus"&gt;&lt;/div&gt;
+      &lt;div id="source"&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/header&gt;
+
+  &lt;main id="conversation"&gt;&lt;/main&gt;
+
+  &lt;script src="chat.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 5.2: Create extension/chat.js</h3>
+            <pre>/**
+ * Chat page - loads payload and renders conversation
+ */
+
+(async function initChatPage() {
+  const payload = await loadPayload();
+  renderChat(payload);
+})();
+
+async function loadPayload() {
+  const params = new URLSearchParams(window.location.search);
+  const sessionKey = params.get('s');
+
+  if (!sessionKey) {
+    console.warn('[Chat] No session key');
+    return getFallbackPayload();
+  }
+
+  <span class="status-good">// Try chrome.storage.session</span>
+  if (typeof chrome !== 'undefined' && chrome.storage?.session) {
+    try {
+      const result = await chrome.storage.session.get(sessionKey);
+
+      if (result[sessionKey]) {
+        const payload = result[sessionKey];
+
+        <span class="status-good">// Delete key after reading (one-time use)</span>
+        chrome.storage.session.remove(sessionKey).catch(err => {
+          console.warn('[Chat] Cleanup failed:', err);
+        });
+
+        return payload;
+      } else {
+        console.warn('[Chat] Key not found:', sessionKey);
+      }
+    } catch (error) {
+      console.error('[Chat] Storage error:', error);
+    }
+  }
+
+  <span class="status-good">// Fallback for bookmarks/direct navigation</span>
+  return getFallbackPayload();
+}
+
+function renderChat(payload) {
+  document.getElementById('subject').textContent = payload.subject || 'Untitled';
+  document.getElementById('focus').textContent = payload.focus ? `Focus: ${payload.focus}` : '';
+  document.getElementById('source').textContent = payload.sourceUrl ? `From: ${payload.sourceUrl}` : '';
+
+  const container = document.getElementById('conversation');
+  container.innerHTML = '';
+
+  if (payload.transcript?.length > 0) {
+    payload.transcript.forEach(msg => {
+      const div = document.createElement('div');
+      div.className = `message ${msg.role}`;
+
+      const role = document.createElement('div');
+      role.className = 'role';
+      role.textContent = msg.role;
+
+      const content = document.createElement('div');
+      content.className = 'content';
+      <span class="status-good">// Support both old format (content) and new format (text)</span>
+      content.textContent = msg.content || msg.text || '';
+
+      div.appendChild(role);
+      div.appendChild(content);
+      container.appendChild(div);
+    });
+  } else {
+    container.innerHTML = '&lt;p style="color: #999;"&gt;No conversation.&lt;/p&gt;';
+  }
+}
+
+function getFallbackPayload() {
+  return {
+    subject: 'Example Hypertext',
+    focus: 'Fallback mode',
+    transcript: [
+      { role: 'assistant', text: 'Session expired or key not found.' }
+    ],
+    sourceUrl: window.location.href
+  };
+}</pre>
+        </div>
+
+        <div class="card priority">
+            <h3>Step 5.3: Update extension/hypertext-loader.js</h3>
+            <pre>window.createHypertextExperience({
+  backendUrl: 'http://localhost:3100',
+  chatPageUrl: 'extension/chat.html',
+
+  <span class="status-good">// Custom opener using background script</span>
+  openChatPage: (payload, options) => {
+    const { shiftKey } = options || {};
+
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        {
+          type: 'OPEN_CHAT_PAGE',
+          payload,
+          shiftKey: Boolean(shiftKey)
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+
+          if (response?.success) {
+            resolve(response);
+          } else {
+            reject(new Error(response?.error || 'Failed'));
+          }
+        }
+      );
+    });
+  }
+});</pre>
+        </div>
+    </div>
+</div>
+
+<div class="divider"></div>
+
+<h2>Testing Strategy</h2>
+
+<div class="two-column">
+    <div class="card">
+        <h3>Unit Tests: JSON Parsing</h3>
+        <ul class="dense-list">
+            <li>Test new format: <code>{"text": "...", "url": "..."}</code></li>
+            <li>Test old format migration: <code>{"pillText": ..., "explanation": ...}</code></li>
+            <li>Test missing fields: <code>{"text": null}</code></li>
+            <li>Test escape sequences in text: <code>\n</code></li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3>Integration: Streaming</h3>
+        <ul class="dense-list">
+            <li>Mock SSE with chunked deltas</li>
+            <li>Verify RAF throttling (max 60fps)</li>
+            <li>Verify final JSON parse after stream</li>
+            <li>Test with markdown in chunks</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3>E2E: URL Navigation</h3>
+        <ul class="dense-list">
+            <li>Create hypertext → click → chat opens</li>
+            <li>Verify URL: <code>extension/chat.html?s=hx:...</code></li>
+            <li>Verify payload loads correctly</li>
+            <li>Test shift-click (replace tab)</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h3>Visual: Resize Behavior</h3>
+        <ul class="dense-list">
+            <li>Resize tooltip to min-height</li>
+            <li>Verify composer always visible</li>
+            <li>Verify send button clickable</li>
+            <li>Test with long conversation</li>
+        </ul>
+    </div>
+</div>
+
+<div class="divider"></div>
+
+<h2>Implementation Checklist</h2>
+
+<div class="card priority">
+    <h3>✅ Complete Task List (In Order)</h3>
+    <ol class="dense-list" style="list-style: decimal; margin-left: 20px;">
+        <li>Update manifest.json - add "tabs" permission</li>
+        <li>Create extension/background.js with OPEN_CHAT_PAGE handler</li>
+        <li>Update buildSystemPrompt() with simplified schema</li>
+        <li>Update parseHypertextJson() with migration layer</li>
+        <li>Update formatAssistantDisplay() for new format</li>
+        <li>Update updateWrapperWithResult() to derive pillText</li>
+        <li>Add updateStreamingDisplay() with RAF throttling</li>
+        <li>Update streamHypertext() to call streaming display</li>
+        <li>Add CSS for streaming preview/indicator</li>
+        <li>Update renderConversation() for streaming item</li>
+        <li>Update tooltip CSS to use flexbox</li>
+        <li>Update body/list/composer CSS for flex layout</li>
+        <li>Update showTooltip/hideTooltip to use data-hidden</li>
+        <li>Create extension/chat.html</li>
+        <li>Create extension/chat.js with fallback support</li>
+        <li>Update extension/hypertext-loader.js with openChatPage</li>
+        <li>Update hypertext-experience.js to accept openChatPage option</li>
+        <li>Update openChatPageFromSession() to use custom opener</li>
+        <li>Update all test fixtures for new JSON format</li>
+        <li>Run tests: <code>npx playwright test</code></li>
+        <li>Build extension: <code>npm run build</code></li>
+        <li>Manual testing on multiple websites</li>
+    </ol>
+</div>
+
+<div class="divider"></div>
+
+<h2>Migration & Compatibility</h2>
+
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Component</th>
+                <th>Old Format Support</th>
+                <th>New Format</th>
+                <th>Migration Strategy</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>LLM Response</strong></td>
+                <td><code>{"pillText": ..., "mode": ..., "explanation": ..., "url": ...}</code></td>
+                <td><code>{"text": ..., "url": ...}</code></td>
+                <td>Update system prompt</td>
+            </tr>
+            <tr>
+                <td><strong>Parser</strong></td>
+                <td>✅ Detects and converts old format</td>
+                <td>✅ Native support</td>
+                <td>parseHypertextJson() handles both</td>
+            </tr>
+            <tr>
+                <td><strong>session.lastResult</strong></td>
+                <td>✅ Converted on read</td>
+                <td><code>{text, url, pillText}</code></td>
+                <td>Derive pillText from text</td>
+            </tr>
+            <tr>
+                <td><strong>Chat Transcript</strong></td>
+                <td><code>msg.content</code></td>
+                <td><code>msg.text || msg.content</code></td>
+                <td>Fallback in chat.js</td>
+            </tr>
+            <tr>
+                <td><strong>Test Fixtures</strong></td>
+                <td>⚠️ Must update</td>
+                <td>Update mock responses</td>
+                <td>tests/fixtures/data.ts</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="divider"></div>
+
+<h2>Risk Assessment</h2>
+
+<div class="two-column">
+    <div class="card">
+        <h4>High Risk: Schema Changes</h4>
+        <ul class="dense-list">
+            <li><strong>Issue:</strong> Breaking existing payloads</li>
+            <li><strong>Mitigation:</strong> Migration layer in parser</li>
+            <li><strong>Test:</strong> Run with old mock responses</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h4>Medium Risk: Streaming Thrash</h4>
+        <ul class="dense-list">
+            <li><strong>Issue:</strong> Too many DOM updates</li>
+            <li><strong>Mitigation:</strong> RAF throttling</li>
+            <li><strong>Test:</strong> Profile with DevTools</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h4>Medium Risk: Flexbox Edge Cases</h4>
+        <ul class="dense-list">
+            <li><strong>Issue:</strong> Composer cut off in some scenarios</li>
+            <li><strong>Mitigation:</strong> min-height + flex-shrink: 0</li>
+            <li><strong>Test:</strong> Resize to extremes</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h4>Low Risk: Storage Cleanup</h4>
+        <ul class="dense-list">
+            <li><strong>Issue:</strong> Keys not deleted on error</li>
+            <li><strong>Mitigation:</strong> Auto-cleanup on browser close</li>
+            <li><strong>Test:</strong> Monitor chrome.storage usage</li>
+        </ul>
+    </div>
+</div>
+
+</div>
+
+<script>
+mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    flowchart: { curve: 'basis' }
+});
+
+document.querySelectorAll('.collapsible-header').forEach(header => {
+    header.addEventListener('click', () => {
+        const collapsible = header.parentElement;
+        collapsible.classList.toggle('open');
+    });
+});
+
+document.getElementById('expand-all').addEventListener('click', () => {
+    document.querySelectorAll('.collapsible').forEach(c => c.classList.add('open'));
+});
+
+document.getElementById('collapse-all').addEventListener('click', () => {
+    document.querySelectorAll('.collapsible').forEach(c => c.classList.remove('open'));
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Part 5: Multi-Tooltip Support for Pinned Chats</title>
+<style>
+:root {
+    --chinese-red: #8B0000;
+    --chinese-gold: #FFD700;
+    --jade-green: #00A86B;
+    --ink-black: #2B2B2B;
+    --paper-beige: #F5F5DC;
+    --light-cream: #FAFAF0;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+    color: var(--ink-black);
+    font-size: 14px;
+    font-family: "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.3;
+    padding: 0;
+}
+
+.container { width: 100%; padding: 0; margin: 0; }
+
+h1 {
+    font-size: 24px; font-weight: 900; margin: 4px 0; padding: 6px 4px;
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+h2 {
+    font-size: 18px; font-weight: 700; margin: 8px 0 4px 0; padding: 4px;
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.03);
+}
+
+h3 {
+    font-size: 14px; font-weight: 600; margin: 4px 0 2px 8px;
+    color: #333; text-transform: uppercase;
+}
+
+.critical-issue {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.15), rgba(255, 215, 0, 0.1));
+    border: 3px solid var(--chinese-red);
+    padding: 12px; margin: 8px 0; border-radius: 4px;
+}
+
+.card {
+    background: white;
+    border: 1px solid rgba(139, 0, 0, 0.2);
+    border-radius: 2px; padding: 8px; margin: 6px 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card.priority {
+    border: 2px solid var(--chinese-gold);
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.05), white);
+}
+
+pre {
+    background: linear-gradient(135deg, rgba(245, 245, 220, 0.3), rgba(255, 255, 255, 0.5));
+    border: 1px solid rgba(139, 0, 0, 0.15);
+    padding: 8px; font-size: 12px; font-family: 'SF Mono', Monaco, monospace;
+    line-height: 1.4; overflow-x: auto; border-radius: 2px; margin: 4px 0;
+}
+
+code {
+    background: rgba(245, 245, 220, 0.5);
+    padding: 2px 5px;
+    font-size: 12px;
+    font-family: 'SF Mono', Monaco, monospace;
+    border-radius: 2px;
+}
+
+.dense-list { list-style: none; padding: 0; margin-left: 10px; }
+.dense-list li {
+    padding: 3px 0 3px 14px; position: relative;
+}
+.dense-list li:before {
+    content: "▸"; position: absolute; left: 0;
+    color: var(--chinese-red); font-size: 11px;
+}
+
+.divider {
+    height: 1px;
+    background: linear-gradient(90deg, var(--chinese-red), transparent);
+    margin: 12px 0;
+}
+
+.status-good { color: var(--jade-green); font-weight: 600; }
+.status-bad { color: var(--chinese-red); font-weight: 600; }
+.status-warn { color: #ff8c00; font-weight: 600; }
+
+table {
+    border-collapse: collapse; width: 100%; margin: 6px 0;
+    background: white; font-size: 12px;
+}
+
+th, td {
+    border: 1px solid rgba(139, 0, 0, 0.2);
+    padding: 5px 8px; text-align: left;
+}
+
+th {
+    background: rgba(139, 0, 0, 0.08);
+    font-weight: 600;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Part 5: Multi-Tooltip Support for Pinned Chats</h1>
+
+<div class="critical-issue">
+    <h2>🚨 MAJOR ARCHITECTURAL REFACTOR</h2>
+    <p><strong>Current Bug:</strong> When a chat is pinned and you open a new chat, the pinned chat disappears.</p>
+    <p><strong>Root Cause:</strong> Only ONE shared tooltip element exists. Opening a new chat repurposes it, hiding the pinned chat.</p>
+    <p><strong>Solution:</strong> One tooltip per session with per-session controllers.</p>
+    <p><strong>Complexity:</strong> High - requires refactoring 15+ functions and all event handling</p>
+</div>
+
+<div class="divider"></div>
+
+<h2>Codex Review: Critical Blockers Identified</h2>
+
+<div class="card priority">
+    <h3>Blocker 1: Singleton DOM References</h3>
+    <p><strong>Location:</strong> hypertext-experience.js:893-907</p>
+    <p><strong>Problem:</strong> Module-scoped refs (<code>listEl</code>, <code>inputEl</code>, <code>sendButton</code>, etc.) bound to single tooltip</p>
+    <pre>// CURRENT (broken for multi-tooltip):
+const {
+  tooltip,      // ← Single shared element
+  titleEl,      // ← Points to first tooltip only
+  listEl,       // ← Points to first tooltip only
+  inputEl,      // ← Points to first tooltip only
+  sendButton,   // ← Points to first tooltip only
+  // ... etc
+} = buildTooltip(doc);
+
+doc.body.appendChild(tooltip);  // Only one appended</pre>
+</div>
+
+<div class="card priority">
+    <h3>Blocker 2: Global Event Listeners</h3>
+    <p><strong>Location:</strong> hypertext-experience.js:1365-2070</p>
+    <p><strong>Problem:</strong> Event listeners registered once for singleton tooltip</p>
+    <pre>// CURRENT (only works for one tooltip):
+dragHandle.addEventListener('pointerdown', beginDrag);
+sendButton.addEventListener('click', () => { ... });
+pinButton.addEventListener('click', () => { ... });
+
+// New tooltips never get listeners!</pre>
+</div>
+
+<div class="card priority">
+    <h3>Blocker 3: Non-Unique IDs</h3>
+    <p><strong>Location:</strong> hypertext-experience.js:650</p>
+    <p><strong>Problem:</strong> HTML uses <code>id="hx-chat-input"</code> - causes conflicts with multiple tooltips</p>
+    <pre>&lt;!-- CURRENT (invalid HTML with multiple tooltips): --&gt;
+&lt;textarea id="hx-chat-input" ...&gt;&lt;/textarea&gt;
+&lt;label for="hx-chat-input"&gt;...&lt;/label&gt;
+
+&lt;!-- Multiple tooltips = duplicate IDs! --&gt;</pre>
+</div>
+
+<div class="card priority">
+    <h3>Blocker 4: Shared State Variables</h3>
+    <p><strong>Location:</strong> Throughout module scope</p>
+    <p><strong>Problem:</strong> Global state for drag, resize, timers</p>
+    <pre>// CURRENT (module scope):
+let activeChatSession = null;      // Only one active
+let dragState = null;               // Only one draggable
+let resizeState = null;             // Only one resizable
+let tooltipCloseTimeout = null;     // Only one timer
+
+// Needs to be PER SESSION!</pre>
+</div>
+
+<div class="card priority">
+    <h3>Blocker 5: Cleanup Not Scoped</h3>
+    <p><strong>Location:</strong> hypertext-experience.js:2073-2087</p>
+    <p><strong>Problem:</strong> destroy() only removes ONE tooltip</p>
+    <pre>// CURRENT:
+const destroy = () => {
+  // ... remove listeners ...
+  palette.remove();
+  tooltip.remove();   // ← Only removes THE tooltip
+  sessions.clear();
+  // Leaks all other tooltips!
+};</pre>
+</div>
+
+<div class="divider"></div>
+
+<h2>Proposed Architecture: Per-Session Controllers</h2>
+
+<div class="card priority">
+    <h3>Core Concept: TooltipController Class</h3>
+    <pre>/**
+ * Encapsulates ALL tooltip logic for one session
+ * - Creates unique DOM elements with unique IDs
+ * - Registers event listeners for THIS tooltip only
+ * - Manages z-index, position, state
+ * - Handles cleanup when session closes
+ */
+function createTooltipController(session, doc, win) {
+  const sessionId = session.id;
+
+  // Build tooltip with UNIQUE IDs
+  const tooltip = buildTooltip(doc, sessionId);  // NEW: Pass session ID
+
+  // Extract sub-elements (scoped to THIS tooltip)
+  const titleEl = tooltip.querySelector('.hx-chat-tooltip__title');
+  const listEl = tooltip.querySelector('.hx-chat-tooltip__list ul');
+  const inputEl = tooltip.querySelector(`#hx-chat-input-${sessionId}`);
+  const sendButton = tooltip.querySelector('[data-action="send"]');
+  const pinButton = tooltip.querySelector('[data-action="pin"]');
+  // ... etc
+
+  // Per-session state
+  let closeTimeout = null;
+  let dragState = null;
+  let resizeState = null;
+
+  // Scoped event handlers
+  function handleDrag(event) { /* uses dragState */ }
+  function handleResize(event) { /* uses resizeState */ }
+  function handleSend() { /* sends from THIS session */ }
+  function handlePin() { /* toggles THIS session's pin */ }
+
+  // Register listeners for THIS tooltip
+  tooltip.querySelector('[data-role="drag-handle"]')
+    .addEventListener('pointerdown', handleDrag);
+  tooltip.querySelector('[data-role="resize-handle"]')
+    .addEventListener('pointerdown', handleResize);
+  sendButton.addEventListener('click', handleSend);
+  pinButton.addEventListener('click', handlePin);
+
+  // Return controller API
+  return {
+    tooltip,          // The DOM element
+    titleEl,          // Sub-elements
+    listEl,
+    inputEl,
+    sendButton,
+    // ... other refs
+
+    // Methods
+    render: () => renderConversation(session, listEl, titleEl, ...),
+    show: () => showTooltip(tooltip, session),
+    hide: () => hideTooltip(tooltip),
+    destroy: () => {
+      // Remove ALL listeners
+      // Remove tooltip from DOM
+      // Clear timers
+      tooltip.remove();
+    },
+
+    setZIndex: (z) => { tooltip.style.zIndex = z; },
+    scheduleClose: (delay) => { /* uses closeTimeout */ },
+    cancelClose: () => { /* clears closeTimeout */ }
+  };
+}</pre>
+</div>
+
+<div class="card priority">
+    <h3>Updated buildTooltip() with Unique IDs</h3>
+    <pre>function buildTooltip(doc, sessionId) {
+  const tooltip = doc.createElement('div');
+  tooltip.className = 'hx-chat-tooltip';
+  tooltip.dataset.sessionId = sessionId;
+  tooltip.innerHTML = `
+    &lt;header class="hx-chat-tooltip__header"&gt;
+      &lt;!-- ... header content ... --&gt;
+    &lt;/header&gt;
+    &lt;div class="hx-chat-tooltip__body"&gt;
+      &lt;div class="hx-chat-tooltip__list"&gt;&lt;ul&gt;&lt;/ul&gt;&lt;/div&gt;
+      &lt;div class="hx-chat-tooltip__composer"&gt;
+        &lt;label class="hx-sr-only" for="hx-chat-input-<span class="status-good">${sessionId}</span>"&gt;Compose&lt;/label&gt;
+        &lt;textarea id="hx-chat-input-<span class="status-good">${sessionId}</span>" ...&gt;&lt;/textarea&gt;
+        &lt;button data-action="send"&gt;Send&lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  `;
+  return tooltip;
+}</pre>
+</div>
+
+<div class="card priority">
+    <h3>Updated applyHypertext() - Create Controller</h3>
+    <pre>function applyHypertext(instructions) {
+  // ... existing setup ...
+
+  const session = {
+    id: sessionId,
+    subject,
+    context: getContext({ id: sessionId, subject }),
+    wrapper,
+    messages: [],
+    lastResult: null,
+    isStreaming: false,
+    isPinned: false,
+
+    <span class="status-good">// NEW: Each session gets its own controller</span>
+    <span class="status-good">controller: null  // Created lazily on first open</span>
+  };
+
+  sessions.set(sessionId, session);
+
+  // ... event bindings on wrapper ...
+
+  wrapper.addEventListener('mouseenter', () => {
+    openChat(session, { autoFocus: false });
+  });
+}</pre>
+</div>
+
+<div class="card priority">
+    <h3>Updated openChat() - Handle Multiple Tooltips</h3>
+    <pre>function openChat(session, { autoFocus = true } = {}) {
+  if (!session) return;
+
+  <span class="status-good">// Create controller if first time opening</span>
+  if (!session.controller) {
+    session.controller = createTooltipController(session, doc, win);
+    doc.body.appendChild(session.controller.tooltip);
+  }
+
+  <span class="status-good">// Handle previous active session</span>
+  if (activeChatSession && activeChatSession !== session) {
+    <span class="status-good">// If previous was pinned, lower its z-index but keep visible</span>
+    if (activeChatSession.isPinned) {
+      activeChatSession.controller.setZIndex(2147483000);
+      activeChatSession.wrapper?.setAttribute('aria-expanded', 'false');
+    } else {
+      <span class="status-good">// If not pinned, close it</span>
+      closeChat();
+    }
+  }
+
+  <span class="status-good">// Activate new session</span>
+  activeChatSession = session;
+  session.wrapper?.setAttribute('aria-expanded', 'true');
+
+  <span class="status-good">// Raise z-index to bring to front</span>
+  session.controller.setZIndex(2147483001);
+
+  <span class="status-good">// Render and show</span>
+  session.controller.render();
+  session.controller.show();
+
+  if (autoFocus) {
+    session.controller.inputEl.focus();
+  }
+}</pre>
+</div>
+
+<div class="card priority">
+    <h3>Z-Index Management Strategy</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>State</th>
+                <th>Z-Index</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Pinned (inactive)</strong></td>
+                <td><code>2147483000</code></td>
+                <td>Background, still visible</td>
+            </tr>
+            <tr>
+                <td><strong>Active</strong></td>
+                <td><code>2147483001</code></td>
+                <td>Front, currently focused</td>
+            </tr>
+            <tr>
+                <td><strong>Dragging</strong></td>
+                <td><code>2147483002</code></td>
+                <td>Temporary boost while dragging</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="divider"></div>
+
+<h2>Implementation Checklist</h2>
+
+<div class="card">
+    <h3>Step-by-Step Refactor (In Order)</h3>
+    <ol class="dense-list" style="list-style: decimal; margin-left: 20px;">
+        <li>Create <code>createTooltipController()</code> function</li>
+        <li>Update <code>buildTooltip()</code> to accept sessionId for unique IDs</li>
+        <li>Move all event handler functions INSIDE controller</li>
+        <li>Update <code>applyHypertext()</code> to store controller ref (lazy create)</li>
+        <li>Update <code>openChat()</code> to handle multiple tooltips</li>
+        <li>Update <code>closeChat()</code> to clean up specific tooltip</li>
+        <li>Update <code>renderConversation()</code> to accept controller</li>
+        <li>Update <code>showTooltip()</code> to work with specific element</li>
+        <li>Update <code>hideTooltip()</code> to work with specific element</li>
+        <li>Update <code>positionTooltip()</code> to work with specific element</li>
+        <li>Update <code>refreshPinUi()</code> to work with specific tooltip</li>
+        <li>Update <code>runHypertext()</code> to use session.controller</li>
+        <li>Update <code>destroy()</code> to clean up ALL tooltips</li>
+        <li>Add <code>getTooltipElements()</code> to return all tooltips</li>
+        <li>Add limit check (max 10 simultaneous tooltips)</li>
+        <li>Add warning when hitting limit</li>
+        <li>Write regression test (see below)</li>
+        <li>Test drag/resize with multiple tooltips</li>
+        <li>Test memory cleanup (no leaks)</li>
+    </ol>
+</div>
+
+<div class="divider"></div>
+
+<h2>Regression Test</h2>
+
+<div class="card priority">
+    <h3>Test: Pinned Chats Remain Visible</h3>
+    <pre>// tests/e2e/multi-tooltip-pinned.spec.ts
+
+import { test, expect } from '@playwright/test';
+
+test('pinned chats remain visible when opening new chat', async ({ page }) => {
+  // Load extension
+  await page.goto('https://example.com');
+
+  // Create first hypertext
+  await page.evaluate(() => {
+    const range = document.createRange();
+    range.selectNode(document.querySelector('h1'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  });
+
+  await page.keyboard.press('Control+Shift+K');
+  await page.fill('#hx-instruction-input', 'First chat');
+  await page.click('#hx-generate-button');
+
+  // Wait for first tooltip
+  await page.waitForSelector('.hx-chat-tooltip[data-session-id]');
+  const firstTooltip = page.locator('.hx-chat-tooltip').first();
+  const firstSessionId = await firstTooltip.getAttribute('data-session-id');
+
+  // Pin the first tooltip
+  await firstTooltip.locator('[data-action="pin"]').click();
+
+  // Verify pinned state
+  await expect(firstTooltip).toHaveClass(/is-pinned/);
+  await expect(firstTooltip.locator('[data-action="pin"]')).toHaveClass(/is-active/);
+
+  // Select DIFFERENT text
+  await page.evaluate(() => {
+    const range = document.createRange();
+    range.selectNode(document.querySelector('p'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  });
+
+  // Create second hypertext
+  await page.keyboard.press('Control+Shift+K');
+  await page.fill('#hx-instruction-input', 'Second chat');
+  await page.click('#hx-generate-button');
+
+  // Wait for second tooltip
+  await page.waitForSelector('.hx-chat-tooltip[data-session-id]:not([data-session-id="${firstSessionId}"])');
+
+  // CRITICAL ASSERTION: Both tooltips should be visible
+  const visibleTooltips = page.locator('.hx-chat-tooltip:visible');
+  await expect(visibleTooltips).toHaveCount(2);
+
+  // Verify first tooltip is STILL pinned and visible
+  await expect(firstTooltip).toBeVisible();
+  await expect(firstTooltip).toHaveClass(/is-pinned/);
+
+  // Verify second tooltip is active (higher z-index)
+  const secondTooltip = page.locator('.hx-chat-tooltip').nth(1);
+  const firstZIndex = await firstTooltip.evaluate(el => window.getComputedStyle(el).zIndex);
+  const secondZIndex = await secondTooltip.evaluate(el => window.getComputedStyle(el).zIndex);
+
+  expect(parseInt(secondZIndex)).toBeGreaterThan(parseInt(firstZIndex));
+});
+
+test('unpinned chats close when opening new chat', async ({ page }) => {
+  // Load extension
+  await page.goto('https://example.com');
+
+  // Create first hypertext (without pinning)
+  await page.keyboard.press('Control+Shift+K');
+  await page.fill('#hx-instruction-input', 'First chat');
+  await page.click('#hx-generate-button');
+
+  await page.waitForSelector('.hx-chat-tooltip');
+  const firstTooltip = page.locator('.hx-chat-tooltip').first();
+
+  // Do NOT pin - leave unpinned
+
+  // Create second hypertext
+  await page.evaluate(() => {
+    const range = document.createRange();
+    range.selectNode(document.querySelector('p'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  });
+
+  await page.keyboard.press('Control+Shift+K');
+  await page.fill('#hx-instruction-input', 'Second chat');
+  await page.click('#hx-generate-button');
+
+  await page.waitForSelector('.hx-chat-tooltip:visible');
+
+  // ASSERTION: Only ONE tooltip visible (first was closed)
+  const visibleTooltips = page.locator('.hx-chat-tooltip:visible');
+  await expect(visibleTooltips).toHaveCount(1);
+
+  // Verify first tooltip no longer visible
+  await expect(firstTooltip).not.toBeVisible();
+});
+
+test('max 10 tooltips warning', async ({ page }) => {
+  await page.goto('https://example.com');
+
+  // Create 10 pinned tooltips
+  for (let i = 0; i < 10; i++) {
+    await page.keyboard.press('Control+Shift+K');
+    await page.fill('#hx-instruction-input', `Chat ${i}`);
+    await page.click('#hx-generate-button');
+
+    await page.waitForSelector('.hx-chat-tooltip:visible');
+    const tooltip = page.locator('.hx-chat-tooltip').nth(i);
+    await tooltip.locator('[data-action="pin"]').click();
+  }
+
+  // Verify 10 tooltips visible
+  await expect(page.locator('.hx-chat-tooltip:visible')).toHaveCount(10);
+
+  // Try to create 11th
+  await page.keyboard.press('Control+Shift+K');
+  await page.fill('#hx-instruction-input', 'Chat 11');
+  await page.click('#hx-generate-button');
+
+  // Should show warning (implementation detail - check for toast or modal)
+  await expect(page.locator('.hx-toast, .hx-warning')).toContainText(/maximum.*tooltip/i);
+
+  // Still only 10 tooltips (oldest unpinned or blocked)
+  await expect(page.locator('.hx-chat-tooltip:visible')).toHaveCount(10);
+});</pre>
+</div>
+
+<div class="divider"></div>
+
+<h2>Recommended Phasing</h2>
+
+<div class="card priority">
+    <h3>⚠️ This is a Large Refactor - Consider Phasing</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Phase</th>
+                <th>Work</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Phase 1</strong><br/>(Current Plan)</td>
+                <td>
+                    - URL architecture<br/>
+                    - Prompt simplification<br/>
+                    - Streaming<br/>
+                    - Resize fix
+                </td>
+                <td class="status-good">✅ High value, moderate effort</td>
+            </tr>
+            <tr>
+                <td><strong>Phase 2</strong><br/>(This Plan)</td>
+                <td>
+                    - Multi-tooltip support<br/>
+                    - Per-session controllers<br/>
+                    - Z-index management<br/>
+                    - Regression tests
+                </td>
+                <td class="status-warn">⚠️ High value, HIGH effort</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p style="margin-top: 8px;"><strong>Recommendation:</strong> Complete Phase 1 first, then tackle Phase 2 as a separate PR with dedicated testing time.</p>
+</div>
+
+</div>
+</body>
+</html>

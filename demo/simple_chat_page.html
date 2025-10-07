@@ -200,6 +200,30 @@
       color: white;
     }
 
+    body.text-small,
+    body.text-small .conversation,
+    body.text-small .bubble,
+    body.text-small textarea {
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    body.text-large,
+    body.text-large .conversation,
+    body.text-large .bubble,
+    body.text-large textarea {
+      font-size: 17px;
+      line-height: 1.65;
+    }
+
+    body.text-xlarge,
+    body.text-xlarge .conversation,
+    body.text-xlarge .bubble,
+    body.text-xlarge textarea {
+      font-size: 20px;
+      line-height: 1.7;
+    }
+
     @media (max-width: 720px) {
       body {
         padding: 24px 12px;
@@ -242,7 +266,7 @@
   </main>
 
   <script>
-    const STORAGE_KEY = 'hypertext:pendingChat';
+    const STORAGE_KEY = 'hypertext:handoff';
 
     function loadPayload() {
       try {
@@ -259,29 +283,26 @@
       return {
         subject: 'Kinbote\'s interventions',
         summary: 'Kinbote commandeers Shade\'s poem by letting the footnotes exceed the source text, so we end up reading his story to understand the verses.',
-        context: 'Opened without tooltip context · Using fallback copy',
-        openedAt: new Date().toISOString(),
-        messages: [
-          { role: 'assistant', text: 'Fallback assistant insight: Nabokov weaponizes commentary to fracture authorship.' },
-          { role: 'user', text: 'Show me how often Kinbote interrupts the poem.' }
-        ]
+        focus: 'Footnotes vs. canto pacing',
+        transcript: [
+          { role: 'assistant', content: 'Fallback assistant insight: Nabokov weaponizes commentary to fracture authorship.' },
+          { role: 'user', content: 'Show me how often Kinbote interrupts the poem.' }
+        ],
+        sourceUrl: 'demo/simple_tooltip_redirect.html',
+        timestamp: new Date().toISOString(),
+        textSize: 'normal'
       };
     }
 
-    function renderConversation(messages) {
+    function renderConversation(transcript = []) {
       const container = document.getElementById('conversation');
       container.textContent = '';
-      messages.forEach((message, index) => {
+      transcript.forEach(message => {
         const wrapper = document.createElement('article');
         wrapper.className = `message ${message.role}`;
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        bubble.textContent = message.text;
-        if (message.url) {
-          const link = document.createElement('small');
-          link.textContent = `Source: ${message.url}`;
-          bubble.appendChild(link);
-        }
+        bubble.textContent = message.content || '';
         wrapper.appendChild(bubble);
         container.appendChild(wrapper);
       });
@@ -290,10 +311,22 @@
 
     function populatePage(data) {
       document.getElementById('chat-subject').textContent = data.subject || 'Hypertext Chat';
-      document.getElementById('chat-summary').textContent = data.summary || 'No summary provided.';
-      const meta = data.context ? `${data.context} · Opened ${new Date(data.openedAt || Date.now()).toLocaleTimeString()}` : 'No extra context';
-      document.getElementById('chat-meta').textContent = meta;
-      renderConversation(data.messages || []);
+      const summaryText = data.summary || (data.lastResult && data.lastResult.explanation) || 'No summary provided.';
+      document.getElementById('chat-summary').textContent = summaryText;
+      const metaParts = [];
+      if (data.focus) metaParts.push(`Focus: ${data.focus}`);
+      if (data.sourceUrl) metaParts.push(data.sourceUrl);
+      metaParts.push(`Opened ${new Date(data.timestamp || Date.now()).toLocaleTimeString()}`);
+      document.getElementById('chat-meta').textContent = metaParts.filter(Boolean).join(' · ');
+
+      // Apply text size
+      document.body.classList.remove('text-small', 'text-large', 'text-xlarge');
+      const validSizes = ['small', 'large', 'xlarge'];
+      if (validSizes.includes(data.textSize)) {
+        document.body.classList.add(`text-${data.textSize}`);
+      }
+
+      renderConversation(data.transcript || []);
     }
 
     document.getElementById('back-button').addEventListener('click', () => {

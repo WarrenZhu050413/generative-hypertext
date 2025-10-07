@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan: Enhance Mermaid Diagram Usage Guidance</title>
+<style>
+:root {
+    --chinese-red: #8B0000;
+    --chinese-gold: #FFD700;
+    --jade-green: #00A86B;
+    --ink-black: #2B2B2B;
+    --paper-beige: #F5F5DC;
+    --light-cream: #FAFAF0;
+    --level-1: #000;
+    --level-2: #333;
+    --level-3: #666;
+    --level-4: #999;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: linear-gradient(135deg, var(--paper-beige) 0%, var(--light-cream) 100%);
+    color: var(--ink-black);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.3;
+    padding: 8px;
+}
+
+h1 {
+    font-size: 22px;
+    font-weight: 900;
+    margin: 6px 0;
+    padding: 6px;
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 10px 0 4px 0;
+    padding: 4px;
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.03);
+    color: var(--level-1);
+}
+
+h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 6px 0 3px 0;
+    color: var(--level-2);
+}
+
+h4 {
+    font-size: 12px;
+    font-weight: 500;
+    margin: 4px 0 2px 8px;
+    color: var(--level-3);
+}
+
+.two-column-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+}
+
+.full-width { grid-column: span 2; }
+
+button {
+    background: linear-gradient(135deg, var(--chinese-red), #CD5C5C);
+    color: white;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    padding: 4px 8px;
+    margin: 2px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 2px;
+}
+
+button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+}
+
+.important-always-visible {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), white);
+    border: 2px solid var(--chinese-gold);
+    padding: 10px;
+    margin: 8px 0;
+    border-radius: 3px;
+}
+
+.metric {
+    display: inline-block;
+    background: white;
+    border: 1px solid var(--chinese-gold);
+    padding: 2px 6px;
+    margin: 2px;
+    border-radius: 2px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.metric.important {
+    background: var(--chinese-gold);
+    color: white;
+    font-weight: 700;
+}
+
+.collapsible { margin: 4px 0; width: 100%; }
+.collapsible-header {
+    cursor: pointer;
+    padding: 6px 8px;
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(255, 215, 0, 0.02));
+    border-left: 3px solid var(--chinese-gold);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.collapsible.critical .collapsible-header {
+    border-left: 4px solid var(--chinese-red);
+    background: rgba(139, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+.collapsible.secondary .collapsible-header {
+    border-left: 2px solid #999;
+    background: rgba(0, 0, 0, 0.02);
+    font-size: 13px;
+}
+
+.collapsible-header:hover {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.1), rgba(255, 215, 0, 0.05));
+}
+
+.collapsible-header .arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    color: var(--chinese-red);
+    font-size: 10px;
+}
+
+.collapsible.open .arrow {
+    transform: rotate(90deg);
+}
+
+.collapsible-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 8px;
+    margin-left: 8px;
+}
+
+.collapsible.open .collapsible-content {
+    max-height: 5000px;
+    padding: 8px;
+}
+
+.dense-list {
+    list-style: none;
+    padding: 0;
+    margin-left: 8px;
+}
+
+.dense-list li {
+    padding: 3px 0 3px 12px;
+    position: relative;
+    line-height: 1.4;
+}
+
+.dense-list li:before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--chinese-red);
+    font-size: 10px;
+}
+
+ol.dense-list {
+    list-style: decimal;
+    padding-left: 20px;
+}
+
+ol.dense-list li:before {
+    content: none;
+}
+
+.indent-1 { margin-left: 12px; }
+.indent-2 { margin-left: 24px; }
+.indent-3 { margin-left: 36px; }
+
+.muted { color: var(--level-4); font-size: 12px; }
+.critical { color: var(--chinese-red); font-weight: 700; }
+.success { color: var(--jade-green); font-weight: 600; }
+.warning { color: var(--chinese-gold); font-weight: 600; }
+
+code {
+    background: rgba(139, 0, 0, 0.05);
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 12px;
+    font-family: "Monaco", "Courier New", monospace;
+}
+
+pre {
+    background: rgba(245, 245, 220, 0.3);
+    border: 1px solid rgba(139, 0, 0, 0.1);
+    padding: 6px;
+    margin: 4px 0;
+    overflow-x: auto;
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0;
+    font-size: 12px;
+}
+
+th {
+    background: var(--chinese-red);
+    color: white;
+    padding: 4px 6px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+td {
+    border: 1px solid #ddd;
+    padding: 3px 6px;
+    vertical-align: top;
+}
+
+tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+
+.step-box {
+    background: white;
+    border-left: 3px solid var(--chinese-gold);
+    padding: 6px;
+    margin: 4px 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.highlight-box {
+    background: linear-gradient(135deg, rgba(0, 168, 107, 0.1), white);
+    border: 2px solid var(--jade-green);
+    padding: 8px;
+    margin: 6px 0;
+    border-radius: 3px;
+}
+</style>
+</head>
+<body>
+
+<div style="margin: 8px 0; text-align: right;">
+    <button id="expand-all">Expand All</button>
+    <button id="collapse-all">Collapse All</button>
+</div>
+
+<div class="important-always-visible">
+    <h1>📋 Plan: Enhance Mermaid Diagram Usage Guidance</h1>
+    <div class="two-column-layout">
+        <div>
+            <h3>Objective</h3>
+            <p>Significantly strengthen Mermaid diagram encouragement in HTML style documentation, adding explicit guidance for architecture diagrams, data flow diagrams, and explanatory graphics.</p>
+        </div>
+        <div>
+            <h3>Approach</h3>
+            <p>Expand "When to Use" section with compelling use cases, add decision flowchart favoring diagrams, enhance examples with architecture/data flow patterns, update all 3 files with new verification hashes.</p>
+            <div style="margin-top: 4px;">
+                <span class="metric important">Complexity: Low</span>
+                <span class="metric">Time: ~30 min</span>
+                <span class="metric">Files: 3</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="highlight-box">
+    <h2 style="margin-top: 0;">💡 Key Insight from File Analysis</h2>
+    <p><strong>Current State:</strong> Mermaid section exists (lines 541-744 in HTML.md, ~200 lines) with good technical setup but <span class="warning">passive encouragement</span></p>
+    <p style="margin-top: 4px;"><strong>Gap:</strong> Missing explicit "prefer diagrams over text" guidance, no architecture/data flow examples, buried in middle of document</p>
+    <p style="margin-top: 4px;"><strong>Strategy:</strong> Make Mermaid <span class="success">first-class citizen</span> with prominent "Think Visual First" callout and compelling examples</p>
+</div>
+
+<div class="two-column-layout">
+    <!-- Implementation Steps -->
+    <div class="collapsible critical full-width" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>⚡ Implementation Steps (7 Steps Across 3 Files)</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+
+            <h3>Phase 1: Enhance Main HTML Style Guide (~/.claude/output-styles/html.md)</h3>
+
+            <div class="step-box">
+                <h4>Step 1.1: Add "Think Visual First" Principle to Design Principles</h4>
+                <p>Insert prominent callout in "Compact Design Principles" section (around line 29)</p>
+                <div class="indent-1 muted">File: ~/.claude/output-styles/html.md</div>
+                <div class="indent-1">
+                    <strong>Add after line 30 (before end of Compact Design Principles):</strong>
+                    <pre>- **Visual Communication Priority**: When explaining systems, flows, relationships, or architectures, STRONGLY PREFER Mermaid diagrams over prose. A diagram is worth 1000 words of description.</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.2: Expand "When to Use Mermaid" Section</h4>
+                <p>Replace current passive list (line 543-548) with compelling, active guidance</p>
+                <div class="indent-1">
+                    <strong>Current text (line 543-548):</strong>
+                    <pre>### When to Use Mermaid Diagrams
+Use Mermaid.js diagrams when visual representation enhances understanding:
+- **Flowcharts**: Algorithms, workflows, decision trees, process flows
+- **Sequence Diagrams**: API interactions, message passing, temporal flows
+- **Class Diagrams**: Type hierarchies, OOP structures, domain models
+- **State Diagrams**: State transitions, lifecycle management, workflow states</pre>
+                </div>
+                <div class="indent-1">
+                    <strong>Replace with (ACTIVE, ENCOURAGING):</strong>
+                    <pre>### When to Use Mermaid Diagrams (STRONGLY ENCOURAGED)
+
+**PREFER diagrams over prose for:**
+
+✅ **ALWAYS USE for these scenarios:**
+- **System Architecture**: Component interactions, service boundaries, deployment topologies
+- **Data Flow**: How data moves through systems, transformations, pipelines
+- **Process Flows**: Step-by-step workflows, algorithms, decision trees
+- **API Interactions**: Request/response cycles, authentication flows, message sequences
+- **State Machines**: Entity lifecycle, workflow states, transition logic
+- **Relationships**: Class hierarchies, entity relationships, dependency graphs
+- **Technical Explanations**: Complex concepts that benefit from visual structure
+
+💡 **Default Rule**: If you're about to write 3+ paragraphs explaining a system, flow, or relationship → **DRAW IT INSTEAD**
+
+**Diagram Types & Use Cases:**
+- **Flowcharts** → Algorithms, workflows, decision logic, process steps
+- **Sequence Diagrams** → API calls, message passing, temporal interactions, authentication flows
+- **Class/ER Diagrams** → Type hierarchies, database schemas, domain models, object relationships
+- **State Diagrams** → Lifecycle management, workflow states, FSM logic
+- **Architecture Diagrams** → System components, service topology, deployment architecture
+- **Data Flow Diagrams** → Data pipelines, ETL processes, information flow</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.3: Add Architecture Diagram Example</h4>
+                <p>Insert new example after State Diagram example (around line 710)</p>
+                <div class="indent-1">
+                    <strong>Add new section:</strong>
+                    <pre>**Architecture Diagram (System Components):**
+```html
+<div class="diagram-container">
+    <h3>System Architecture</h3>
+    <div class="mermaid">
+flowchart TB
+    subgraph Frontend
+        UI[Web UI]
+        Mobile[Mobile App]
+    end
+
+    subgraph Backend
+        API[API Gateway]
+        Auth[Auth Service]
+        Data[Data Service]
+    end
+
+    subgraph Storage
+        DB[(Database)]
+        Cache[(Redis Cache)]
+    end
+
+    UI --> API
+    Mobile --> API
+    API --> Auth
+    API --> Data
+    Data --> DB
+    Data --> Cache
+    Auth --> DB
+
+    style API fill:#1B3A57,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Auth fill:#2D5016,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Data fill:#2D5016,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style DB fill:#6B4423,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Cache fill:#6B4423,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    </div>
+</div>
+```</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.4: Add Data Flow Diagram Example</h4>
+                <p>Insert immediately after Architecture example</p>
+                <div class="indent-1">
+                    <strong>Add:</strong>
+                    <pre>**Data Flow Diagram (ETL Pipeline):**
+```html
+<div class="diagram-container">
+    <h3>Data Processing Pipeline</h3>
+    <div class="mermaid">
+flowchart LR
+    Source[Data Source] --> Extract[Extract]
+    Extract --> Transform[Transform]
+    Transform --> Validate{Valid?}
+    Validate -->|Yes| Load[Load to DW]
+    Validate -->|No| Error[Error Queue]
+    Load --> Index[Index in Search]
+    Load --> Cache[Update Cache]
+    Error --> Notify[Alert Team]
+
+    style Source fill:#4A5568,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Transform fill:#1B3A57,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Load fill:#2D5016,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    style Error fill:#C53030,stroke:#1a1a1a,stroke-width:2px,color:#fff
+    </div>
+</div>
+```</pre>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 1.5: Add "Decision: When Diagram vs. Text" Flowchart</h4>
+                <p>Insert before "Mermaid Best Practices" (around line 713)</p>
+                <div class="indent-1">
+                    <strong>Add decision flowchart:</strong>
+                    <pre>### Deciding: Diagram vs. Text
+
+Use this decision tree:
+
+<div class="mermaid">
+flowchart TD
+    Start{Explaining...?}
+    Start -->|System/Architecture| Diagram[✅ USE DIAGRAM]
+    Start -->|Data Flow| Diagram
+    Start -->|Process/Workflow| Diagram
+    Start -->|Relationships| Diagram
+    Start -->|Sequence of Events| Diagram
+    Start -->|State Changes| Diagram
+    Start -->|Simple Definition| Text[Use Text]
+    Start -->|Single Concept| Text
+
+    Diagram --> Type{Which Type?}
+    Type -->|Components/Services| Arch[Flowchart TB<br/>subgraphs]
+    Type -->|Data Pipeline| Flow[Flowchart LR<br/>linear flow]
+    Type -->|API Calls| Seq[Sequence Diagram]
+    Type -->|Entity Lifecycle| State[State Diagram]
+    Type -->|Class Relations| Class[Class Diagram]
+
+    style Diagram fill:#2D5016,stroke:#1a1a1a,stroke-width:3px,color:#fff
+    style Text fill:#999,stroke:#666,stroke-width:1px
+</div></pre>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 12px;">Phase 2: Update HTML.md Snippet</h3>
+
+            <div class="step-box">
+                <h4>Step 2.1: Apply Same Changes to Snippet File</h4>
+                <p>Replicate all changes from Phase 1 to HTML.md snippet</p>
+                <div class="indent-1 muted">File: ~/.claude/snippets/snippets/HTML.md</div>
+                <div class="indent-1">
+                    <strong>Changes:</strong>
+                    <ul style="list-style: disc; margin-left: 20px; margin-top: 2px;">
+                        <li>Add "Visual Communication Priority" to line ~30</li>
+                        <li>Replace "When to Use" section (line ~543) with expanded version</li>
+                        <li>Add Architecture example after State diagram</li>
+                        <li>Add Data Flow example</li>
+                        <li>Add decision flowchart before Best Practices</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step-box">
+                <h4>Step 2.2: Update Verification Hash</h4>
+                <p>Change VERIFICATION_HASH to force reload</p>
+                <div class="indent-1">
+                    <strong>Current (line 13):</strong> <code>459a1cb45b02aa6f</code>
+                </div>
+                <div class="indent-1">
+                    <strong>New hash:</strong> <code>8d3f9a1b4c2e7650</code> (random 16-char hex)
+                </div>
+            </div>
+
+            <h3 style="margin-top: 12px;">Phase 3: Verify No Changes Needed for PLANHTML.md</h3>
+
+            <div class="step-box">
+                <h4>Step 3.1: Review PLANHTML.md for Mermaid References</h4>
+                <p>PLANHTML.md is about plan structure, not content formatting. No Mermaid changes needed.</p>
+                <div class="indent-1 muted">File: ~/.claude/snippets/snippets/PLANHTML.md</div>
+                <div class="indent-1">
+                    <strong>Decision:</strong> No updates required (references HTML.md for styles)
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Prerequisites & Context -->
+    <div class="collapsible secondary" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>📍 Prerequisites & Context</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Files to Modify</h3>
+            <table>
+                <tr>
+                    <th>File</th>
+                    <th>Current Lines</th>
+                    <th>Changes</th>
+                </tr>
+                <tr>
+                    <td><code>~/.claude/output-styles/html.md</code></td>
+                    <td>877 lines</td>
+                    <td>Add ~60 lines (examples + guidance)</td>
+                </tr>
+                <tr>
+                    <td><code>~/.claude/snippets/snippets/HTML.md</code></td>
+                    <td>885 lines</td>
+                    <td>Same changes + hash update</td>
+                </tr>
+                <tr>
+                    <td><code>~/.claude/snippets/snippets/PLANHTML.md</code></td>
+                    <td>252 lines</td>
+                    <td>No changes needed</td>
+                </tr>
+            </table>
+
+            <h3 style="margin-top: 8px;">Current Mermaid Section Analysis</h3>
+            <div class="two-column-layout">
+                <div>
+                    <strong>Strengths (Keep):</strong>
+                    <ul style="list-style: disc; margin-left: 20px; margin-top: 2px;">
+                        <li>Complete setup code</li>
+                        <li>Good theme configuration</li>
+                        <li>4 diagram type examples</li>
+                        <li>Custom styling examples</li>
+                    </ul>
+                </div>
+                <div>
+                    <strong>Gaps (Fix):</strong>
+                    <ul style="list-style: disc; margin-left: 20px; margin-top: 2px;">
+                        <li>Passive "when visual enhances" tone</li>
+                        <li>No architecture examples</li>
+                        <li>No data flow examples</li>
+                        <li>No decision guidance</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 8px;">Dependencies</h3>
+            <ul class="dense-list">
+                <li><strong>No breaking changes:</strong> Only additive enhancements</li>
+                <li><strong>No CSS changes:</strong> Existing Mermaid container styles unchanged</li>
+                <li><strong>Backward compatible:</strong> Existing HTML documents unaffected</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Testing & Validation -->
+    <div class="collapsible secondary" data-collapsible="open">
+        <div class="collapsible-header">
+            <span>✓ Testing & Validation</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Validation Tests</h3>
+            <table>
+                <tr>
+                    <th>Test</th>
+                    <th>Method</th>
+                    <th>Expected Result</th>
+                </tr>
+                <tr>
+                    <td>Snippet hash updated</td>
+                    <td>Check line 13 of HTML.md snippet</td>
+                    <td>Shows new hash: <code>8d3f9a1b4c2e7650</code></td>
+                </tr>
+                <tr>
+                    <td>Examples render</td>
+                    <td>Copy architecture example, save as .html, open</td>
+                    <td>Mermaid diagram renders with correct styling</td>
+                </tr>
+                <tr>
+                    <td>Data flow renders</td>
+                    <td>Copy data flow example, save, open</td>
+                    <td>LR flowchart renders correctly</td>
+                </tr>
+                <tr>
+                    <td>Decision flowchart</td>
+                    <td>Copy decision tree, save, open</td>
+                    <td>TD flowchart with styling renders</td>
+                </tr>
+                <tr>
+                    <td>Guidance visible</td>
+                    <td>Read updated "When to Use" section</td>
+                    <td>Sees "STRONGLY ENCOURAGED" and "ALWAYS USE"</td>
+                </tr>
+            </table>
+
+            <h3 style="margin-top: 8px;">Integration Test Scenario</h3>
+            <div class="step-box">
+                <strong>Scenario:</strong> Request HTML output for "Microservices Architecture Analysis"
+                <div class="indent-1">
+                    <strong>Expected Behavior:</strong>
+                    <ol style="list-style: decimal; margin-left: 20px; margin-top: 2px;">
+                        <li>Claude sees enhanced "Think Visual First" guidance</li>
+                        <li>Claude generates architecture diagram using flowchart with subgraphs</li>
+                        <li>Claude includes data flow diagram for service interactions</li>
+                        <li>Claude uses sequence diagram for API call flows</li>
+                        <li>Minimal prose, maximum visual communication</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Potential Issues -->
+    <div class="collapsible secondary" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>⚠️ Potential Issues & Mitigations</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <h3>Risk: Over-Encouragement</h3>
+            <div class="step-box">
+                <strong>Issue:</strong> Might lead to diagrams for trivial explanations
+                <div class="indent-1">
+                    <strong>Mitigation:</strong> Decision flowchart explicitly shows when NOT to use diagrams ("Simple Definition", "Single Concept" → use text)
+                </div>
+            </div>
+
+            <h3>Risk: Example Complexity</h3>
+            <div class="step-box">
+                <strong>Issue:</strong> Architecture/data flow examples might be too complex
+                <div class="indent-1">
+                    <strong>Mitigation:</strong> Kept examples to 8-10 nodes (within "max 10-15" guideline), clear labels, simple relationships
+                </div>
+            </div>
+
+            <h3>Risk: Mermaid CDN Dependency</h3>
+            <div class="step-box">
+                <strong>Issue:</strong> More diagrams = more reliance on CDN availability
+                <div class="indent-1">
+                    <strong>Mitigation:</strong> Already acknowledged in docs ("exception to no-CDN rule"), CDN is highly reliable (jsDelivr)
+                </div>
+            </div>
+
+            <h3>Edge Cases</h3>
+            <ul class="dense-list">
+                <li><strong>Very large systems:</strong> Might exceed "10-15 nodes" guideline → Use multiple diagrams or subgraphs</li>
+                <li><strong>Real-time collaboration:</strong> Mermaid is static → Note: "For live editing, diagrams are snapshots"</li>
+                <li><strong>Print/PDF output:</strong> Mermaid renders to SVG → Works fine in print</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Post-Implementation -->
+    <div class="collapsible secondary full-width" data-collapsible="closed">
+        <div class="collapsible-header">
+            <span>📊 Post-Implementation</span>
+            <span class="arrow">▶</span>
+        </div>
+        <div class="collapsible-content">
+            <div class="two-column-layout">
+                <div>
+                    <h3>Success Metrics (1 week)</h3>
+                    <ul class="dense-list">
+                        <li>Generated HTML docs include ≥1 Mermaid diagram per technical explanation</li>
+                        <li>Architecture questions result in diagrams, not walls of text</li>
+                        <li>Data flow explanations visualized with flowcharts</li>
+                        <li>User feedback: "diagrams made it much clearer"</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Follow-Up Enhancements</h3>
+                    <ul class="dense-list">
+                        <li>Add timeline diagram examples (Gantt charts)</li>
+                        <li>Add entity-relationship diagram pattern</li>
+                        <li>Add network topology examples</li>
+                        <li>Create diagram pattern library</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 8px;">Documentation Updates</h3>
+            <div class="step-box">
+                <p><strong>Add to changelog:</strong> "Enhanced Mermaid diagram guidance with architecture and data flow examples, stronger encouragement for visual communication"</p>
+                <p style="margin-top: 4px;"><strong>Verification hash updated:</strong> HTML.md snippet hash changed to <code>8d3f9a1b4c2e7650</code> to force reload</p>
+            </div>
+
+            <h3 style="margin-top: 8px;">Maintenance Notes</h3>
+            <ul class="dense-list">
+                <li>Keep examples simple (8-12 nodes max) to serve as templates</li>
+                <li>If adding new diagram types, include in "When to Use" list</li>
+                <li>Monitor if users request more specific diagram patterns → add to library</li>
+                <li>Periodically review Mermaid.js updates for new features</li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+<div style="margin: 16px 0; padding: 10px; background: white; border: 2px solid var(--jade-green); border-radius: 3px;">
+    <h3 style="margin: 0 0 6px 0; color: var(--jade-green);">✅ Implementation Summary</h3>
+    <div class="two-column-layout">
+        <div>
+            <strong>Changes:</strong>
+            <ul style="list-style: disc; margin-left: 20px; margin-top: 4px;">
+                <li>Add "Visual First" principle</li>
+                <li>Expand "When to Use" (passive → active)</li>
+                <li>Add 2 new examples (architecture, data flow)</li>
+                <li>Add decision flowchart</li>
+                <li>Update snippet hash</li>
+            </ul>
+        </div>
+        <div>
+            <strong>Impact:</strong>
+            <ul style="list-style: disc; margin-left: 20px; margin-top: 4px;">
+                <li>+60 lines to html.md (~7% growth)</li>
+                <li>0 breaking changes</li>
+                <li>High visibility for diagrams</li>
+                <li>Clear decision guidance</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-collapsible]').forEach(function(section) {
+        const isOpen = section.getAttribute('data-collapsible') === 'open';
+        section.classList.add('collapsible');
+        if (isOpen) section.classList.add('open');
+    });
+
+    document.querySelectorAll('.collapsible-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            const collapsible = this.closest('.collapsible');
+            collapsible.classList.toggle('open');
+        });
+    });
+
+    const expandAllBtn = document.getElementById('expand-all');
+    const collapseAllBtn = document.getElementById('collapse-all');
+
+    if (expandAllBtn) {
+        expandAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.collapsible').forEach(function(c) {
+                c.classList.add('open');
+            });
+        });
+    }
+
+    if (collapseAllBtn) {
+        collapseAllBtn.addEventListener('click', function() {
+            document.querySelectorAll('.collapsible').forEach(function(c) {
+                c.classList.remove('open');
+            });
+        });
+    }
+});
+</script>
+
+</body>
+</html>
