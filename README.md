@@ -18,13 +18,20 @@ Generative Hypertext is a Chrome extension and JavaScript library that lets you 
 
 ### As a Chrome Extension
 
-1. **Clone and build**:
+1. **Clone and setup**:
    ```bash
    git clone https://github.com/WarrenZhu050413/generative-hypertext.git
    cd generative-hypertext
+
+   # Install extension dependencies
    npm install
    npm run dev:symlinks  # For development
    # OR: npm run build:unpacked  # For production
+
+   # Setup backend
+   cd backend
+   npm install
+   npm start  # Runs on http://localhost:3100
    ```
 
 2. **Load in Chrome**:
@@ -90,6 +97,10 @@ generative-hypertext/
 │   └── hypertext-experience.js    # Core hypertext runtime (80KB)
 ├── extension/
 │   └── hypertext-loader.js        # Chrome extension loader
+├── backend/
+│   ├── server.mjs                 # API server for AI-powered tooltips
+│   ├── lib/                       # Server utilities
+│   └── tests/                     # Backend tests
 ├── demo/
 │   └── hypertext_navigation_demo.html  # Standalone demo
 ├── dist/unpacked/                 # Built extension (symlinks in dev mode)
@@ -109,9 +120,21 @@ generative-hypertext/
 
 ## Configuration
 
-### Backend URL
+### Backend Setup
 
-By default, the extension looks for an API at `http://localhost:3100`. Configure it:
+The extension requires a backend API server to generate AI-powered tooltips.
+
+**Start the backend:**
+```bash
+cd backend
+npm install
+npm start
+# Server runs on http://localhost:3100
+```
+
+See [backend/README.md](backend/README.md) for detailed backend setup and deployment instructions.
+
+**Configure backend URL:**
 
 **In demo pages:**
 ```javascript
